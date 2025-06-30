@@ -339,7 +339,12 @@ struct AlbumDetailView: View {
         }
         .fullScreenCover(isPresented: $showingFullScreen) {
             if let selectedAsset = selectedAsset {
-                FullScreenImageView(asset: selectedAsset, immichService: immichService)
+                FullScreenImageView(
+                    asset: selectedAsset,
+                    assets: albumAssets,
+                    currentIndex: albumAssets.firstIndex(of: selectedAsset) ?? 0,
+                    immichService: immichService
+                )
             }
         }
         .onAppear {

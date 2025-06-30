@@ -8,7 +8,7 @@
 import Foundation
 
 // MARK: - Asset Models
-struct ImmichAsset: Codable, Identifiable {
+struct ImmichAsset: Codable, Identifiable, Equatable {
     let id: String
     let deviceAssetId: String
     let deviceId: String
@@ -42,6 +42,11 @@ struct ImmichAsset: Codable, Identifiable {
         case originalMimeType, resized, thumbhash, fileModifiedAt, fileCreatedAt, localDateTime, updatedAt
         case isFavorite, isArchived, isOffline, isTrashed, checksum, duration, hasMetadata, livePhotoVideoId
         case people, visibility, duplicateId, exifInfo
+    }
+    
+    // Equatable conformance - compare by id since it should be unique
+    static func == (lhs: ImmichAsset, rhs: ImmichAsset) -> Bool {
+        return lhs.id == rhs.id
     }
 }
 

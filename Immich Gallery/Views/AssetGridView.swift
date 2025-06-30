@@ -91,7 +91,7 @@ struct AssetGridView: View {
         }
         .fullScreenCover(isPresented: $showingFullScreen) {
             if let selectedAsset = selectedAsset {
-                FullScreenImageView(asset: selectedAsset, immichService: immichService)
+                FullScreenImageView(asset: selectedAsset, assets: assets, currentIndex: assets.firstIndex(of: selectedAsset) ?? 0, immichService: immichService)
             }
         }
         .onAppear {
@@ -229,11 +229,25 @@ struct AssetThumbnailView: View {
 
 struct FullScreenImageView: View {
     let asset: ImmichAsset
+    let assets: [ImmichAsset]
+    let currentIndex: Int
     @ObservedObject var immichService: ImmichService
     @Environment(\.dismiss) private var dismiss
     @State private var image: UIImage?
     @State private var isLoading = true
     @State private var showingExifInfo = false
+    @State private var currentAssetIndex: Int
+    @State private var currentAsset: ImmichAsset
+    @State private var showingSwipeHint = false
+    
+    init(asset: ImmichAsset, assets: [ImmichAsset], currentIndex: Int, immichService: ImmichService) {
+        self.asset = asset
+        self.assets = assets
+        self.currentIndex = currentIndex
+        self.immichService = immichService
+        self._currentAssetIndex = State(initialValue: currentIndex)
+        self._currentAsset = State(initialValue: asset)
+    }
     
     var body: some View {
         ZStack {
@@ -248,14 +262,14 @@ struct FullScreenImageView: View {
                 Image(uiImage: image)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    // .padding()
+                    .ignoresSafeArea()
                     .overlay(
                         // Date and location overlay in bottom right
                         VStack {
                             Spacer()
                             HStack {
                                 Spacer()
-                                DateLocationOverlay(asset: asset)
+                                DateLocationOverlay(asset: currentAsset)
                                     .padding(.trailing, 20)
                                     .padding(.bottom, 20)
                             }
@@ -309,34 +323,191 @@ struct FullScreenImageView: View {
                 VStack {
                     Spacer()
                     
-                    ExifInfoOverlay(asset: asset)
+                    ExifInfoOverlay(asset: currentAsset)
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
+            }
+            
+
+            
+            // Swipe hint overlay
+            if showingSwipeHint && assets.count > 1 {
+                VStack {
+                    Spacer()
+                    HStack {
+                        Spacer()
+                        VStack(spacing: 8) {
+                            HStack(spacing: 20) {
+                                Image(systemName: "arrow.left")
+                                    .font(.title2)
+                                    .foregroundColor(.white.opacity(0.7))
+                                Text("Swipe to navigate")
+                                    .font(.caption)
+                                    .foregroundColor(.white.opacity(0.7))
+                                Image(systemName: "arrow.right")
+                                    .font(.title2)
+                                    .foregroundColor(.white.opacity(0.7))
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .background(Color.black.opacity(0.6))
+                            .cornerRadius(20)
+                        }
+                        Spacer()
+                    }
+                    .padding(.bottom, 100)
+                }
+                .transition(.opacity)
             }
         }
         .onAppear {
             loadFullImage()
+            if assets.count > 1 {
+                showingSwipeHint = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                    withAnimation(.easeOut(duration: 0.5)) {
+                        showingSwipeHint = false
+                    }
+                }
+            }
         }
         .onTapGesture {
             dismiss()
         }
         .animation(.easeInOut(duration: 0.3), value: showingExifInfo)
+        .overlay(
+            SwipeGestureView(
+                onSwipeLeft: {
+                    print("FullScreenImageView: Left navigation triggered (current: \(currentAssetIndex), total: \(assets.count))")
+                    if currentAssetIndex > 0 {
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            navigateToImage(at: currentAssetIndex - 1)
+                        }
+                    } else {
+                        print("FullScreenImageView: Already at first photo, cannot navigate further")
+                    }
+                },
+                onSwipeRight: {
+                    print("FullScreenImageView: Right navigation triggered (current: \(currentAssetIndex), total: \(assets.count))")
+                    if currentAssetIndex < assets.count - 1 {
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            navigateToImage(at: currentAssetIndex + 1)
+                        }
+                    } else {
+                        print("FullScreenImageView: Already at last photo, cannot navigate further")
+                    }
+                }
+            )
+        )
+    }
+    
+    private func navigateToImage(at index: Int) {
+        print("FullScreenImageView: Attempting to navigate to image at index \(index) (total assets: \(assets.count))")
+        guard index >= 0 && index < assets.count else { 
+            print("FullScreenImageView: Navigation failed - index \(index) out of bounds")
+            return 
+        }
+        
+        print("FullScreenImageView: Navigating to asset ID: \(assets[index].id)")
+        currentAssetIndex = index
+        currentAsset = assets[index]
+        image = nil
+        isLoading = true
+        loadFullImage()
     }
     
     private func loadFullImage() {
         Task {
             do {
-                let fullImage = try await immichService.loadFullImage(from: asset)
+                let fullImage = try await immichService.loadFullImage(from: currentAsset)
                 await MainActor.run {
                     self.image = fullImage
                     self.isLoading = false
                 }
             } catch {
-                print("Failed to load full image for asset \(asset.id): \(error)")
+                print("Failed to load full image for asset \(currentAsset.id): \(error)")
                 await MainActor.run {
                     self.isLoading = false
                 }
             }
+        }
+    }
+}
+
+// UIKit wrapper for tvOS directional pad navigation using UITapGestureRecognizer
+struct SwipeGestureView: UIViewRepresentable {
+    let onSwipeLeft: () -> Void
+    let onSwipeRight: () -> Void
+    
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView()
+        view.backgroundColor = UIColor.clear
+        view.isUserInteractionEnabled = true
+        
+        print("SwipeGestureView: Creating UIView with user interaction enabled")
+        
+        // Try a simpler approach - just use basic tap gestures for all directions
+        let leftGesture = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleLeft))
+        leftGesture.allowedPressTypes = [NSNumber(value: UIPress.PressType.leftArrow.rawValue)]
+        view.addGestureRecognizer(leftGesture)
+        print("SwipeGestureView: Added LEFT gesture recognizer")
+        
+        let rightGesture = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleRight))
+        rightGesture.allowedPressTypes = [NSNumber(value: UIPress.PressType.rightArrow.rawValue)]
+        view.addGestureRecognizer(rightGesture)
+        print("SwipeGestureView: Added RIGHT gesture recognizer")
+        
+        // Add swipe gestures for touchpad
+        let leftSwipe = UISwipeGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleLeft))
+        leftSwipe.direction = .left
+        view.addGestureRecognizer(leftSwipe)
+        print("SwipeGestureView: Added LEFT swipe gesture recognizer")
+        
+        let rightSwipe = UISwipeGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleRight))
+        rightSwipe.direction = .right
+        view.addGestureRecognizer(rightSwipe)
+        print("SwipeGestureView: Added RIGHT swipe gesture recognizer")
+        
+        // Test tap gesture
+        let testTap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.testTap))
+        view.addGestureRecognizer(testTap)
+        print("SwipeGestureView: Added test tap gesture recognizer")
+        
+        print("SwipeGestureView: All gesture recognizers added for tvOS navigation")
+        
+        return view
+    }
+    
+    func updateUIView(_ uiView: UIView, context: Context) {
+        // No updates needed
+    }
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onSwipeLeft: onSwipeLeft, onSwipeRight: onSwipeRight)
+    }
+    
+    class Coordinator: NSObject {
+        let onSwipeLeft: () -> Void
+        let onSwipeRight: () -> Void
+        
+        init(onSwipeLeft: @escaping () -> Void, onSwipeRight: @escaping () -> Void) {
+            self.onSwipeLeft = onSwipeLeft
+            self.onSwipeRight = onSwipeRight
+            print("SwipeGestureView.Coordinator: Initialized with navigation callbacks")
+        }
+        
+        @objc func handleLeft(_ gesture: UIGestureRecognizer) {
+            print("SwipeGestureView: LEFT gesture detected (type: \(type(of: gesture))) - navigating to next photo")
+            onSwipeLeft()
+        }
+        
+        @objc func handleRight(_ gesture: UIGestureRecognizer) {
+            print("SwipeGestureView: RIGHT gesture detected (type: \(type(of: gesture))) - navigating to previous photo")
+            onSwipeRight()
+        }
+        
+        @objc func testTap(_ gesture: UITapGestureRecognizer) {
+            print("SwipeGestureView: Test tap detected - view is receiving touch events!")
         }
     }
 }
@@ -515,6 +686,18 @@ struct DateLocationOverlay: View {
                     .background(Color.black.opacity(0.6))
                     .cornerRadius(8)
             }
+            
+
+            // Location
+            if let name = asset.people.first?.name {
+                Text(name)
+                    .font(.caption)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.black.opacity(0.6))
+                    .cornerRadius(8)
+            }
         }
     }
     
@@ -554,69 +737,3 @@ struct DateLocationOverlay: View {
         return nil
     }
 }
-
-#Preview {
-    AssetGridView(immichService: ImmichService())
-}
-
-#Preview("FullScreenImageView") {
-    // Create a mock asset for preview
-    let mockAsset = ImmichAsset(
-        id: "preview-asset-1",
-        deviceAssetId: "preview-device-1",
-        deviceId: "preview-device",
-        ownerId: "preview-owner",
-        libraryId: nil,
-        type: .image,
-        originalPath: "/preview/image.jpg",
-        originalFileName: "preview-image.jpg",
-        originalMimeType: "image/jpeg",
-        resized: false,
-        thumbhash: nil,
-        fileModifiedAt: "2024-01-01T12:00:00.000Z",
-        fileCreatedAt: "2024-01-01T12:00:00.000Z",
-        localDateTime: "2024-01-01T12:00:00.000Z",
-        updatedAt: "2024-01-01T12:00:00.000Z",
-        isFavorite: false,
-        isArchived: false,
-        isOffline: false,
-        isTrashed: false,
-        checksum: "preview-checksum",
-        duration: nil,
-        hasMetadata: true,
-        livePhotoVideoId: nil,
-        people: [],
-        visibility: "VISIBLE",
-        duplicateId: nil,
-        exifInfo: ExifInfo(
-            make: "Apple",
-            model: "iPhone 15 Pro",
-            imageName: "IMG_1234",
-            exifImageWidth: 4032,
-            exifImageHeight: 3024,
-            dateTimeOriginal: "2024:01:01 12:00:00",
-            modifyDate: "2024:01:01 12:00:00",
-            lensModel: "iPhone 15 Pro back triple camera 6.86mm f/1.78",
-            fNumber: 1.78,
-            focalLength: 6.86,
-            iso: 100,
-            exposureTime: "1/120",
-            latitude: 37.7749,
-            longitude: -122.4194,
-            city: "San Francisco",
-            state: "California",
-            country: "United States",
-            timeZone: "America/Los_Angeles",
-            description: "A beautiful sunset",
-            fileSizeInByte: 5242880,
-            orientation: "1",
-            projectionType: nil,
-            rating: 5
-        )
-    )
-    
-    // Create a mock service that loads a free image
-    let mockService = ImmichService()
-    
-    return FullScreenImageView(asset: mockAsset, immichService: mockService)
-} 
