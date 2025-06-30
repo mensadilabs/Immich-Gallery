@@ -9,6 +9,7 @@ import SwiftUI
 
 struct AssetGridView: View {
     @ObservedObject var immichService: ImmichService
+    let albumId: String? // Optional album ID to filter assets
     @State private var assets: [ImmichAsset] = []
     @State private var isLoading = false
     @State private var errorMessage: String?
@@ -56,10 +57,10 @@ struct AssetGridView: View {
                     Image(systemName: "photo.on.rectangle.angled")
                         .font(.system(size: 60))
                         .foregroundColor(.gray)
-                    Text("No Photos Found")
+                    Text(albumId != nil ? "No Photos in Album" : "No Photos Found")
                         .font(.title)
                         .foregroundColor(.white)
-                    Text("Your photos will appear here")
+                    Text(albumId != nil ? "This album is empty" : "Your photos will appear here")
                         .foregroundColor(.gray)
                 }
             } else {
@@ -112,7 +113,7 @@ struct AssetGridView: View {
         
         Task {
             do {
-                let fetchedAssets = try await immichService.fetchAssets(page: 1, limit: 100)
+                let fetchedAssets = try await immichService.fetchAssets(page: 1, limit: 100, albumId: albumId)
                 await MainActor.run {
                     self.assets = fetchedAssets
                     self.isLoading = false

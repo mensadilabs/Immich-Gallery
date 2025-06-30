@@ -243,20 +243,6 @@ struct AlbumDetailView: View {
     let album: ImmichAlbum
     @ObservedObject var immichService: ImmichService
     @Environment(\.dismiss) private var dismiss
-    @State private var selectedAsset: ImmichAsset?
-    @State private var showingFullScreen = false
-    @State private var albumAssets: [ImmichAsset] = []
-    @State private var isLoadingAssets = false
-    @State private var assetError: String?
-    @FocusState private var focusedAssetId: String?
-    
-    private let columns = [
-        GridItem(.fixed(280), spacing: 20),
-        GridItem(.fixed(280), spacing: 20),
-        GridItem(.fixed(280), spacing: 20),
-        GridItem(.fixed(280), spacing: 20),
-        GridItem(.fixed(280), spacing: 20)
-    ]
     
     var body: some View {
         NavigationView {
@@ -264,63 +250,7 @@ struct AlbumDetailView: View {
                 Color.black
                     .ignoresSafeArea()
                 
-                if isLoadingAssets {
-                    ProgressView("Loading photos...")
-                        .foregroundColor(.white)
-                        .scaleEffect(1.5)
-                } else if let assetError = assetError {
-                    VStack {
-                        Image(systemName: "exclamationmark.triangle")
-                            .font(.system(size: 60))
-                            .foregroundColor(.orange)
-                        Text("Error Loading Photos")
-                            .font(.title)
-                            .foregroundColor(.white)
-                        Text(assetError)
-                            .foregroundColor(.gray)
-                            .multilineTextAlignment(.center)
-                            .padding()
-                        Button("Retry") {
-                            loadAlbumAssets()
-                        }
-                        .buttonStyle(.borderedProminent)
-                    }
-                } else if albumAssets.isEmpty {
-                    VStack {
-                        Image(systemName: "photo.on.rectangle.angled")
-                            .font(.system(size: 60))
-                            .foregroundColor(.gray)
-                        Text("No Photos in Album")
-                            .font(.title)
-                            .foregroundColor(.white)
-                        Text("This album is empty")
-                            .foregroundColor(.gray)
-                    }
-                } else {
-                    ScrollView {
-                        LazyVGrid(columns: columns, spacing: 20) {
-                            ForEach(albumAssets) { asset in
-                                UIKitFocusable(action: {
-                                    selectedAsset = asset
-                                    showingFullScreen = true
-                                }) {
-                                    AssetThumbnailView(
-                                        asset: asset,
-                                        immichService: immichService,
-                                        isFocused: focusedAssetId == asset.id
-                                    )
-                                }
-                                .frame(width: 280, height: 340)
-                                .focused($focusedAssetId, equals: asset.id)
-                                .scaleEffect(focusedAssetId == asset.id ? 1.05 : 1.0)
-                                .animation(.easeInOut(duration: 0.2), value: focusedAssetId)
-                            }
-                        }
-                        .padding(.horizontal)
-                        .padding(.top, 80)
-                        .padding(.bottom, 40)
-                    }
-                }
+                AssetGridView(immichService: immichService, albumId: album.id)
             }
             .navigationTitle(album.albumName)
             .toolbar {
@@ -330,48 +260,11 @@ struct AlbumDetailView: View {
                     }
                     .foregroundColor(.white)
                 }
-                
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Text("\(albumAssets.count) photos")
-                        .foregroundColor(.gray)
-                }
             }
-        }
-        .fullScreenCover(isPresented: $showingFullScreen) {
-            if let selectedAsset = selectedAsset {
-                FullScreenImageView(
-                    asset: selectedAsset,
-                    assets: albumAssets,
-                    currentIndex: albumAssets.firstIndex(of: selectedAsset) ?? 0,
-                    immichService: immichService
-                )
-            }
-        }
-        .onAppear {
-            loadAlbumAssets()
         }
     }
     
-    private func loadAlbumAssets() {
-        isLoadingAssets = true
-        assetError = nil
-        
-        Task {
-            do {
-                // Use search metadata to get album assets with people data
-                let assets = try await immichService.fetchAssets(albumId: album.id)
-                await MainActor.run {
-                    self.albumAssets = assets
-                    self.isLoadingAssets = false
-                }
-            } catch {
-                await MainActor.run {
-                    self.assetError = error.localizedDescription
-                    self.isLoadingAssets = false
-                }
-            }
-        }
-    }
+
 }
 
 #Preview {
