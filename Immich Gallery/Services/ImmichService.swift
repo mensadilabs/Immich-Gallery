@@ -104,7 +104,9 @@ class ImmichService: ObservableObject {
         let searchRequest = [
             "page": page,
             "size": limit,
-            "order": "desc"
+            "withPeople": true,
+            "order": "desc",
+            "withExif": true
         ] as [String : Any]
         
         do {

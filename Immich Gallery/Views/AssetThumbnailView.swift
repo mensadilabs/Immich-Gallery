@@ -1,0 +1,108 @@
+//
+//  AssetThumbnailView.swift
+//  Immich Gallery
+//
+//  Created by mensadi-labs on 2025-06-29.
+//
+
+import SwiftUI
+
+struct AssetThumbnailView: View {
+    let asset: ImmichAsset
+    @ObservedObject var immichService: ImmichService
+    @State private var image: UIImage?
+    @State private var isLoading = true
+    let isFocused: Bool
+    
+    var body: some View {
+        VStack(spacing: 8) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color.gray.opacity(0.3))
+                    .frame(width: 280, height: 280)
+                
+                if isLoading {
+                    ProgressView()
+                        .scaleEffect(1.2)
+                } else if let image = image {
+                    Image(uiImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 280, height: 280)
+                        .clipped()
+                        .cornerRadius(12)
+                } else {
+                    Image(systemName: "photo")
+                        .font(.system(size: 40))
+                        .foregroundColor(.gray)
+                }
+                
+                // Video indicator
+                if asset.type == .video {
+                    VStack {
+                        HStack {
+                            Spacer()
+                            Image(systemName: "play.circle.fill")
+                                .font(.title2)
+                                .foregroundColor(.white)
+                                .background(Color.black.opacity(0.5))
+                                .clipShape(Circle())
+                                .padding(8)
+                        }
+                        Spacer()
+                    }
+                }
+            }
+            .shadow(color: .black.opacity(isFocused ? 0.5 : 0), radius: 15, y: 10)
+            
+            // Asset info
+            VStack(alignment: .leading, spacing: 4) {
+                Text(asset.originalFileName)
+                    .font(.caption)
+                    .foregroundColor(isFocused ? .white : .gray)
+                    .lineLimit(1)
+                
+                Text(formatDate(asset.fileCreatedAt))
+                    .font(.caption2)
+                    .foregroundColor(.gray)
+            }
+            .frame(maxWidth: 280, alignment: .leading)
+            .padding(.horizontal, 4)
+        }
+        .frame(width: 280)
+        .onAppear {
+            loadThumbnail()
+        }
+    }
+    
+    private func loadThumbnail() {
+        Task {
+            do {
+                let thumbnail = try await immichService.loadImage(from: asset, size: "preview")
+                await MainActor.run {
+                    self.image = thumbnail
+                    self.isLoading = false
+                }
+            } catch {
+                print("Failed to load thumbnail for asset \(asset.id): \(error)")
+                await MainActor.run {
+                    self.isLoading = false
+                }
+            }
+        }
+    }
+    
+    private func formatDate(_ dateString: String) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
+        formatter.timeZone = TimeZone(abbreviation: "UTC")
+        
+        if let date = formatter.date(from: dateString) {
+            let displayFormatter = DateFormatter()
+            displayFormatter.dateStyle = .medium
+            return displayFormatter.string(from: date)
+        }
+        
+        return dateString
+    }
+} 
