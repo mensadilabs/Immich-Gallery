@@ -297,6 +297,29 @@ class ImmichService: ObservableObject {
         return UIImage(data: data)
     }
     
+    // MARK: - Video Loading
+    func loadVideoURL(from asset: ImmichAsset) async throws -> URL {
+        guard let accessToken = accessToken else {
+            throw ImmichError.notAuthenticated
+        }
+        
+        let urlString = "\(baseURL)/api/assets/\(asset.id)/original"
+        guard let url = URL(string: urlString) else {
+            throw ImmichError.invalidURL
+        }
+        
+        // Create a URL with authentication headers for video streaming
+        var components = URLComponents(url: url, resolvingAgainstBaseURL: false)!
+        components.scheme = "https"
+        
+        // Add authorization header to the URL for video streaming
+        var request = URLRequest(url: components.url!)
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/octet-stream", forHTTPHeaderField: "Accept")
+        
+        return request.url!
+    }
+    
     // MARK: - Preview Image Loading
     private func loadPreviewImage() async throws -> UIImage? {
         // Load a beautiful high-resolution image from Unsplash

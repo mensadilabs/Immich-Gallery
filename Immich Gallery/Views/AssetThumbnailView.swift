@@ -50,6 +50,21 @@ struct AssetThumbnailView: View {
                                 .padding(8)
                         }
                         Spacer()
+                        
+                        // Video duration
+                        if let duration = asset.duration, !duration.isEmpty {
+                            HStack {
+                                Spacer()
+                                Text(formatVideoDuration(duration))
+                                    .font(.caption2)
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(Color.black.opacity(0.7))
+                                    .cornerRadius(4)
+                                    .padding(8)
+                            }
+                        }
                     }
                 }
             }
@@ -104,5 +119,25 @@ struct AssetThumbnailView: View {
         }
         
         return dateString
+    }
+    
+    private func formatVideoDuration(_ durationString: String) -> String {
+        // Parse duration string like "PT1M30S" (ISO 8601 duration format)
+        let duration = durationString.replacingOccurrences(of: "PT", with: "")
+        
+        var minutes = 0
+        var seconds = 0
+        
+        if let minuteRange = duration.range(of: "M") {
+            let minuteString = String(duration[..<minuteRange.lowerBound])
+            minutes = Int(minuteString) ?? 0
+        }
+        
+        if let secondRange = duration.range(of: "S") {
+            let secondString = String(duration[..<secondRange.lowerBound])
+            seconds = Int(secondString) ?? 0
+        }
+        
+        return String(format: "%d:%02d", minutes, seconds)
     }
 } 

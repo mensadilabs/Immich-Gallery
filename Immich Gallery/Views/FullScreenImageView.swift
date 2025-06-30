@@ -34,34 +34,40 @@ struct FullScreenImageView: View {
             Color.black
                 .ignoresSafeArea()
             
-            if isLoading {
-                ProgressView("Loading...")
-                    .foregroundColor(.white)
-                    .scaleEffect(1.5)
-            } else if let image = image {
-                Image(uiImage: image)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .ignoresSafeArea()
-                    .overlay(
-                        // Date and location overlay in bottom right
-                        VStack {
-                            Spacer()
-                            HStack {
-                                Spacer()
-                                DateLocationOverlay(asset: currentAsset)
-                                    .padding(.trailing, 20)
-                                    .padding(.bottom, 20)
-                            }
-                        }
-                    )
+            if currentAsset.type == .video {
+                // Use VideoPlayerView for videos
+                VideoPlayerView(asset: currentAsset, immichService: immichService)
             } else {
-                VStack {
-                    Image(systemName: "photo")
-                        .font(.system(size: 60))
-                        .foregroundColor(.gray)
-                    Text("Failed to load image")
-                        .foregroundColor(.gray)
+                // Use image view for photos
+                if isLoading {
+                    ProgressView("Loading...")
+                        .foregroundColor(.white)
+                        .scaleEffect(1.5)
+                } else if let image = image {
+                    Image(uiImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .ignoresSafeArea()
+                        .overlay(
+                            // Date and location overlay in bottom right
+                            VStack {
+                                Spacer()
+                                HStack {
+                                    Spacer()
+                                    DateLocationOverlay(asset: currentAsset)
+                                        .padding(.trailing, 20)
+                                        .padding(.bottom, 20)
+                                }
+                            }
+                        )
+                } else {
+                    VStack {
+                        Image(systemName: "photo")
+                            .font(.system(size: 60))
+                            .foregroundColor(.gray)
+                        Text("Failed to load image")
+                            .foregroundColor(.gray)
+                    }
                 }
             }
             
@@ -141,7 +147,9 @@ struct FullScreenImageView: View {
             }
         }
         .onAppear {
-            loadFullImage()
+            if currentAsset.type != .video {
+                loadFullImage()
+            }
             if assets.count > 1 {
                 showingSwipeHint = true
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
@@ -191,9 +199,12 @@ struct FullScreenImageView: View {
         print("FullScreenImageView: Navigating to asset ID: \(assets[index].id)")
         currentAssetIndex = index
         currentAsset = assets[index]
-        image = nil
-        isLoading = true
-        loadFullImage()
+        
+        if currentAsset.type != .video {
+            image = nil
+            isLoading = true
+            loadFullImage()
+        }
     }
     
     private func loadFullImage() {
