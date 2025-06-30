@@ -353,20 +353,15 @@ struct AlbumDetailView: View {
     }
     
     private func loadAlbumAssets() {
-        // Use existing assets if available, otherwise fetch them
-        if !album.assets.isEmpty {
-            albumAssets = album.assets
-            return
-        }
-        
         isLoadingAssets = true
         assetError = nil
         
         Task {
             do {
-                let albumInfo = try await immichService.getAlbumInfo(albumId: album.id, withoutAssets: false)
+                // Use search metadata to get album assets with people data
+                let assets = try await immichService.fetchAssets(albumId: album.id)
                 await MainActor.run {
-                    self.albumAssets = albumInfo.assets
+                    self.albumAssets = assets
                     self.isLoadingAssets = false
                 }
             } catch {

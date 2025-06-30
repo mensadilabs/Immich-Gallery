@@ -85,7 +85,7 @@ class ImmichService: ObservableObject {
     }
     
     // MARK: - Assets
-    func fetchAssets(page: Int = 1, limit: Int = 50) async throws -> [ImmichAsset] {
+    func fetchAssets(page: Int = 1, limit: Int = 50, albumId: String? = nil) async throws -> [ImmichAsset] {
         guard let accessToken = accessToken else {
             throw ImmichError.notAuthenticated
         }
@@ -101,13 +101,18 @@ class ImmichService: ObservableObject {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
         // Create search request body
-        let searchRequest = [
+        var searchRequest: [String: Any] = [
             "page": page,
             "size": limit,
             "withPeople": true,
             "order": "desc",
             "withExif": true
-        ] as [String : Any]
+        ]
+        
+        // Add album filter if provided
+        if let albumId = albumId {
+            searchRequest["albumIds"] = [albumId]
+        }
         
         do {
             request.httpBody = try JSONSerialization.data(withJSONObject: searchRequest)
@@ -152,31 +157,6 @@ class ImmichService: ObservableObject {
         return albums
     }
     
-    // MARK: - Album Assets
-    func fetchAlbumAssets(albumId: String) async throws -> [ImmichAsset] {
-        guard let accessToken = accessToken else {
-            throw ImmichError.notAuthenticated
-        }
-        
-        let urlString = "\(baseURL)/api/albums/\(albumId)/assets"
-        guard let url = URL(string: urlString) else {
-            throw ImmichError.invalidURL
-        }
-        
-        var request = URLRequest(url: url)
-        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
-        
-        let (data, response) = try await session.data(for: request)
-        
-        guard let httpResponse = response as? HTTPURLResponse,
-              httpResponse.statusCode == 200 else {
-            throw ImmichError.serverError
-        }
-        
-        let assets = try JSONDecoder().decode([ImmichAsset].self, from: data)
-        return assets
-    }
     
     // MARK: - Get Album Info
     func getAlbumInfo(albumId: String, withoutAssets: Bool = false) async throws -> ImmichAlbum {
@@ -189,6 +169,8 @@ class ImmichService: ObservableObject {
             urlString += "?withoutAssets=true"
         }
         
+        print("🔍 Fetching album info from: \(urlString)")
+        
         guard let url = URL(string: urlString) else {
             throw ImmichError.invalidURL
         }
@@ -199,12 +181,27 @@ class ImmichService: ObservableObject {
         
         let (data, response) = try await session.data(for: request)
         
-        guard let httpResponse = response as? HTTPURLResponse,
-              httpResponse.statusCode == 200 else {
+        guard let httpResponse = response as? HTTPURLResponse else {
             throw ImmichError.serverError
         }
         
+        print("📡 Album API Response Status: \(httpResponse.statusCode)")
+        
+        if httpResponse.statusCode != 200 {
+            if let responseString = String(data: data, encoding: .utf8) {
+                print("❌ Album API Error Response: \(responseString)")
+            }
+            throw ImmichError.serverError
+        }
+        
+        // Log the raw JSON response
+        if let responseString = String(data: data, encoding: .utf8) {
+            print("📄 Raw Album API Response:")
+            print(responseString)
+        }
+        
         let album = try JSONDecoder().decode(ImmichAlbum.self, from: data)
+        print("✅ Successfully decoded album: \(album.albumName) with \(album.assets.count) assets")
         return album
     }
     
