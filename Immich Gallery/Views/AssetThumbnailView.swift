@@ -15,75 +15,77 @@ struct AssetThumbnailView: View {
     let isFocused: Bool
     
     var body: some View {
-        VStack(spacing: 8) {
-            ZStack(alignment: .bottomTrailing) {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.gray.opacity(0.3))
+        ZStack(alignment: .bottomTrailing) {
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.gray.opacity(0.3))
+                .frame(width: 320, height: 320)
+            
+            if isLoading {
+                ProgressView()
+                    .scaleEffect(1.2)
+            } else if let image = image {
+                Image(uiImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
                     .frame(width: 320, height: 320)
-                
-                if isLoading {
-                    ProgressView()
-                        .scaleEffect(1.2)
-                } else if let image = image {
-                    Image(uiImage: image)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: 320, height: 320)
-                        .clipped()
-                        .cornerRadius(12)
-                } else {
-                    Image(systemName: "photo")
-                        .font(.system(size: 40))
-                        .foregroundColor(.gray)
+                    .clipped()
+                    .cornerRadius(12)
+            } else {
+                Image(systemName: "photo")
+                    .font(.system(size: 40))
+                    .foregroundColor(.gray)
+            }
+            
+                        // Video indicator
+            if asset.type == .video {
+                // Play button at top right
+                VStack {
+                    HStack {
+                        Spacer()
+                        Image(systemName: "play.circle.fill")
+                            .font(.system(size: 40))
+                            .foregroundColor(.white)
+                            .background(Color.black.opacity(0.6))
+                            .clipShape(Circle())
+                            .shadow(color: .black.opacity(0.5), radius: 5, x: 0, y: 2)
+                            .padding(8)
+                    }
+                    Spacer()
                 }
                 
-                // Video indicator
-                if asset.type == .video {
+                // Video duration at bottom right
+                if let duration = asset.duration, !duration.isEmpty {
                     VStack {
                         HStack {
-                            Spacer()
-                            Image(systemName: "play.circle.fill")
-                                .font(.title2)
+                            Text(formatVideoDuration(duration))
+                                .font(.caption2)
                                 .foregroundColor(.white)
-                                .background(Color.black.opacity(0.5))
-                                .clipShape(Circle())
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Color.black.opacity(0.7))
+                                .cornerRadius(4)
                                 .padding(8)
-                        }
-                        Spacer()
-                        
-                        // Video duration
-                        if let duration = asset.duration, !duration.isEmpty {
-                            HStack {
-                                Spacer()
-                                Text(formatVideoDuration(duration))
-                                    .font(.caption2)
-                                    .foregroundColor(.white)
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 4)
-                                    .background(Color.black.opacity(0.7))
-                                    .cornerRadius(4)
-                                    .padding(8)
-                            }
+                            Spacer()
                         }
                     }
                 }
-                
-                // Text overlay at bottom right
-                VStack(alignment: .trailing, spacing: 2) {                    
-                    Text(formatDate(asset.fileCreatedAt))
-                        .font(.caption2)
-                        .foregroundColor(.white.opacity(0.8))
-                }
-                .padding(8)
-                .background(
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(Color.black.opacity(0.4))
-                )
-                .padding(8)
             }
-            .shadow(color: .black.opacity(isFocused ? 0.5 : 0), radius: 15, y: 10)
+            
+            // Text overlay at bottom right
+            VStack(alignment: .trailing, spacing: 2) {                    
+                Text(formatDate(asset.fileCreatedAt))
+                    .font(.caption2)
+                    .foregroundColor(.white.opacity(0.8))
+            }
+            .padding(8)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.black.opacity(0.4))
+            )
+            .padding(8)
         }
-        .frame(width: 320)
+        .frame(width: 320, height: 320)
+        .shadow(color: .black.opacity(isFocused ? 0.5 : 0), radius: 15, y: 10)
         .onAppear {
             loadThumbnail()
         }

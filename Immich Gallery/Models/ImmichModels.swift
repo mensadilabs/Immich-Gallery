@@ -199,6 +199,13 @@ struct AlbumsResponse: Codable {
     let albums: [ImmichAlbum]
 }
 
+// MARK: - Search Result Model
+struct SearchResult: Codable {
+    let assets: [ImmichAsset]
+    let total: Int
+    let nextPage: String?
+}
+
 struct AuthResponse: Codable {
     let accessToken: String
     let userId: String

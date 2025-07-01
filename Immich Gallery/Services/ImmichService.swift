@@ -85,7 +85,7 @@ class ImmichService: ObservableObject {
     }
     
     // MARK: - Assets
-    func fetchAssets(page: Int = 1, limit: Int = 50, albumId: String? = nil) async throws -> [ImmichAsset] {
+    func fetchAssets(page: Int = 1, limit: Int = 50, albumId: String? = nil) async throws -> SearchResult {
         guard let accessToken = accessToken else {
             throw ImmichError.notAuthenticated
         }
@@ -128,7 +128,11 @@ class ImmichService: ObservableObject {
         }
         
         let searchResponse = try JSONDecoder().decode(SearchResponse.self, from: data)
-        return searchResponse.assets.items
+        return SearchResult(
+            assets: searchResponse.assets.items,
+            total: searchResponse.assets.total,
+            nextPage: searchResponse.assets.nextPage
+        )
     }
     
     // MARK: - Albums
