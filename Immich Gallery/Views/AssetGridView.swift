@@ -18,18 +18,26 @@ struct AssetGridView: View {
     @FocusState private var focusedAssetId: String?
     
     private let columns = [
-        GridItem(.fixed(280), spacing: 20),
-        GridItem(.fixed(280), spacing: 20),
-        GridItem(.fixed(280), spacing: 20),
-        GridItem(.fixed(280), spacing: 20),
-        GridItem(.fixed(280), spacing: 20)
+        GridItem(.fixed(300), spacing: 50),
+        GridItem(.fixed(300), spacing: 50),
+        GridItem(.fixed(300), spacing: 50),
+        GridItem(.fixed(300), spacing: 50),
+        GridItem(.fixed(300), spacing: 50),
     ]
     
     var body: some View {
         ZStack {
             // Background
-            Color.black
-                .ignoresSafeArea()
+            LinearGradient(
+                gradient: Gradient(colors: [
+                    Color.blue.opacity(0.3),
+                    Color.purple.opacity(0.2),
+                    Color.gray.opacity(0.4)
+                ]),
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
             
             if isLoading {
                 ProgressView("Loading photos...")
@@ -65,7 +73,7 @@ struct AssetGridView: View {
                 }
             } else {
                 ScrollView {
-                    LazyVGrid(columns: columns, spacing: 20) {
+                    LazyVGrid(columns: columns, spacing: 50) {
                         ForEach(assets) { asset in
                             UIKitFocusable(action: {
                                 print("Asset selected: \(asset.id)")
@@ -78,7 +86,7 @@ struct AssetGridView: View {
                                     isFocused: focusedAssetId == asset.id
                                 )
                             }
-                            .frame(width: 280, height: 340)
+                            .frame(width: 300, height: 360)
                             .focused($focusedAssetId, equals: asset.id)
                             .scaleEffect(focusedAssetId == asset.id ? 1.05 : 1.0)
                             .animation(.easeInOut(duration: 0.2), value: focusedAssetId)

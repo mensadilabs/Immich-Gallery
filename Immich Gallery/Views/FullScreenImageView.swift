@@ -15,7 +15,7 @@ struct FullScreenImageView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var image: UIImage?
     @State private var isLoading = true
-    @State private var showingExifInfo = false
+
     @State private var currentAssetIndex: Int
     @State private var currentAsset: ImmichAsset
     @State private var showingSwipeHint = false
@@ -55,8 +55,8 @@ struct FullScreenImageView: View {
                                 HStack {
                                     Spacer()
                                     DateLocationOverlay(asset: currentAsset)
-                                        .padding(.trailing, 20)
-                                        .padding(.bottom, 20)
+                                        .padding(.trailing, 5)
+                                        .padding(.bottom, 5)
                                 }
                             }
                         )
@@ -71,48 +71,9 @@ struct FullScreenImageView: View {
                 }
             }
             
-            // Top controls
-            VStack {
-                HStack {
-                    Spacer()
-                    
-                    // EXIF Info toggle button
-                    Button(action: {
-                        showingExifInfo.toggle()
-                    }) {
-                        HStack {
-                            Image(systemName: showingExifInfo ? "info.circle.fill" : "info.circle")
-                                .font(.title2)
-                            Text("Info")
-                                .font(.headline)
-                        }
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
-                        .background(Color.black.opacity(0.7))
-                        .cornerRadius(20)
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                    .focusable()
-                    .onTapGesture {
-                        showingExifInfo.toggle()
-                    }
-                    
-                }
-                .padding()
-                
-                Spacer()
-            }
+
             
-            // EXIF Info overlay
-            if showingExifInfo {
-                VStack {
-                    Spacer()
-                    
-                    ExifInfoOverlay(asset: currentAsset)
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
-                }
-            }
+
             
 
             
@@ -159,10 +120,11 @@ struct FullScreenImageView: View {
                 }
             }
         }
+        .contentShape(Rectangle())
         .onTapGesture {
             dismiss()
         }
-        .animation(.easeInOut(duration: 0.3), value: showingExifInfo)
+
         .overlay(
             SwipeGestureView(
                 onSwipeLeft: {

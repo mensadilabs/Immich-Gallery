@@ -16,10 +16,10 @@ struct AssetThumbnailView: View {
     
     var body: some View {
         VStack(spacing: 8) {
-            ZStack {
+            ZStack(alignment: .bottomTrailing) {
                 RoundedRectangle(cornerRadius: 12)
                     .fill(Color.gray.opacity(0.3))
-                    .frame(width: 280, height: 280)
+                    .frame(width: 320, height: 320)
                 
                 if isLoading {
                     ProgressView()
@@ -28,7 +28,7 @@ struct AssetThumbnailView: View {
                     Image(uiImage: image)
                         .resizable()
                         .aspectRatio(contentMode: .fill)
-                        .frame(width: 280, height: 280)
+                        .frame(width: 320, height: 320)
                         .clipped()
                         .cornerRadius(12)
                 } else {
@@ -67,24 +67,23 @@ struct AssetThumbnailView: View {
                         }
                     }
                 }
+                
+                // Text overlay at bottom right
+                VStack(alignment: .trailing, spacing: 2) {                    
+                    Text(formatDate(asset.fileCreatedAt))
+                        .font(.caption2)
+                        .foregroundColor(.white.opacity(0.8))
+                }
+                .padding(8)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color.black.opacity(0.4))
+                )
+                .padding(8)
             }
             .shadow(color: .black.opacity(isFocused ? 0.5 : 0), radius: 15, y: 10)
-            
-            // Asset info
-            VStack(alignment: .leading, spacing: 4) {
-                Text(asset.originalFileName)
-                    .font(.caption)
-                    .foregroundColor(isFocused ? .white : .gray)
-                    .lineLimit(1)
-                
-                Text(formatDate(asset.fileCreatedAt))
-                    .font(.caption2)
-                    .foregroundColor(.gray)
-            }
-            .frame(maxWidth: 280, alignment: .leading)
-            .padding(.horizontal, 4)
         }
-        .frame(width: 280)
+        .frame(width: 320)
         .onAppear {
             loadThumbnail()
         }

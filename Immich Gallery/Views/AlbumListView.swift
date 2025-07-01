@@ -25,8 +25,16 @@ struct AlbumListView: View {
     var body: some View {
         ZStack {
             // Background
-            Color.black
-                .ignoresSafeArea()
+            LinearGradient(
+                gradient: Gradient(colors: [
+                    Color.blue.opacity(0.3),
+                    Color.purple.opacity(0.2),
+                    Color.gray.opacity(0.4)
+                ]),
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
             
             if isLoading {
                 ProgressView("Loading albums...")
@@ -62,7 +70,7 @@ struct AlbumListView: View {
                 }
             } else {
                 ScrollView {
-                    LazyVGrid(columns: columns, spacing: 5) {
+                    LazyVGrid(columns: columns, spacing: 30) {
                         ForEach(albums) { album in
                             UIKitFocusable(action: {
                                 selectedAlbum = album
@@ -74,7 +82,7 @@ struct AlbumListView: View {
                                     isFocused: focusedAlbumId == album.id
                                 )
                             }
-                            .frame(width: 490, height: 300)
+                            .frame(width: 490, height: 400)
                             .focused($focusedAlbumId, equals: album.id)
                             .scaleEffect(focusedAlbumId == album.id ? 1.02 : 1.0)
                             .animation(.easeInOut(duration: 0.2), value: focusedAlbumId)
@@ -129,59 +137,61 @@ struct AlbumRowView: View {
     let isFocused: Bool
     
     var body: some View {
-        HStack(spacing: 16) {
-            // Album thumbnail
+        VStack(spacing: 0) {
+            // Album thumbnail at top
             ZStack {
-                RoundedRectangle(cornerRadius: 8)
+                RoundedRectangle(cornerRadius: 12)
                     .fill(Color.gray.opacity(0.3))
-                    .frame(width: 150, height: 150)
+                    .frame(width: 470, height: 280)
                 
                 if let thumbnailImage = thumbnailImage {
                     Image(uiImage: thumbnailImage)
                         .resizable()
                         .aspectRatio(contentMode: .fill)
-                        .frame(width: 150, height: 150)
+                        .frame(width: 470, height: 280)
                         .clipped()
-                        .cornerRadius(8)
+                        .cornerRadius(12)
                 } else {
                     Image(systemName: "folder")
-                        .font(.system(size: 30))
+                        .font(.system(size: 50))
                         .foregroundColor(.gray)
                 }
             }
             
-            // Album info
-            VStack(alignment: .leading, spacing: 4) {
-                Text(album.albumName)
-                    .font(.body)
-                    .fontWeight(.semibold)
-                    .foregroundColor(isFocused ? .white : .gray)
-                    .lineLimit(1)
-                    
-                
-                
-                    Text(album.description ?? "")
-                        .font(.caption)
-                        .foregroundColor(.gray)
-                        .lineLimit(1)
-                
-                
-                Text("\(album.assetCount) photos")
-                    .font(.caption)
-                    .foregroundColor(.blue)
-                
-                if let createdAt = formatDate(album.createdAt) {
-                    Text("Created \(createdAt)")
-                        .font(.caption2)
-                        .foregroundColor(.gray)
+            // Album info at bottom
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(album.albumName)
+                            .font(.title3)
+                            .fontWeight(.semibold)
+                            .foregroundColor(isFocused ? .white : .gray)
+                            .lineLimit(1)
+                        
+                        
+                            Text(album.description ?? "Album")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                                .lineLimit(2)
+                        
+                        
+                        HStack(spacing: 12) {
+                            Text("\(album.assetCount) photos")
+                                .font(.caption)
+                                .foregroundColor(.blue)
+                            
+                            if let createdAt = formatDate(album.createdAt) {
+                                Text("Created \(createdAt)")
+                                    .font(.caption2)
+                                    .foregroundColor(.gray)
+                            }
+                        }
+                    }
                 }
             }
-            
-            
-            Image(systemName: "chevron.right")
-                .foregroundColor(isFocused ? .white : .gray)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
         }
-        .padding()
         .background(isFocused ? Color.white.opacity(0.1) : Color.gray.opacity(0.1))
         .cornerRadius(12)
         .shadow(color: .black.opacity(isFocused ? 0.4 : 0), radius: 15, y: 5)
@@ -253,14 +263,6 @@ struct AlbumDetailView: View {
                 AssetGridView(immichService: immichService, albumId: album.id)
             }
             .navigationTitle(album.albumName)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Close") {
-                        dismiss()
-                    }
-                    .foregroundColor(.white)
-                }
-            }
         }
     }
     
