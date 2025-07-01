@@ -9,6 +9,7 @@ import SwiftUI
 
 struct AssetGridView: View {
     @ObservedObject var immichService: ImmichService
+    @ObservedObject private var thumbnailCache = ThumbnailCache.shared
     let albumId: String? // Optional album ID to filter assets
     @State private var assets: [ImmichAsset] = []
     @State private var isLoading = false
@@ -76,8 +77,27 @@ struct AssetGridView: View {
                         .foregroundColor(.gray)
                 }
             } else {
-                ScrollView {
-                    LazyVGrid(columns: columns, spacing: 50) {
+                VStack {
+                    // Cache status indicator
+                    HStack {
+                        Spacer()
+                        HStack(spacing: 8) {
+                            Image(systemName: "photo.stack")
+                                .foregroundColor(.blue)
+                            Text("\(thumbnailCache.memoryCacheCount) cached")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Color.black.opacity(0.3))
+                        .cornerRadius(8)
+                        .padding(.top, 20)
+                        .padding(.trailing, 20)
+                    }
+                    
+                    ScrollView {
+                        LazyVGrid(columns: columns, spacing: 50) {
                         ForEach(assets) { asset in
                             UIKitFocusable(action: {
                                 print("Asset selected: \(asset.id)")
@@ -119,9 +139,10 @@ struct AssetGridView: View {
                         }
                     }
                     .padding(.horizontal)
-                    .padding(.top, 80)
+                    .padding(.top, 20)
                     .padding(.bottom, 40)
                 }
+            }
             }
         }
         .fullScreenCover(isPresented: $showingFullScreen) {
@@ -161,6 +182,9 @@ struct AssetGridView: View {
                     // If there's no nextPage, we've reached the end
                     self.hasMoreAssets = searchResult.nextPage != nil
                 }
+                
+                // Preload thumbnails for better performance
+                ThumbnailCache.shared.preloadThumbnails(for: searchResult.assets)
             } catch {
                 await MainActor.run {
                     self.errorMessage = error.localizedDescription
@@ -210,6 +234,9 @@ struct AssetGridView: View {
                     }
                     self.isLoadingMore = false
                 }
+                
+                // Preload thumbnails for newly loaded assets
+                ThumbnailCache.shared.preloadThumbnails(for: searchResult.assets)
             } catch {
                 await MainActor.run {
                     print("Failed to load more assets: \(error)")

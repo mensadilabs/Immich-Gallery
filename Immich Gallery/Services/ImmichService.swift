@@ -245,26 +245,29 @@ class ImmichService: ObservableObject {
     
     // MARK: - Image Loading
     func loadImage(from asset: ImmichAsset, size: String = "thumbnail") async throws -> UIImage? {
-        guard let accessToken = accessToken else {
-            throw ImmichError.notAuthenticated
+        return try await ThumbnailCache.shared.getThumbnail(for: asset.id, size: size) {
+            // Load from server closure
+            guard let accessToken = self.accessToken else {
+                throw ImmichError.notAuthenticated
+            }
+            
+            let urlString = "\(self.baseURL)/api/assets/\(asset.id)/thumbnail?format=webp&size=\(size)"
+            guard let url = URL(string: urlString) else {
+                throw ImmichError.invalidURL
+            }
+            
+            var request = URLRequest(url: url)
+            request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+            
+            let (data, response) = try await self.session.data(for: request)
+            
+            guard let httpResponse = response as? HTTPURLResponse,
+                  httpResponse.statusCode == 200 else {
+                throw ImmichError.serverError
+            }
+            
+            return UIImage(data: data)
         }
-        
-        let urlString = "\(baseURL)/api/assets/\(asset.id)/thumbnail?format=webp&size=\(size)"
-        guard let url = URL(string: urlString) else {
-            throw ImmichError.invalidURL
-        }
-        
-        var request = URLRequest(url: url)
-        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-        
-        let (data, response) = try await session.data(for: request)
-        
-        guard let httpResponse = response as? HTTPURLResponse,
-              httpResponse.statusCode == 200 else {
-            throw ImmichError.serverError
-        }
-        
-        return UIImage(data: data)
     }
     
     func loadFullImage(from asset: ImmichAsset) async throws -> UIImage? {

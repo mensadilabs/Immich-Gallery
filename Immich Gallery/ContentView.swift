@@ -56,6 +56,13 @@ struct ContentView: View {
                                 Text("Albums")
                             }
                             .tag(1)
+                        
+                        CacheManagementView()
+                            .tabItem {
+                                Image(systemName: "gear")
+                                Text("Settings")
+                            }
+                            .tag(2)
                     }
                     // .accentColor(.blue)
                 }
