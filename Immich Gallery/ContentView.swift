@@ -7,9 +7,14 @@
 
 import SwiftUI
 
+extension Notification.Name {
+    static let userSwitched = Notification.Name("userSwitched")
+}
+
 struct ContentView: View {
     @StateObject private var immichService = ImmichService()
     @State private var selectedTab = 0
+    @State private var refreshTrigger = UUID()
     
     var body: some View {
         NavigationView {
@@ -45,6 +50,7 @@ struct ContentView: View {
                             }
                             .tag(2)
                     }
+                    .id(refreshTrigger) // Force refresh when user switches
                     // .accentColor(.blue)
                 }
             }
@@ -52,6 +58,10 @@ struct ContentView: View {
             .navigationBarHidden(true)
         }
         .navigationViewStyle(StackNavigationViewStyle())
+        .onReceive(NotificationCenter.default.publisher(for: .userSwitched)) { _ in
+            // Refresh the app by generating a new UUID
+            refreshTrigger = UUID()
+        }
     }
 }
 

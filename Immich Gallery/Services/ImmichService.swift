@@ -191,6 +191,32 @@ class ImmichService: ObservableObject {
         print("✅ Sign out completed")
     }
     
+    func switchUser(serverURL: String, accessToken: String, email: String, name: String) {
+        print("🔄 Switching to user: \(email)")
+        
+        // Update service properties
+        self.baseURL = serverURL
+        self.accessToken = accessToken
+        self.isAuthenticated = true
+        
+        // Create temporary user object
+        self.currentUser = Owner(
+            id: "",
+            email: email,
+            name: name,
+            profileImagePath: "",
+            profileChangedAt: "",
+            avatarColor: "primary"
+        )
+        
+        // Update UserDefaults
+        UserDefaults.standard.set(serverURL, forKey: "immich_server_url")
+        UserDefaults.standard.set(accessToken, forKey: "immich_access_token")
+        UserDefaults.standard.set(email, forKey: "immich_user_email")
+        
+        print("✅ User switched to: \(email)")
+    }
+    
     // MARK: - Assets
     func fetchAssets(page: Int = 1, limit: Int = 50, albumId: String? = nil) async throws -> SearchResult {
         guard let accessToken = accessToken else {
