@@ -2,7 +2,7 @@
 //  Immich_GalleryUITestsLaunchTests.swift
 //  Immich GalleryUITests
 //
-//  Created by mensadi-labs on 2025-06-29.
+//  Created by mensadi-labs Kumar on 2025-06-29.
 //
 
 import XCTest
