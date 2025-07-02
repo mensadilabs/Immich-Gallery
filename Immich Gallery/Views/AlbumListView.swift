@@ -260,7 +260,7 @@ struct AlbumDetailView: View {
                 Color.black
                     .ignoresSafeArea()
                 
-                AssetGridView(immichService: immichService, albumId: album.id)
+                AssetGridView(immichService: immichService, albumId: album.id, personId: nil)
             }
             .navigationTitle(album.albumName)
         }

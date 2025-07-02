@@ -108,7 +108,6 @@ struct Person: Codable, Identifiable {
     let isFavorite: Bool?
     let updatedAt: String?
     let color: String?
-    let faces: [Face]
 }
 
 struct Face: Codable, Identifiable {
@@ -121,6 +120,8 @@ struct Face: Codable, Identifiable {
     let imageHeight: Int
     let sourceType: String?
 }
+
+
 
 struct Stack: Codable {
     let id: String

@@ -11,6 +11,7 @@ struct AssetGridView: View {
     @ObservedObject var immichService: ImmichService
     @ObservedObject private var thumbnailCache = ThumbnailCache.shared
     let albumId: String? // Optional album ID to filter assets
+    let personId: String? // Optional person ID to filter assets
     @State private var assets: [ImmichAsset] = []
     @State private var isLoading = false
     @State private var isLoadingMore = false
@@ -70,10 +71,10 @@ struct AssetGridView: View {
                     Image(systemName: "photo.on.rectangle.angled")
                         .font(.system(size: 60))
                         .foregroundColor(.gray)
-                    Text(albumId != nil ? "No Photos in Album" : "No Photos Found")
+                    Text(getEmptyStateTitle())
                         .font(.title)
                         .foregroundColor(.white)
-                    Text(albumId != nil ? "This album is empty" : "Your photos will appear here")
+                    Text(getEmptyStateMessage())
                         .foregroundColor(.gray)
                 }
             } else {
@@ -158,7 +159,7 @@ struct AssetGridView: View {
         
         Task {
             do {
-                let searchResult = try await immichService.fetchAssets(page: 1, limit: 100, albumId: albumId)
+                let searchResult = try await immichService.fetchAssets(page: 1, limit: 100, albumId: albumId, personId: personId)
                 await MainActor.run {
                     self.assets = searchResult.assets
                     self.nextPage = searchResult.nextPage
@@ -204,7 +205,7 @@ struct AssetGridView: View {
             do {
                 // Extract page number from nextPage string
                 let pageNumber = extractPageFromNextPage(nextPage!)
-                let searchResult = try await immichService.fetchAssets(page: pageNumber, limit: 100, albumId: albumId)
+                let searchResult = try await immichService.fetchAssets(page: pageNumber, limit: 100, albumId: albumId, personId: personId)
                 
                 await MainActor.run {
                     if !searchResult.assets.isEmpty {
@@ -247,6 +248,26 @@ struct AssetGridView: View {
         
         // Default fallback - calculate based on current assets count
         return (assets.count / 100) + 2
+    }
+    
+    private func getEmptyStateTitle() -> String {
+        if personId != nil {
+            return "No Photos of Person"
+        } else if albumId != nil {
+            return "No Photos in Album"
+        } else {
+            return "No Photos Found"
+        }
+    }
+    
+    private func getEmptyStateMessage() -> String {
+        if personId != nil {
+            return "This person has no photos"
+        } else if albumId != nil {
+            return "This album is empty"
+        } else {
+            return "Your photos will appear here"
+        }
     }
 }
 

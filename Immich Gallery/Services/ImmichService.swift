@@ -218,7 +218,7 @@ class ImmichService: ObservableObject {
     }
     
     // MARK: - Assets
-    func fetchAssets(page: Int = 1, limit: Int = 50, albumId: String? = nil) async throws -> SearchResult {
+    func fetchAssets(page: Int = 1, limit: Int = 50, albumId: String? = nil, personId: String? = nil) async throws -> SearchResult {
         guard let accessToken = accessToken else {
             throw ImmichError.notAuthenticated
         }
@@ -245,6 +245,11 @@ class ImmichService: ObservableObject {
         // Add album filter if provided
         if let albumId = albumId {
             searchRequest["albumIds"] = [albumId]
+        }
+        
+        // Add person filter if provided
+        if let personId = personId {
+            searchRequest["personIds"] = [personId]
         }
         
         do {
@@ -459,10 +464,6 @@ class ImmichService: ObservableObject {
     }
     
     func loadFullImage(from asset: ImmichAsset) async throws -> UIImage? {
-        // Handle preview assets by loading a free image from Unsplash
-        if asset.id.hasPrefix("preview-") {
-            return try await loadPreviewImage()
-        }
         
         guard let accessToken = accessToken else {
             throw ImmichError.notAuthenticated
@@ -514,17 +515,23 @@ class ImmichService: ObservableObject {
         
         return request.url!
     }
+   
     
-    // MARK: - Preview Image Loading
-    private func loadPreviewImage() async throws -> UIImage? {
-        // Load a beautiful high-resolution image from Unsplash
-        let unsplashURL = "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1920&h=1080&fit=crop&auto=format"
+    // MARK: - Person Thumbnail Loading
+    func loadPersonThumbnail(personId: String) async throws -> UIImage? {
+        guard let accessToken = accessToken else {
+            throw ImmichError.notAuthenticated
+        }
         
-        guard let url = URL(string: unsplashURL) else {
+        let urlString = "\(baseURL)/api/people/\(personId)/thumbnail"
+        guard let url = URL(string: urlString) else {
             throw ImmichError.invalidURL
         }
         
-        let request = URLRequest(url: url)
+        var request = URLRequest(url: url)
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/octet-stream", forHTTPHeaderField: "Accept")
+        
         let (data, response) = try await session.data(for: request)
         
         guard let httpResponse = response as? HTTPURLResponse,
@@ -533,6 +540,43 @@ class ImmichService: ObservableObject {
         }
         
         return UIImage(data: data)
+    }
+    
+    // MARK: - People
+    func getAllPeople(page: Int = 1, size: Int = 100, withHidden: Bool = false) async throws -> [Person] {
+        guard let accessToken = accessToken else {
+            throw ImmichError.notAuthenticated
+        }
+        let urlString = "\(baseURL)/api/people?page=\(page)&size=\(size)&withHidden=\(withHidden)"
+        print("🔍 Fetching people from: \(urlString)")
+        guard let url = URL(string: urlString) else {
+            throw ImmichError.invalidURL
+        }
+        var request = URLRequest(url: url)
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        let (data, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw ImmichError.serverError
+        }
+        print("📡 People API Response Status: \(httpResponse.statusCode)")
+        if httpResponse.statusCode != 200 {
+            if let responseString = String(data: data, encoding: .utf8) {
+                print("❌ People API Error Response: \(responseString)")
+            }
+            throw ImmichError.serverError
+        }
+        // Log the raw JSON response for debugging
+        if let responseString = String(data: data, encoding: .utf8) {
+            print("📄 Raw People API Response:")
+            print(responseString)
+        }
+        struct PeopleResponse: Codable {
+            let people: [Person]
+        }
+        let peopleResponse = try JSONDecoder().decode(PeopleResponse.self, from: data)
+        print("✅ Successfully decoded \(peopleResponse.people.count) people")
+        return peopleResponse.people
     }
 }
 

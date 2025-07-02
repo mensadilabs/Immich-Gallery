@@ -1,0 +1,266 @@
+//
+//  PeopleGridView.swift
+//  Immich Gallery
+//
+//  Created by mensadi-labs on 2025-06-29.
+//
+
+import SwiftUI
+
+struct PeopleGridView: View {
+    @ObservedObject var immichService: ImmichService
+    @State private var people: [Person] = []
+    @State private var isLoading = false
+    @State private var errorMessage: String?
+    @State private var selectedPerson: Person?
+    @State private var showingPersonPhotos = false
+    @FocusState private var focusedPersonId: String?
+    
+    private let columns = [
+        GridItem(.fixed(300), spacing: 50),
+        GridItem(.fixed(300), spacing: 50),
+        GridItem(.fixed(300), spacing: 50),
+        GridItem(.fixed(300), spacing: 50),
+        GridItem(.fixed(300), spacing: 50),
+    ]
+    
+    var body: some View {
+        ZStack {
+            // Background
+            LinearGradient(
+                gradient: Gradient(colors: [
+                    Color.blue.opacity(0.3),
+                    Color.purple.opacity(0.2),
+                    Color.gray.opacity(0.4)
+                ]),
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+            
+            if isLoading {
+                ProgressView("Loading people...")
+                    .foregroundColor(.white)
+                    .scaleEffect(1.5)
+            } else if let errorMessage = errorMessage {
+                VStack {
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.system(size: 60))
+                        .foregroundColor(.orange)
+                    Text("Error")
+                        .font(.title)
+                        .foregroundColor(.white)
+                    Text(errorMessage)
+                        .foregroundColor(.gray)
+                        .multilineTextAlignment(.center)
+                        .padding()
+                    Button("Retry") {
+                        loadPeople()
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+            } else if people.isEmpty {
+                VStack {
+                    Image(systemName: "person.crop.circle")
+                        .font(.system(size: 60))
+                        .foregroundColor(.gray)
+                    Text("No People Found")
+                        .font(.title)
+                        .foregroundColor(.white)
+                    Text("People detected in your photos will appear here")
+                        .foregroundColor(.gray)
+                }
+            } else {
+                ScrollView {
+                    LazyVGrid(columns: columns, spacing: 50) {
+                        ForEach(people) { person in
+                            UIKitFocusable(action: {
+                                print("Person selected: \(person.id)")
+                                selectedPerson = person
+                                showingPersonPhotos = true
+                            }) {
+                                PersonThumbnailView(
+                                    person: person,
+                                    immichService: immichService,
+                                    isFocused: focusedPersonId == person.id
+                                )
+                            }
+                            .frame(width: 300, height: 360)
+                            .focused($focusedPersonId, equals: person.id)
+                            .scaleEffect(focusedPersonId == person.id ? 1.05 : 1.0)
+                            .animation(.easeInOut(duration: 0.2), value: focusedPersonId)
+                        }
+                    }
+                    .padding(.horizontal)
+                    .padding(.top, 20)
+                    .padding(.bottom, 40)
+                }
+            }
+        }
+        .fullScreenCover(isPresented: $showingPersonPhotos) {
+            if let selectedPerson = selectedPerson {
+                PersonPhotosView(person: selectedPerson, immichService: immichService)
+            }
+        }
+        .onAppear {
+            if people.isEmpty {
+                loadPeople()
+            }
+        }
+    }
+    
+    private func loadPeople() {
+        guard immichService.isAuthenticated else {
+            errorMessage = "Not authenticated. Please check your credentials."
+            return
+        }
+        
+        isLoading = true
+        errorMessage = nil
+        
+        Task {
+            do {
+                let fetchedPeople = try await immichService.getAllPeople()
+                await MainActor.run {
+                    self.people = fetchedPeople
+                    self.isLoading = false
+                }
+            } catch {
+                await MainActor.run {
+                    self.errorMessage = error.localizedDescription
+                    self.isLoading = false
+                }
+            }
+        }
+    }
+}
+
+struct PersonThumbnailView: View {
+    let person: Person
+    @ObservedObject var immichService: ImmichService
+    @State private var image: UIImage?
+    @State private var isLoading = true
+    let isFocused: Bool
+    
+    var body: some View {
+        VStack(spacing: 8) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color.gray.opacity(0.3))
+                    .frame(width: 300, height: 300)
+                
+                if isLoading {
+                    ProgressView()
+                        .scaleEffect(1.2)
+                } else if let image = image {
+                    Image(uiImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 300, height: 300)
+                        .clipped()
+                        .cornerRadius(12)
+                } else {
+                    Image(systemName: "person.crop.circle")
+                        .font(.system(size: 40))
+                        .foregroundColor(.gray)
+                }
+            }
+            .shadow(color: .black.opacity(isFocused ? 0.5 : 0), radius: 15, y: 10)
+            
+            // Person info
+            VStack(alignment: .leading, spacing: 4) {
+                Text(person.name.isEmpty ? "Unknown Person" : person.name)
+                    .font(.headline)
+                    .foregroundColor(isFocused ? .white : .gray)
+                    .lineLimit(1)
+                
+                if let birthDate = person.birthDate {
+                    Text("Born: \(formatDate(birthDate))")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                }
+                
+                Text("Tap to view photos")
+                    .font(.caption)
+                    .foregroundColor(.gray)
+                
+                if let isFavorite = person.isFavorite, isFavorite {
+                    HStack {
+                        Image(systemName: "heart.fill")
+                            .foregroundColor(.red)
+                        Text("Favorite")
+                            .font(.caption)
+                            .foregroundColor(.red)
+                    }
+                }
+            }
+            .frame(maxWidth: 300, alignment: .leading)
+            .padding(.horizontal, 4)
+        }
+        .frame(width: 300)
+        .onAppear {
+            loadPersonThumbnail()
+        }
+    }
+    
+    private func loadPersonThumbnail() {
+        Task {
+            do {
+                let thumbnail = try await immichService.loadPersonThumbnail(personId: person.id)
+                await MainActor.run {
+                    self.image = thumbnail
+                    self.isLoading = false
+                }
+            } catch {
+                print("Failed to load person thumbnail for person \(person.id): \(error)")
+                await MainActor.run {
+                    self.isLoading = false
+                }
+            }
+        }
+    }
+    
+    private func formatDate(_ dateString: String) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        
+        if let date = formatter.date(from: dateString) {
+            let displayFormatter = DateFormatter()
+            displayFormatter.dateStyle = .medium
+            return displayFormatter.string(from: date)
+        }
+        
+        return dateString
+    }
+}
+
+struct PersonPhotosView: View {
+    let person: Person
+    @ObservedObject var immichService: ImmichService
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        NavigationView {
+            ZStack {
+                Color.black
+                    .ignoresSafeArea()
+                
+                // Use existing AssetGridView with personIds filter
+                AssetGridView(immichService: immichService, albumId: nil, personId: person.id)
+            }
+            .navigationTitle(person.name.isEmpty ? "Unknown Person" : person.name)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                    .foregroundColor(.white)
+                }
+            }
+        }
+    }
+}
+
+#Preview {
+    PeopleGridView(immichService: ImmichService())
+} 

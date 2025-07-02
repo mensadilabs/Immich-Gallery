@@ -29,7 +29,7 @@ struct ContentView: View {
                 } else {
                     // Main app interface
                     TabView(selection: $selectedTab) {
-                        AssetGridView(immichService: immichService, albumId: nil)
+                        AssetGridView(immichService: immichService, albumId: nil, personId: nil)
                             .tabItem {
                                 Image(systemName: "photo.on.rectangle")
                                 Text("Photos")
@@ -43,12 +43,19 @@ struct ContentView: View {
                             }
                             .tag(1)
                         
+                        PeopleGridView(immichService: immichService)
+                            .tabItem {
+                                Image(systemName: "person.crop.circle")
+                                Text("People")
+                            }
+                            .tag(2)
+                        
                         CacheManagementView(immichService: immichService)
                             .tabItem {
                                 Image(systemName: "gear")
                                 Text("Settings")
                             }
-                            .tag(2)
+                            .tag(3)
                     }
                     .id(refreshTrigger) // Force refresh when user switches
                     // .accentColor(.blue)
