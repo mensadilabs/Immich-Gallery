@@ -19,27 +19,8 @@ struct ContentView: View {
                     .ignoresSafeArea()
                 
                 if !immichService.isAuthenticated {
-                    // Authentication loading screen
-                    VStack(spacing: 20) {
-                        Image(systemName: "photo.on.rectangle.angled")
-                            .font(.system(size: 80))
-                            .foregroundColor(.blue)
-                        
-                        Text("Immich Gallery")
-                            .font(.largeTitle)
-                            .fontWeight(.bold)
-                            .foregroundColor(.white)
-                        
-                        ProgressView("Connecting to Immich...")
-                            .foregroundColor(.gray)
-                            .scaleEffect(1.2)
-                        
-                        Text("Please check your server configuration")
-                            .font(.caption)
-                            .foregroundColor(.gray)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal)
-                    }
+                    // Show sign-in view
+                    SignInView(immichService: immichService)
                 } else {
                     // Main app interface
                     TabView(selection: $selectedTab) {
@@ -57,7 +38,7 @@ struct ContentView: View {
                             }
                             .tag(1)
                         
-                        CacheManagementView()
+                        CacheManagementView(immichService: immichService)
                             .tabItem {
                                 Image(systemName: "gear")
                                 Text("Settings")

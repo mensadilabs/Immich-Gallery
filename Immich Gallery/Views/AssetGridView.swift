@@ -77,24 +77,8 @@ struct AssetGridView: View {
                         .foregroundColor(.gray)
                 }
             } else {
-                VStack {
-                    // Cache status indicator
-                    HStack {
-                        Spacer()
-                        HStack(spacing: 8) {
-                            Image(systemName: "photo.stack")
-                                .foregroundColor(.blue)
-                            Text("\(thumbnailCache.memoryCacheCount) cached")
-                                .font(.caption)
-                                .foregroundColor(.gray)
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(Color.black.opacity(0.3))
-                        .cornerRadius(8)
-                        .padding(.top, 20)
-                        .padding(.trailing, 20)
-                    }
+
+                   
                     
                     ScrollView {
                         LazyVGrid(columns: columns, spacing: 50) {
@@ -141,7 +125,7 @@ struct AssetGridView: View {
                     .padding(.horizontal)
                     .padding(.top, 20)
                     .padding(.bottom, 40)
-                }
+                
             }
             }
         }

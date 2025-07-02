@@ -137,6 +137,39 @@ struct Owner: Codable {
     let avatarColor: String
 }
 
+// MARK: - User Model for /api/users/me endpoint
+struct User: Codable {
+    let id: String
+    let email: String
+    let name: String
+    let profileImagePath: String
+    let profileChangedAt: String
+    let avatarColor: String
+    let createdAt: String
+    let updatedAt: String
+    let deletedAt: String?
+    let isAdmin: Bool
+    let shouldChangePassword: Bool
+    let status: String
+    let storageLabel: String?
+    let oauthId: String?
+    let quotaSizeInBytes: Int64?
+    let quotaUsageInBytes: Int64?
+    let license: UserLicense?
+    
+    enum CodingKeys: String, CodingKey {
+        case id, email, name, profileImagePath, profileChangedAt, avatarColor
+        case createdAt, updatedAt, deletedAt, isAdmin, shouldChangePassword, status
+        case storageLabel, oauthId, quotaSizeInBytes, quotaUsageInBytes, license
+    }
+}
+
+struct UserLicense: Codable {
+    let activatedAt: String?
+    let activationKey: String?
+    let licenseKey: String?
+}
+
 // MARK: - Album Models
 struct ImmichAlbum: Codable, Identifiable {
     let id: String

@@ -10,10 +10,7 @@ import UIKit
 
 class ImmichService: ObservableObject {
     // MARK: - Configuration
-    private let baseURL = "***REMOVED***" // Replace with your Immich server URL
-    private let email = "***REMOVED***" // Replace with your email
-    private let password = "***REMOVED***" // Replace with your password
-    
+    @Published var baseURL: String = ""
     @Published var isAuthenticated = false
     @Published var accessToken: String?
     @Published var currentUser: Owner?
@@ -21,12 +18,78 @@ class ImmichService: ObservableObject {
     private let session = URLSession.shared
     
     init() {
-        authenticate()
+        print("🚀 ImmichService initializing...")
+        // Check if we have saved credentials
+        loadSavedCredentials()
+    }
+    
+    // MARK: - Credential Management
+    private func loadSavedCredentials() {
+        print("🔍 Loading saved credentials...")
+        
+        if let savedURL = UserDefaults.standard.string(forKey: "immich_server_url"),
+           let savedToken = UserDefaults.standard.string(forKey: "immich_access_token") {
+            print("✅ Found saved credentials:")
+            print("   Server URL: \(savedURL)")
+            print("   Token: \(String(savedToken.prefix(20)))...")
+            
+            baseURL = savedURL
+            accessToken = savedToken
+            isAuthenticated = true
+            
+            // Try to validate the token by making a test request
+            validateToken()
+        } else {
+            print("❌ No saved credentials found")
+            print("   Saved URL: \(UserDefaults.standard.string(forKey: "immich_server_url") ?? "nil")")
+            print("   Saved Token: \(UserDefaults.standard.string(forKey: "immich_access_token") != nil ? "exists" : "nil")")
+        }
+    }
+    
+    private func saveCredentials(serverURL: String, token: String) {
+        print("💾 Saving credentials...")
+        print("   Server URL: \(serverURL)")
+        print("   Token: \(String(token.prefix(20)))...")
+        UserDefaults.standard.set(serverURL, forKey: "immich_server_url")
+        UserDefaults.standard.set(token, forKey: "immich_access_token")
+        print("✅ Credentials saved to UserDefaults")
+    }
+    
+    private func clearCredentials() {
+        print("🧹 Clearing saved credentials...")
+        UserDefaults.standard.removeObject(forKey: "immich_server_url")
+        UserDefaults.standard.removeObject(forKey: "immich_access_token")
+        UserDefaults.standard.removeObject(forKey: "immich_user_email")
+        print("✅ Credentials cleared from UserDefaults")
+    }
+    
+    private func validateToken() {
+        print("🔐 Starting token validation...")
+        // Make a simple API call to validate the token and fetch user details
+        Task {
+            // Add a small delay to ensure the app is fully initialized
+            try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second delay
+            
+            do {
+                print("📡 Making API call to validate token...")
+                // Try to fetch user info to validate token and get user details
+                try await fetchUserInfo()
+                print("✅ Token validation successful")
+            } catch {
+                print("❌ Token validation failed: \(error)")
+                print("   Error details: \(error.localizedDescription)")
+                // Token is invalid, clear credentials
+                DispatchQueue.main.async {
+                    print("🚪 Signing out due to token validation failure")
+                    self.signOut()
+                }
+            }
+        }
     }
     
     // MARK: - Authentication
-    func authenticate() {
-        let loginURL = URL(string: "\(baseURL)/api/auth/login")!
+    func signIn(serverURL: String, email: String, password: String, completion: @escaping (Bool, String?) -> Void) {
+        let loginURL = URL(string: "\(serverURL)/api/auth/login")!
         var request = URLRequest(url: loginURL)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -39,49 +102,93 @@ class ImmichService: ObservableObject {
         do {
             request.httpBody = try JSONSerialization.data(withJSONObject: loginData)
         } catch {
-            print("Error creating login request: \(error)")
+            completion(false, "Error creating login request: \(error.localizedDescription)")
             return
         }
         
         session.dataTask(with: request) { [weak self] data, response, error in
             DispatchQueue.main.async {
                 if let error = error {
-                    print("Authentication error: \(error)")
+                    completion(false, "Network error: \(error.localizedDescription)")
+                    return
+                }
+                
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    completion(false, "Invalid response from server")
                     return
                 }
                 
                 guard let data = data else {
-                    print("No data received")
+                    completion(false, "No data received from server")
+                    return
+                }
+                
+                print("🔐 Authentication response status: \(httpResponse.statusCode)")
+                
+                if httpResponse.statusCode != 200 && httpResponse.statusCode != 201 {
+                    // Try to parse error message
+                    if let errorResponse = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                       let message = errorResponse["message"] as? String {
+                        print("❌ Authentication error: \(message)")
+                        completion(false, message)
+                    } else {
+                        print("❌ Authentication failed with status: \(httpResponse.statusCode)")
+                        completion(false, "Authentication failed (Status: \(httpResponse.statusCode))")
+                    }
                     return
                 }
                 
                 do {
                     let authResponse = try JSONDecoder().decode(AuthResponse.self, from: data)
+                    print("✅ Authentication successful for user: \(authResponse.userEmail)")
+                    self?.baseURL = serverURL
                     self?.accessToken = authResponse.accessToken
                     self?.isAuthenticated = true
                     
-                    // Parse name into first and last name
-                    let nameComponents = authResponse.name.components(separatedBy: "-")
-                    let firstName = nameComponents.first ?? authResponse.name
-                    let lastName = nameComponents.count > 1 ? nameComponents.dropFirst().joined(separator: "-") : ""
+                    // Save credentials
+                    self?.saveCredentials(serverURL: serverURL, token: authResponse.accessToken)
+                    UserDefaults.standard.set(email, forKey: "immich_user_email")
                     
-                    self?.currentUser = Owner(
-                        id: authResponse.userId,
-                        email: authResponse.userEmail,
-                        name: authResponse.name,
-                        profileImagePath: authResponse.profileImagePath,
-                        profileChangedAt: "",
-                        avatarColor: "primary"
-                    )
-                    print("Authentication successful")
-                } catch {
-                    print("Error decoding auth response: \(error)")
-                    if let responseString = String(data: data, encoding: .utf8) {
-                        print("Response: \(responseString)")
+                    // Fetch user details from the server
+                    Task {
+                        do {
+                            try await self?.fetchUserInfo()
+                            print("✅ User details fetched successfully")
+                        } catch {
+                            print("⚠️ Failed to fetch user details: \(error)")
+                            // Create a basic user object from auth response as fallback
+                            self?.currentUser = Owner(
+                                id: authResponse.userId,
+                                email: authResponse.userEmail,
+                                name: authResponse.name,
+                                profileImagePath: authResponse.profileImagePath,
+                                profileChangedAt: "",
+                                avatarColor: "primary"
+                            )
+                        }
                     }
+                    
+                    print("Authentication successful")
+                    completion(true, nil)
+                } catch {
+                    print("❌ Error decoding auth response: \(error)")
+                    if let responseString = String(data: data, encoding: .utf8) {
+                        print("📄 Raw response data: \(responseString)")
+                    }
+                    completion(false, "Invalid response format from server")
                 }
             }
         }.resume()
+    }
+    
+    func signOut() {
+        print("🚪 Signing out user...")
+        clearCredentials()
+        baseURL = ""
+        accessToken = nil
+        currentUser = nil
+        isAuthenticated = false
+        print("✅ Sign out completed")
     }
     
     // MARK: - Assets
@@ -133,6 +240,61 @@ class ImmichService: ObservableObject {
             total: searchResponse.assets.total,
             nextPage: searchResponse.assets.nextPage
         )
+    }
+    
+    // MARK: - User Info
+    func fetchUserInfo() async throws {
+        guard let accessToken = accessToken else {
+            print("❌ No access token available")
+            throw ImmichError.notAuthenticated
+        }
+        
+        let urlString = "\(baseURL)/api/users/me"
+        print("📡 Fetching user info from: \(urlString)")
+        
+        guard let url = URL(string: urlString) else {
+            print("❌ Invalid URL: \(urlString)")
+            throw ImmichError.invalidURL
+        }
+        
+        var request = URLRequest(url: url)
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        
+        print("🔑 Making request with token: \(String(accessToken.prefix(20)))...")
+        
+        let (data, response) = try await session.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            print("❌ Invalid HTTP response")
+            throw ImmichError.serverError
+        }
+        
+        print("📊 User info response status: \(httpResponse.statusCode)")
+        
+        guard httpResponse.statusCode == 200 else {
+            print("❌ User info request failed with status: \(httpResponse.statusCode)")
+            if let responseString = String(data: data, encoding: .utf8) {
+                print("📄 Error response: \(responseString)")
+            }
+            throw ImmichError.serverError
+        }
+        
+        let user = try JSONDecoder().decode(User.self, from: data)
+        
+        // Convert User to Owner for compatibility
+        let owner = Owner(
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            profileImagePath: user.profileImagePath,
+            profileChangedAt: user.profileChangedAt,
+            avatarColor: user.avatarColor
+        )
+        
+        DispatchQueue.main.async {
+            self.currentUser = owner
+        }
     }
     
     // MARK: - Albums
