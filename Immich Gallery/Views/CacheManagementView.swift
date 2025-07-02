@@ -81,9 +81,9 @@ struct CacheManagementView: View {
                                 }
                                 .padding()
                                 .frame(maxWidth: .infinity)
-                                .background(Color.red.opacity(0.1))
+                                .background(Color.orange.opacity(0.1))
                                 .cornerRadius(12)
-                            }
+                            }.buttonStyle(.plain)
                         }
                         
                         // Cache Management Section
@@ -106,7 +106,7 @@ struct CacheManagementView: View {
                                 .frame(maxWidth: .infinity)
                                 .background(Color.red.opacity(0.1))
                                 .cornerRadius(12)
-                            }
+                            }.buttonStyle(.plain)
                             
                             Button(action: {
                                 thumbnailCache.clearExpiredCache()
@@ -121,7 +121,7 @@ struct CacheManagementView: View {
                                 .frame(maxWidth: .infinity)
                                 .background(Color.orange.opacity(0.1))
                                 .cornerRadius(12)
-                            }
+                            }.buttonStyle(.plain)
                         }
                         
                         // Cache Information Section
