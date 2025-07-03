@@ -1,3 +1,9 @@
+## Note 1: As you can probabaly tell, AI was used in writing this. However, it is not "vibe coded". I have checked every line and edited things manually to get this working. As it is my side project and pretty much an experiment, I didn't want to spend time typing every line. 
+
+## Note 2: There are places where UIKit is used instead of SwiftUI, it is because I couldn't figure out how to handle navigations in TvOs using swiftUI and could only find UIKit documentation on Apple dev docs. If you have suggestions, would apprecitae some links to read. 
+
+## Note 3: Some of the readme maybe outdated. I change code and I forget to update README. 
+
 # Immich Gallery for Apple TV
 
 A native Apple TV app for browsing your Immich photo library with a beautiful, TV-optimized interface.
