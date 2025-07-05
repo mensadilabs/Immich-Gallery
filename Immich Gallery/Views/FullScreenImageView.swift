@@ -110,58 +110,16 @@ struct FullScreenImageView: View {
             }
         }
         .id(refreshToggle)
-        .focusable(true)
-        .focused($isFocused)
-        .onAppear {
-            if currentAsset.type != .video {
-                loadFullImage()
-            }
-            if assets.count > 1 {
-                showingSwipeHint = true
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                    withAnimation(.easeOut(duration: 0.5)) {
-                        showingSwipeHint = false
-                    }
-                }
-            }
-            isFocused = true
-        }
-        .onChange(of: isFocused) { focused in
-            print("FullScreenImageView focus: \(focused)")
-        }
-        .onMoveCommand { direction in
-            // Only handle swipe gestures and button presses for non-video content
-            guard currentAsset.type != .video else { return }
-            switch direction {
-            case .left:
-                print("FullScreenImageView: Left navigation triggered (current: \(currentAssetIndex), total: \(assets.count))")
-                if currentAssetIndex > 0 {
-                    withAnimation(.easeInOut(duration: 0.3)) {
-                        navigateToImage(at: currentAssetIndex - 1)
-                    }
-                } else {
-                    print("FullScreenImageView: Already at first photo, cannot navigate further")
-                }
-            case .right:
-                print("FullScreenImageView: Right navigation triggered (current: \(currentAssetIndex), total: \(assets.count))")
-                if currentAssetIndex < assets.count - 1 {
-                    withAnimation(.easeInOut(duration: 0.3)) {
-                        navigateToImage(at: currentAssetIndex + 1)
-                    }
-                } else {
-                    print("FullScreenImageView: Already at last photo, cannot navigate further")
-                }
-            case .up, .down:
-                // Ignore up/down swipes
-                break
-            @unknown default:
-                print("FullScreenImageView: Unknown direction")
-            }
-        }
-        .contentShape(Rectangle())
-        .onTapGesture {
-            dismiss()
-        }
+        .modifier(ContentAwareModifier(
+            isVideo: currentAsset.type == .video,
+            currentAssetIndex: currentAssetIndex,
+            assets: assets,
+            isFocused: $isFocused,
+            showingSwipeHint: $showingSwipeHint,
+            onNavigate: navigateToImage,
+            onDismiss: { dismiss() },
+            onLoadImage: loadFullImage
+        ))
     }
     
     private func navigateToImage(at index: Int) {
@@ -199,4 +157,74 @@ struct FullScreenImageView: View {
             }
         }
     }
-} 
+}
+
+// MARK: - Content Aware Modifier
+struct ContentAwareModifier: ViewModifier {
+    let isVideo: Bool
+    let currentAssetIndex: Int
+    let assets: [ImmichAsset]
+    @FocusState.Binding var isFocused: Bool
+    @Binding var showingSwipeHint: Bool
+    let onNavigate: (Int) -> Void
+    let onDismiss: () -> Void
+    let onLoadImage: () -> Void
+    
+    func body(content: Content) -> some View {
+        if isVideo {
+            // For videos: no focus, no gestures, no interference
+            content
+        } else {
+            // For images: full navigation support
+            content
+                .focusable(true)
+                .focused($isFocused)
+                .onAppear {
+                    onLoadImage()
+                    if assets.count > 1 {
+                        showingSwipeHint = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                            withAnimation(.easeOut(duration: 0.5)) {
+                                showingSwipeHint = false
+                            }
+                        }
+                    }
+                    isFocused = true
+                }
+                .onChange(of: isFocused) { focused in
+                    print("FullScreenImageView focus: \(focused)")
+                }
+                .onMoveCommand { direction in
+                    switch direction {
+                    case .left:
+                        print("FullScreenImageView: Left navigation triggered (current: \(currentAssetIndex), total: \(assets.count))")
+                        if currentAssetIndex > 0 {
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                onNavigate(currentAssetIndex - 1)
+                            }
+                        } else {
+                            print("FullScreenImageView: Already at first photo, cannot navigate further")
+                        }
+                    case .right:
+                        print("FullScreenImageView: Right navigation triggered (current: \(currentAssetIndex), total: \(assets.count))")
+                        if currentAssetIndex < assets.count - 1 {
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                onNavigate(currentAssetIndex + 1)
+                            }
+                        } else {
+                            print("FullScreenImageView: Already at last photo, cannot navigate further")
+                        }
+                    case .up, .down:
+                        // Ignore up/down swipes
+                        break
+                    @unknown default:
+                        print("FullScreenImageView: Unknown direction")
+                    }
+                }
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    onDismiss()
+                }
+        }
+    }
+}

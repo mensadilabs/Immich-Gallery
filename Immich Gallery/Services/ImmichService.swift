@@ -499,41 +499,26 @@ class ImmichService: ObservableObject {
             throw ImmichError.notAuthenticated
         }
         
-        let urlString = "\(baseURL)/api/assets/\(asset.id)/original"
+        // Use the dedicated video playback endpoint for streaming
+        let urlString = "\(baseURL)/api/assets/\(asset.id)/video/playback"
         guard let url = URL(string: urlString) else {
             throw ImmichError.invalidURL
         }
         
-        // Create a URL with authentication headers for video streaming
-        var components = URLComponents(url: url, resolvingAgainstBaseURL: false)!
-        components.scheme = "https"
-        
-        // Create authenticated request
-        var request = URLRequest(url: url)
-        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-        request.setValue("application/octet-stream", forHTTPHeaderField: "Accept")
-        
-        // Download video to temporary file
-        let (data, response) = try await session.data(for: request)
-        
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw ImmichError.serverError
+        // Return the direct URL - we'll handle authentication in the VideoPlayerView
+        return url
+    }
+    
+    // Helper method to get authentication headers for video requests
+    func getVideoAuthHeaders() -> [String: String] {
+        guard let accessToken = accessToken else {
+            return [:]
         }
         
-        if httpResponse.statusCode != 200 {
-            if let responseString = String(data: data, encoding: .utf8) {
-                print("Video download error response: \(responseString)")
-            }
-            throw ImmichError.serverError
-        }
-        
-        // Save to temporary file
-        let tempDir = FileManager.default.temporaryDirectory
-        let tempFile = tempDir.appendingPathComponent("\(asset.id).mp4")
-        
-        try data.write(to: tempFile)
-        
-        return tempFile
+        return [
+            "Authorization": "Bearer \(accessToken)",
+            "Accept": "application/octet-stream"
+        ]
     }
    
     
