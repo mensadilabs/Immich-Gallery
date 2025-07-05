@@ -19,6 +19,8 @@ struct FullScreenImageView: View {
     @State private var currentAssetIndex: Int
     @State private var currentAsset: ImmichAsset
     @State private var showingSwipeHint = false
+    @FocusState private var isFocused: Bool
+    @State private var refreshToggle = false
     
     init(asset: ImmichAsset, assets: [ImmichAsset], currentIndex: Int, immichService: ImmichService) {
         self.asset = asset
@@ -107,6 +109,9 @@ struct FullScreenImageView: View {
                 .transition(.opacity)
             }
         }
+        .id(refreshToggle)
+        .focusable(true)
+        .focused($isFocused)
         .onAppear {
             if currentAsset.type != .video {
                 loadFullImage()
@@ -119,54 +124,56 @@ struct FullScreenImageView: View {
                     }
                 }
             }
+            isFocused = true
+        }
+        .onChange(of: isFocused) { focused in
+            print("FullScreenImageView focus: \(focused)")
+        }
+        .onMoveCommand { direction in
+            // Only handle swipe gestures and button presses for non-video content
+            guard currentAsset.type != .video else { return }
+            switch direction {
+            case .left:
+                print("FullScreenImageView: Left navigation triggered (current: \(currentAssetIndex), total: \(assets.count))")
+                if currentAssetIndex > 0 {
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        navigateToImage(at: currentAssetIndex - 1)
+                    }
+                } else {
+                    print("FullScreenImageView: Already at first photo, cannot navigate further")
+                }
+            case .right:
+                print("FullScreenImageView: Right navigation triggered (current: \(currentAssetIndex), total: \(assets.count))")
+                if currentAssetIndex < assets.count - 1 {
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        navigateToImage(at: currentAssetIndex + 1)
+                    }
+                } else {
+                    print("FullScreenImageView: Already at last photo, cannot navigate further")
+                }
+            case .up, .down:
+                // Ignore up/down swipes
+                break
+            @unknown default:
+                print("FullScreenImageView: Unknown direction")
+            }
         }
         .contentShape(Rectangle())
         .onTapGesture {
             dismiss()
         }
-
-        .overlay(
-            // Only show swipe gestures for non-video content. Doesn't work for videos.
-            Group {
-                if currentAsset.type != .video {
-                    SwipeGestureView(
-                        onSwipeLeft: {
-                            print("FullScreenImageView: Left navigation triggered (current: \(currentAssetIndex), total: \(assets.count))")
-                            if currentAssetIndex > 0 {
-                                withAnimation(.easeInOut(duration: 0.3)) {
-                                    navigateToImage(at: currentAssetIndex - 1)
-                                }
-                            } else {
-                                print("FullScreenImageView: Already at first photo, cannot navigate further")
-                            }
-                        },
-                        onSwipeRight: {
-                            print("FullScreenImageView: Right navigation triggered (current: \(currentAssetIndex), total: \(assets.count))")
-                            if currentAssetIndex < assets.count - 1 {
-                                withAnimation(.easeInOut(duration: 0.3)) {
-                                    navigateToImage(at: currentAssetIndex + 1)
-                                }
-                            } else {
-                                print("FullScreenImageView: Already at last photo, cannot navigate further")
-                            }
-                        }
-                    )
-                }
-            }
-        )
     }
     
     private func navigateToImage(at index: Int) {
         print("FullScreenImageView: Attempting to navigate to image at index \(index) (total assets: \(assets.count))")
-        guard index >= 0 && index < assets.count else { 
+        guard index >= 0 && index < assets.count else {
             print("FullScreenImageView: Navigation failed - index \(index) out of bounds")
-            return 
+            return
         }
-        
         print("FullScreenImageView: Navigating to asset ID: \(assets[index].id)")
         currentAssetIndex = index
         currentAsset = assets[index]
-        
+        refreshToggle.toggle() // Force UI update
         if currentAsset.type != .video {
             image = nil
             isLoading = true
@@ -177,8 +184,10 @@ struct FullScreenImageView: View {
     private func loadFullImage() {
         Task {
             do {
+                print("Loading full image for asset \(currentAsset.id)")
                 let fullImage = try await immichService.loadFullImage(from: currentAsset)
                 await MainActor.run {
+                    print("Loaded image for asset \(currentAsset.id)")
                     self.image = fullImage
                     self.isLoading = false
                 }
