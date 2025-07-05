@@ -15,7 +15,7 @@ struct SlideshowView: View {
     @State private var currentIndex = 0
     @State private var currentImage: UIImage?
     @State private var isLoading = true
-    @State private var slideInterval: TimeInterval = 3.0
+    @State private var slideInterval: TimeInterval = 6.0
     @State private var autoAdvanceTimer: Timer?
     @State private var isTransitioning = false
     @FocusState private var isFocused: Bool
@@ -41,6 +41,10 @@ struct SlideshowView: View {
                         .foregroundColor(.white)
                         .scaleEffect(1.5)
                 } else if let image = currentImage {
+                                        GeometryReader { geometry in
+                        ZStack {
+                            Color.black
+                                .ignoresSafeArea()
                     Image(uiImage: image)
                         .resizable()
                         .aspectRatio(contentMode: .fit)
@@ -48,19 +52,19 @@ struct SlideshowView: View {
                         .opacity(isTransitioning ? 0.0 : 1.0)
                         .animation(.easeInOut(duration: 0.8), value: isTransitioning)
                         .overlay(
-                            // Date and location overlay
+                            // Lock screen style overlay in slideshow mode
                             VStack {
-                                Spacer()
                                 HStack {
                                     Spacer()
-                                    DateLocationOverlay(asset: assets[currentIndex])
-                                        .padding(.trailing, 5)
-                                        .padding(.bottom, 5)
+                                    LockScreenStyleOverlay(asset: assets[currentIndex], isSlideshowMode: true)
                                         .opacity(isTransitioning ? 0.0 : 1.0)
                                         .animation(.easeInOut(duration: 0.8), value: isTransitioning)
                                 }
                             }
                         )
+                        }
+                    }
+                    .ignoresSafeArea()
                 } else {
                     VStack {
                         Image(systemName: "photo")
@@ -102,7 +106,7 @@ struct SlideshowView: View {
                     
                     // Ensure fade in animation plays after image loads
                     if isTransitioning {
-                        withAnimation(.easeInOut(duration: 0.6)) {
+                        withAnimation(.easeInOut(duration: 1)) {
                             isTransitioning = false
                         }
                     }
@@ -114,7 +118,7 @@ struct SlideshowView: View {
                     
                     // Still fade in even if image failed to load
                     if isTransitioning {
-                        withAnimation(.easeInOut(duration: 0.6)) {
+                        withAnimation(.easeInOut(duration: 1)) {
                             isTransitioning = false
                         }
                     }

@@ -238,6 +238,8 @@ struct PersonPhotosView: View {
     let person: Person
     @ObservedObject var immichService: ImmichService
     @Environment(\.dismiss) private var dismiss
+    @State private var showingSlideshow = false
+    @State private var personAssets: [ImmichAsset] = []
     
     var body: some View {
         NavigationView {
@@ -246,17 +248,45 @@ struct PersonPhotosView: View {
                     .ignoresSafeArea()
                 
                 // Use existing AssetGridView with personIds filter
-                AssetGridView(immichService: immichService, albumId: nil, personId: person.id, onAssetsLoaded: nil)
+                AssetGridView(
+                    immichService: immichService, 
+                    albumId: nil, 
+                    personId: person.id, 
+                    onAssetsLoaded: { loadedAssets in
+                        self.personAssets = loadedAssets
+                    }
+                )
             }
             .navigationTitle(person.name.isEmpty ? "Unknown Person" : person.name)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: startSlideshow) {
+                        Image(systemName: "play.rectangle")
+                            .foregroundColor(.white)
+                    }
+                    .disabled(personAssets.isEmpty)
+                }
+                
+                ToolbarItem(placement: .navigationBarLeading) {
                     Button("Done") {
                         dismiss()
                     }
                     .foregroundColor(.white)
                 }
             }
+        }
+        .fullScreenCover(isPresented: $showingSlideshow) {
+            let imageAssets = personAssets.filter { $0.type == .image }
+            if !imageAssets.isEmpty {
+                SlideshowView(assets: imageAssets, immichService: immichService)
+            }
+        }
+    }
+    
+    private func startSlideshow() {
+        let imageAssets = personAssets.filter { $0.type == .image }
+        if !imageAssets.isEmpty {
+            showingSlideshow = true
         }
     }
 }
