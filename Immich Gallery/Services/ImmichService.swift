@@ -508,12 +508,32 @@ class ImmichService: ObservableObject {
         var components = URLComponents(url: url, resolvingAgainstBaseURL: false)!
         components.scheme = "https"
         
-        // Add authorization header to the URL for video streaming
-        var request = URLRequest(url: components.url!)
+        // Create authenticated request
+        var request = URLRequest(url: url)
         request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         request.setValue("application/octet-stream", forHTTPHeaderField: "Accept")
         
-        return request.url!
+        // Download video to temporary file
+        let (data, response) = try await session.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw ImmichError.serverError
+        }
+        
+        if httpResponse.statusCode != 200 {
+            if let responseString = String(data: data, encoding: .utf8) {
+                print("Video download error response: \(responseString)")
+            }
+            throw ImmichError.serverError
+        }
+        
+        // Save to temporary file
+        let tempDir = FileManager.default.temporaryDirectory
+        let tempFile = tempDir.appendingPathComponent("\(asset.id).mp4")
+        
+        try data.write(to: tempFile)
+        
+        return tempFile
     }
    
     

@@ -126,28 +126,33 @@ struct FullScreenImageView: View {
         }
 
         .overlay(
-            SwipeGestureView(
-                onSwipeLeft: {
-                    print("FullScreenImageView: Left navigation triggered (current: \(currentAssetIndex), total: \(assets.count))")
-                    if currentAssetIndex > 0 {
-                        withAnimation(.easeInOut(duration: 0.3)) {
-                            navigateToImage(at: currentAssetIndex - 1)
+            // Only show swipe gestures for non-video content. Doesn't work for videos.
+            Group {
+                if currentAsset.type != .video {
+                    SwipeGestureView(
+                        onSwipeLeft: {
+                            print("FullScreenImageView: Left navigation triggered (current: \(currentAssetIndex), total: \(assets.count))")
+                            if currentAssetIndex > 0 {
+                                withAnimation(.easeInOut(duration: 0.3)) {
+                                    navigateToImage(at: currentAssetIndex - 1)
+                                }
+                            } else {
+                                print("FullScreenImageView: Already at first photo, cannot navigate further")
+                            }
+                        },
+                        onSwipeRight: {
+                            print("FullScreenImageView: Right navigation triggered (current: \(currentAssetIndex), total: \(assets.count))")
+                            if currentAssetIndex < assets.count - 1 {
+                                withAnimation(.easeInOut(duration: 0.3)) {
+                                    navigateToImage(at: currentAssetIndex + 1)
+                                }
+                            } else {
+                                print("FullScreenImageView: Already at last photo, cannot navigate further")
+                            }
                         }
-                    } else {
-                        print("FullScreenImageView: Already at first photo, cannot navigate further")
-                    }
-                },
-                onSwipeRight: {
-                    print("FullScreenImageView: Right navigation triggered (current: \(currentAssetIndex), total: \(assets.count))")
-                    if currentAssetIndex < assets.count - 1 {
-                        withAnimation(.easeInOut(duration: 0.3)) {
-                            navigateToImage(at: currentAssetIndex + 1)
-                        }
-                    } else {
-                        print("FullScreenImageView: Already at last photo, cannot navigate further")
-                    }
+                    )
                 }
-            )
+            }
         )
     }
     
