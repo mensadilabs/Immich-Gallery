@@ -253,6 +253,9 @@ struct AlbumDetailView: View {
     let album: ImmichAlbum
     @ObservedObject var immichService: ImmichService
     @Environment(\.dismiss) private var dismiss
+    @State private var showingSlideshow = false
+    @State private var albumAssets: [ImmichAsset] = []
+    @State private var isLoadingAssets = false
     
     var body: some View {
         NavigationView {
@@ -263,10 +266,42 @@ struct AlbumDetailView: View {
                 AssetGridView(immichService: immichService, albumId: album.id, personId: nil)
             }
             .navigationTitle(album.albumName)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: startSlideshow) {
+                        Image(systemName: "play.rectangle")
+                            .foregroundColor(.white)
+                    }
+                    .disabled(album.assetCount == 0)
+                }
+            }
+        }
+        .fullScreenCover(isPresented: $showingSlideshow) {
+            if !albumAssets.isEmpty {
+                SlideshowView(assets: albumAssets, immichService: immichService)
+            }
         }
     }
     
-
+    private func startSlideshow() {
+        isLoadingAssets = true
+        
+        Task {
+            do {
+                let searchResult = try await immichService.fetchAssets(page: 1, limit: 1000, albumId: album.id, personId: nil)
+                await MainActor.run {
+                    self.albumAssets = searchResult.assets
+                    self.isLoadingAssets = false
+                    self.showingSlideshow = true
+                }
+            } catch {
+                await MainActor.run {
+                    self.isLoadingAssets = false
+                    print("Failed to load album assets for slideshow: \(error)")
+                }
+            }
+        }
+    }
 }
 
 #Preview {

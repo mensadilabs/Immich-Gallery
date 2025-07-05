@@ -18,6 +18,7 @@ struct AssetGridView: View {
     @State private var errorMessage: String?
     @State private var selectedAsset: ImmichAsset?
     @State private var showingFullScreen = false
+    @State private var showingSlideshow = false
     @FocusState private var focusedAssetId: String?
     @State private var nextPage: String?
     @State private var hasMoreAssets = true
@@ -78,61 +79,86 @@ struct AssetGridView: View {
                         .foregroundColor(.gray)
                 }
             } else {
-
-                   
+                VStack {
+                    // Slideshow button at the top
+                    if assets.count > 1 {
+                        HStack {
+                            Spacer()
+                            Button(action: { showingSlideshow = true }) {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "play.rectangle")
+                                        .font(.title3)
+                                    Text("Start Slideshow")
+                                        .font(.headline)
+                                }
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 20)
+                                .padding(.vertical, 12)
+                                .background(Color.blue.opacity(0.8))
+                                .cornerRadius(25)
+                            }
+                            .padding(.horizontal, 20)
+                            .padding(.top, 10)
+                        }
+                    }
                     
                     ScrollView {
                         LazyVGrid(columns: columns, spacing: 50) {
-                        ForEach(assets) { asset in
-                            UIKitFocusable(action: {
-                                print("Asset selected: \(asset.id)")
-                                selectedAsset = asset
-                                showingFullScreen = true
-                            }) {
-                                AssetThumbnailView(
-                                    asset: asset,
-                                    immichService: immichService,
-                                    isFocused: focusedAssetId == asset.id
-                                )
-                            }
-                            .frame(width: 300, height: 360)
-                            .focused($focusedAssetId, equals: asset.id)
-                            .scaleEffect(focusedAssetId == asset.id ? 1.05 : 1.0)
-                            .animation(.easeInOut(duration: 0.2), value: focusedAssetId)
-                            .onAppear {
-                                // More efficient index check using enumerated
-                                if let index = assets.firstIndex(of: asset) {
-                                    let threshold = max(assets.count - 8, 0) // Load when 8 items away from end
-                                    if index >= threshold && hasMoreAssets && !isLoadingMore {
-                                        debouncedLoadMore()
+                            ForEach(assets) { asset in
+                                UIKitFocusable(action: {
+                                    print("Asset selected: \(asset.id)")
+                                    selectedAsset = asset
+                                    showingFullScreen = true
+                                }) {
+                                    AssetThumbnailView(
+                                        asset: asset,
+                                        immichService: immichService,
+                                        isFocused: focusedAssetId == asset.id
+                                    )
+                                }
+                                .frame(width: 300, height: 360)
+                                .focused($focusedAssetId, equals: asset.id)
+                                .scaleEffect(focusedAssetId == asset.id ? 1.05 : 1.0)
+                                .animation(.easeInOut(duration: 0.2), value: focusedAssetId)
+                                .onAppear {
+                                    // More efficient index check using enumerated
+                                    if let index = assets.firstIndex(of: asset) {
+                                        let threshold = max(assets.count - 8, 0) // Load when 8 items away from end
+                                        if index >= threshold && hasMoreAssets && !isLoadingMore {
+                                            debouncedLoadMore()
+                                        }
                                     }
                                 }
                             }
-                        }
-                        
-                        // Loading indicator at the bottom
-                        if isLoadingMore {
-                            HStack {
-                                Spacer()
-                                ProgressView("Loading more...")
-                                    .foregroundColor(.white)
-                                    .scaleEffect(1.2)
-                                Spacer()
+                            
+                            // Loading indicator at the bottom
+                            if isLoadingMore {
+                                HStack {
+                                    Spacer()
+                                    ProgressView("Loading more...")
+                                        .foregroundColor(.white)
+                                        .scaleEffect(1.2)
+                                    Spacer()
+                                }
+                                .frame(height: 100)
+                                .padding()
                             }
-                            .frame(height: 100)
-                            .padding()
                         }
+                        .padding(.horizontal)
+                        .padding(.top, 20)
+                        .padding(.bottom, 40)
                     }
-                    .padding(.horizontal)
-                    .padding(.top, 20)
-                    .padding(.bottom, 40)
-                
-            }
+                }
             }
         }
         .fullScreenCover(isPresented: $showingFullScreen) {
             if let selectedAsset = selectedAsset {
                 FullScreenImageView(asset: selectedAsset, assets: assets, currentIndex: assets.firstIndex(of: selectedAsset) ?? 0, immichService: immichService)
+            }
+        }
+        .fullScreenCover(isPresented: $showingSlideshow) {
+            if !assets.isEmpty {
+                SlideshowView(assets: assets, immichService: immichService)
             }
         }
         .onAppear {
@@ -270,13 +296,3 @@ struct AssetGridView: View {
         }
     }
 }
-
-
-
-
-
-
-
-
-
-
