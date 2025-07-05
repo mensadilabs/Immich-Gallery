@@ -12,13 +12,13 @@ struct AssetGridView: View {
     @ObservedObject private var thumbnailCache = ThumbnailCache.shared
     let albumId: String? // Optional album ID to filter assets
     let personId: String? // Optional person ID to filter assets
+    let onAssetsLoaded: (([ImmichAsset]) -> Void)? // Callback for when assets are loaded
     @State private var assets: [ImmichAsset] = []
     @State private var isLoading = false
     @State private var isLoadingMore = false
     @State private var errorMessage: String?
     @State private var selectedAsset: ImmichAsset?
     @State private var showingFullScreen = false
-    @State private var showingSlideshow = false
     @FocusState private var focusedAssetId: String?
     @State private var nextPage: String?
     @State private var hasMoreAssets = true
@@ -80,28 +80,6 @@ struct AssetGridView: View {
                 }
             } else {
                 VStack {
-                    // Slideshow button at the top
-                    if assets.count > 1 {
-                        HStack {
-                            Spacer()
-                            Button(action: { showingSlideshow = true }) {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "play.rectangle")
-                                        .font(.title3)
-                                    Text("Start Slideshow")
-                                        .font(.headline)
-                                }
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 20)
-                                .padding(.vertical, 12)
-                                .background(Color.blue.opacity(0.8))
-                                .cornerRadius(25)
-                            }
-                            .padding(.horizontal, 20)
-                            .padding(.top, 10)
-                        }
-                    }
-                    
                     ScrollView {
                         LazyVGrid(columns: columns, spacing: 50) {
                             ForEach(assets) { asset in
@@ -156,11 +134,6 @@ struct AssetGridView: View {
                 FullScreenImageView(asset: selectedAsset, assets: assets, currentIndex: assets.firstIndex(of: selectedAsset) ?? 0, immichService: immichService)
             }
         }
-        .fullScreenCover(isPresented: $showingSlideshow) {
-            if !assets.isEmpty {
-                SlideshowView(assets: assets, immichService: immichService)
-            }
-        }
         .onAppear {
             if assets.isEmpty {
                 loadAssets()
@@ -192,6 +165,9 @@ struct AssetGridView: View {
                     self.isLoading = false
                     // If there's no nextPage, we've reached the end
                     self.hasMoreAssets = searchResult.nextPage != nil
+                    
+                    // Notify parent view about loaded assets
+                    onAssetsLoaded?(searchResult.assets)
                 }
                 
                 // Preload thumbnails for better performance

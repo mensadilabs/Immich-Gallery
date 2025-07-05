@@ -246,7 +246,7 @@ struct PersonPhotosView: View {
                     .ignoresSafeArea()
                 
                 // Use existing AssetGridView with personIds filter
-                AssetGridView(immichService: immichService, albumId: nil, personId: person.id)
+                AssetGridView(immichService: immichService, albumId: nil, personId: person.id, onAssetsLoaded: nil)
             }
             .navigationTitle(person.name.isEmpty ? "Unknown Person" : person.name)
             .toolbar {
