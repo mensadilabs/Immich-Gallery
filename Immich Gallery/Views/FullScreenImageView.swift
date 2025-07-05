@@ -46,22 +46,27 @@ struct FullScreenImageView: View {
                         .foregroundColor(.white)
                         .scaleEffect(1.5)
                 } else if let image = image {
-                    Image(uiImage: image)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .ignoresSafeArea()
-                        .overlay(
-                            // Date and location overlay in bottom right
-                            VStack {
-                                Spacer()
-                                HStack {
-                                    Spacer()
-                                    DateLocationOverlay(asset: currentAsset)
-                                        .padding(.trailing, 5)
-                                        .padding(.bottom, 5)
-                                }
-                            }
-                        )
+                    GeometryReader { geometry in
+                        ZStack {
+                            Color.black
+                                .ignoresSafeArea()
+                            
+                            Image(uiImage: image)
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .overlay(
+                                    // Lock screen style overlay in bottom right
+                                    VStack {
+                                        Spacer()
+                                        HStack {
+                                            Spacer()
+                                            LockScreenStyleOverlay(asset: currentAsset)
+                                        }
+                                    }
+                                )
+                        }
+                    }
+                    .ignoresSafeArea()
                 } else {
                     VStack {
                         Image(systemName: "photo")
@@ -72,12 +77,6 @@ struct FullScreenImageView: View {
                     }
                 }
             }
-            
-
-            
-
-            
-
             
             // Swipe hint overlay
             if showingSwipeHint && assets.count > 1 {
