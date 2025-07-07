@@ -253,6 +253,8 @@ struct AlbumDetailView: View {
     let album: ImmichAlbum
     @ObservedObject var immichService: ImmichService
     @Environment(\.dismiss) private var dismiss
+    @State private var showingSlideshow = false
+    @State private var albumAssets: [ImmichAsset] = []
     
     var body: some View {
         NavigationView {
@@ -260,13 +262,40 @@ struct AlbumDetailView: View {
                 Color.black
                     .ignoresSafeArea()
                 
-                AssetGridView(immichService: immichService, albumId: album.id, personId: nil)
+                AssetGridView(
+                    immichService: immichService, 
+                    albumId: album.id, 
+                    personId: nil,
+                    onAssetsLoaded: { loadedAssets in
+                        self.albumAssets = loadedAssets
+                    }
+                )
             }
             .navigationTitle(album.albumName)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: startSlideshow) {
+                        Image(systemName: "play.rectangle")
+                            .foregroundColor(.white)
+                    }
+                    .disabled(albumAssets.isEmpty)
+                }
+            }
+        }
+        .fullScreenCover(isPresented: $showingSlideshow) {
+            let imageAssets = albumAssets.filter { $0.type == .image }
+            if !imageAssets.isEmpty {
+                SlideshowView(assets: imageAssets, immichService: immichService)
+            }
         }
     }
     
-
+    private func startSlideshow() {
+        let imageAssets = albumAssets.filter { $0.type == .image }
+        if !imageAssets.isEmpty {
+            showingSlideshow = true
+        }
+    }
 }
 
 #Preview {

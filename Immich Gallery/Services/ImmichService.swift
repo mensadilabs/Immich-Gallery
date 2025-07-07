@@ -499,21 +499,26 @@ class ImmichService: ObservableObject {
             throw ImmichError.notAuthenticated
         }
         
-        let urlString = "\(baseURL)/api/assets/\(asset.id)/original"
+        // Use the dedicated video playback endpoint for streaming
+        let urlString = "\(baseURL)/api/assets/\(asset.id)/video/playback"
         guard let url = URL(string: urlString) else {
             throw ImmichError.invalidURL
         }
         
-        // Create a URL with authentication headers for video streaming
-        var components = URLComponents(url: url, resolvingAgainstBaseURL: false)!
-        components.scheme = "https"
+        // Return the direct URL - we'll handle authentication in the VideoPlayerView
+        return url
+    }
+    
+    // Helper method to get authentication headers for video requests
+    func getVideoAuthHeaders() -> [String: String] {
+        guard let accessToken = accessToken else {
+            return [:]
+        }
         
-        // Add authorization header to the URL for video streaming
-        var request = URLRequest(url: components.url!)
-        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-        request.setValue("application/octet-stream", forHTTPHeaderField: "Accept")
-        
-        return request.url!
+        return [
+            "Authorization": "Bearer \(accessToken)",
+            "Accept": "application/octet-stream"
+        ]
     }
    
     

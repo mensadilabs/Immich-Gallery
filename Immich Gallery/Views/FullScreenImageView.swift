@@ -19,6 +19,8 @@ struct FullScreenImageView: View {
     @State private var currentAssetIndex: Int
     @State private var currentAsset: ImmichAsset
     @State private var showingSwipeHint = false
+    @FocusState private var isFocused: Bool
+    @State private var refreshToggle = false
     
     init(asset: ImmichAsset, assets: [ImmichAsset], currentIndex: Int, immichService: ImmichService) {
         self.asset = asset
@@ -44,22 +46,27 @@ struct FullScreenImageView: View {
                         .foregroundColor(.white)
                         .scaleEffect(1.5)
                 } else if let image = image {
-                    Image(uiImage: image)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .ignoresSafeArea()
-                        .overlay(
-                            // Date and location overlay in bottom right
-                            VStack {
-                                Spacer()
-                                HStack {
-                                    Spacer()
-                                    DateLocationOverlay(asset: currentAsset)
-                                        .padding(.trailing, 5)
-                                        .padding(.bottom, 5)
-                                }
-                            }
-                        )
+                    GeometryReader { geometry in
+                        ZStack {
+                            Color.black
+                                .ignoresSafeArea()
+                            
+                            Image(uiImage: image)
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .overlay(
+                                    // Lock screen style overlay in bottom right
+                                    VStack {
+                                        Spacer()
+                                        HStack {
+                                            Spacer()
+                                            LockScreenStyleOverlay(asset: currentAsset)
+                                        }
+                                    }
+                                )
+                        }
+                    }
+                    .ignoresSafeArea()
                 } else {
                     VStack {
                         Image(systemName: "photo")
@@ -70,12 +77,6 @@ struct FullScreenImageView: View {
                     }
                 }
             }
-            
-
-            
-
-            
-
             
             // Swipe hint overlay
             if showingSwipeHint && assets.count > 1 {
@@ -107,61 +108,29 @@ struct FullScreenImageView: View {
                 .transition(.opacity)
             }
         }
-        .onAppear {
-            if currentAsset.type != .video {
-                loadFullImage()
-            }
-            if assets.count > 1 {
-                showingSwipeHint = true
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                    withAnimation(.easeOut(duration: 0.5)) {
-                        showingSwipeHint = false
-                    }
-                }
-            }
-        }
-        .contentShape(Rectangle())
-        .onTapGesture {
-            dismiss()
-        }
-
-        .overlay(
-            SwipeGestureView(
-                onSwipeLeft: {
-                    print("FullScreenImageView: Left navigation triggered (current: \(currentAssetIndex), total: \(assets.count))")
-                    if currentAssetIndex > 0 {
-                        withAnimation(.easeInOut(duration: 0.3)) {
-                            navigateToImage(at: currentAssetIndex - 1)
-                        }
-                    } else {
-                        print("FullScreenImageView: Already at first photo, cannot navigate further")
-                    }
-                },
-                onSwipeRight: {
-                    print("FullScreenImageView: Right navigation triggered (current: \(currentAssetIndex), total: \(assets.count))")
-                    if currentAssetIndex < assets.count - 1 {
-                        withAnimation(.easeInOut(duration: 0.3)) {
-                            navigateToImage(at: currentAssetIndex + 1)
-                        }
-                    } else {
-                        print("FullScreenImageView: Already at last photo, cannot navigate further")
-                    }
-                }
-            )
-        )
+        .id(refreshToggle)
+        .modifier(ContentAwareModifier(
+            isVideo: currentAsset.type == .video,
+            currentAssetIndex: currentAssetIndex,
+            assets: assets,
+            isFocused: $isFocused,
+            showingSwipeHint: $showingSwipeHint,
+            onNavigate: navigateToImage,
+            onDismiss: { dismiss() },
+            onLoadImage: loadFullImage
+        ))
     }
     
     private func navigateToImage(at index: Int) {
         print("FullScreenImageView: Attempting to navigate to image at index \(index) (total assets: \(assets.count))")
-        guard index >= 0 && index < assets.count else { 
+        guard index >= 0 && index < assets.count else {
             print("FullScreenImageView: Navigation failed - index \(index) out of bounds")
-            return 
+            return
         }
-        
         print("FullScreenImageView: Navigating to asset ID: \(assets[index].id)")
         currentAssetIndex = index
         currentAsset = assets[index]
-        
+        refreshToggle.toggle() // Force UI update
         if currentAsset.type != .video {
             image = nil
             isLoading = true
@@ -172,8 +141,10 @@ struct FullScreenImageView: View {
     private func loadFullImage() {
         Task {
             do {
+                print("Loading full image for asset \(currentAsset.id)")
                 let fullImage = try await immichService.loadFullImage(from: currentAsset)
                 await MainActor.run {
+                    print("Loaded image for asset \(currentAsset.id)")
                     self.image = fullImage
                     self.isLoading = false
                 }
@@ -185,4 +156,74 @@ struct FullScreenImageView: View {
             }
         }
     }
-} 
+}
+
+// MARK: - Content Aware Modifier
+struct ContentAwareModifier: ViewModifier {
+    let isVideo: Bool
+    let currentAssetIndex: Int
+    let assets: [ImmichAsset]
+    @FocusState.Binding var isFocused: Bool
+    @Binding var showingSwipeHint: Bool
+    let onNavigate: (Int) -> Void
+    let onDismiss: () -> Void
+    let onLoadImage: () -> Void
+    
+    func body(content: Content) -> some View {
+        if isVideo {
+            // For videos: no focus, no gestures, no interference
+            content
+        } else {
+            // For images: full navigation support
+            content
+                .focusable(true)
+                .focused($isFocused)
+                .onAppear {
+                    onLoadImage()
+                    if assets.count > 1 {
+                        showingSwipeHint = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                            withAnimation(.easeOut(duration: 0.5)) {
+                                showingSwipeHint = false
+                            }
+                        }
+                    }
+                    isFocused = true
+                }
+                .onChange(of: isFocused) { focused in
+                    print("FullScreenImageView focus: \(focused)")
+                }
+                .onMoveCommand { direction in
+                    switch direction {
+                    case .left:
+                        print("FullScreenImageView: Left navigation triggered (current: \(currentAssetIndex), total: \(assets.count))")
+                        if currentAssetIndex > 0 {
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                onNavigate(currentAssetIndex - 1)
+                            }
+                        } else {
+                            print("FullScreenImageView: Already at first photo, cannot navigate further")
+                        }
+                    case .right:
+                        print("FullScreenImageView: Right navigation triggered (current: \(currentAssetIndex), total: \(assets.count))")
+                        if currentAssetIndex < assets.count - 1 {
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                onNavigate(currentAssetIndex + 1)
+                            }
+                        } else {
+                            print("FullScreenImageView: Already at last photo, cannot navigate further")
+                        }
+                    case .up, .down:
+                        // Ignore up/down swipes
+                        break
+                    @unknown default:
+                        print("FullScreenImageView: Unknown direction")
+                    }
+                }
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    onDismiss()
+                }
+        }
+    }
+}

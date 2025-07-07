@@ -29,7 +29,7 @@ struct ContentView: View {
                 } else {
                     // Main app interface
                     TabView(selection: $selectedTab) {
-                        AssetGridView(immichService: immichService, albumId: nil, personId: nil)
+                        AssetGridView(immichService: immichService, albumId: nil, personId: nil, onAssetsLoaded: nil)
                             .tabItem {
                                 Image(systemName: "photo.on.rectangle")
                                 Text("Photos")

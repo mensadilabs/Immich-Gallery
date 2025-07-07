@@ -12,6 +12,7 @@ struct AssetGridView: View {
     @ObservedObject private var thumbnailCache = ThumbnailCache.shared
     let albumId: String? // Optional album ID to filter assets
     let personId: String? // Optional person ID to filter assets
+    let onAssetsLoaded: (([ImmichAsset]) -> Void)? // Callback for when assets are loaded
     @State private var assets: [ImmichAsset] = []
     @State private var isLoading = false
     @State private var isLoadingMore = false
@@ -78,56 +79,54 @@ struct AssetGridView: View {
                         .foregroundColor(.gray)
                 }
             } else {
-
-                   
-                    
+                VStack {
                     ScrollView {
                         LazyVGrid(columns: columns, spacing: 50) {
-                        ForEach(assets) { asset in
-                            UIKitFocusable(action: {
-                                print("Asset selected: \(asset.id)")
-                                selectedAsset = asset
-                                showingFullScreen = true
-                            }) {
-                                AssetThumbnailView(
-                                    asset: asset,
-                                    immichService: immichService,
-                                    isFocused: focusedAssetId == asset.id
-                                )
-                            }
-                            .frame(width: 300, height: 360)
-                            .focused($focusedAssetId, equals: asset.id)
-                            .scaleEffect(focusedAssetId == asset.id ? 1.05 : 1.0)
-                            .animation(.easeInOut(duration: 0.2), value: focusedAssetId)
-                            .onAppear {
-                                // More efficient index check using enumerated
-                                if let index = assets.firstIndex(of: asset) {
-                                    let threshold = max(assets.count - 8, 0) // Load when 8 items away from end
-                                    if index >= threshold && hasMoreAssets && !isLoadingMore {
-                                        debouncedLoadMore()
+                            ForEach(assets) { asset in
+                                UIKitFocusable(action: {
+                                    print("Asset selected: \(asset.id)")
+                                    selectedAsset = asset
+                                    showingFullScreen = true
+                                }) {
+                                    AssetThumbnailView(
+                                        asset: asset,
+                                        immichService: immichService,
+                                        isFocused: focusedAssetId == asset.id
+                                    )
+                                }
+                                .frame(width: 300, height: 360)
+                                .focused($focusedAssetId, equals: asset.id)
+                                .scaleEffect(focusedAssetId == asset.id ? 1.05 : 1.0)
+                                .animation(.easeInOut(duration: 0.2), value: focusedAssetId)
+                                .onAppear {
+                                    // More efficient index check using enumerated
+                                    if let index = assets.firstIndex(of: asset) {
+                                        let threshold = max(assets.count - 8, 0) // Load when 8 items away from end
+                                        if index >= threshold && hasMoreAssets && !isLoadingMore {
+                                            debouncedLoadMore()
+                                        }
                                     }
                                 }
                             }
-                        }
-                        
-                        // Loading indicator at the bottom
-                        if isLoadingMore {
-                            HStack {
-                                Spacer()
-                                ProgressView("Loading more...")
-                                    .foregroundColor(.white)
-                                    .scaleEffect(1.2)
-                                Spacer()
+                            
+                            // Loading indicator at the bottom
+                            if isLoadingMore {
+                                HStack {
+                                    Spacer()
+                                    ProgressView("Loading more...")
+                                        .foregroundColor(.white)
+                                        .scaleEffect(1.2)
+                                    Spacer()
+                                }
+                                .frame(height: 100)
+                                .padding()
                             }
-                            .frame(height: 100)
-                            .padding()
                         }
+                        .padding(.horizontal)
+                        .padding(.top, 20)
+                        .padding(.bottom, 40)
                     }
-                    .padding(.horizontal)
-                    .padding(.top, 20)
-                    .padding(.bottom, 40)
-                
-            }
+                }
             }
         }
         .fullScreenCover(isPresented: $showingFullScreen) {
@@ -166,6 +165,9 @@ struct AssetGridView: View {
                     self.isLoading = false
                     // If there's no nextPage, we've reached the end
                     self.hasMoreAssets = searchResult.nextPage != nil
+                    
+                    // Notify parent view about loaded assets
+                    onAssetsLoaded?(searchResult.assets)
                 }
                 
                 // Preload thumbnails for better performance
@@ -270,13 +272,3 @@ struct AssetGridView: View {
         }
     }
 }
-
-
-
-
-
-
-
-
-
-
