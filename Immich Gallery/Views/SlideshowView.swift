@@ -42,8 +42,7 @@ struct SlideshowView: View {
                 } else if let image = currentImage {
                     GeometryReader { geometry in
                         ZStack {
-                            Color.black
-                                .ignoresSafeArea()
+                           SharedOpaqueBackground()
                         Image(uiImage: image)
                             .resizable()
                             .aspectRatio(contentMode: .fit)
@@ -81,6 +80,9 @@ struct SlideshowView: View {
             isFocused = true
             loadCurrentImage()
             startAutoAdvance()
+        }
+         .onDisappear {
+            stopAutoAdvance()
         }
         .onTapGesture {
             dismiss()
