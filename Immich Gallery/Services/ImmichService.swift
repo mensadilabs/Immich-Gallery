@@ -499,14 +499,42 @@ class ImmichService: ObservableObject {
             throw ImmichError.notAuthenticated
         }
         
+        // Check if this is actually a video asset
+        guard asset.type == .video else {
+            throw ImmichError.serverError
+        }
+        
         // Use the dedicated video playback endpoint for streaming
         let urlString = "\(baseURL)/api/assets/\(asset.id)/video/playback"
         guard let url = URL(string: urlString) else {
             throw ImmichError.invalidURL
         }
         
-        // Return the direct URL - we'll handle authentication in the VideoPlayerView
-        return url
+        // Test the URL to ensure it's accessible
+        var request = URLRequest(url: url)
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/octet-stream", forHTTPHeaderField: "Accept")
+        request.httpMethod = "HEAD" // Just check if the resource exists
+        
+        do {
+            let (_, response) = try await session.data(for: request)
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw ImmichError.serverError
+            }
+            
+            print("📡 Video URL test response: \(httpResponse.statusCode)")
+            
+            if httpResponse.statusCode == 200 || httpResponse.statusCode == 206 {
+                print("✅ Video URL is accessible")
+                return url
+            } else {
+                print("❌ Video URL returned status: \(httpResponse.statusCode)")
+                throw ImmichError.serverError
+            }
+        } catch {
+            print("❌ Video URL test failed: \(error)")
+            throw ImmichError.serverError
+        }
     }
     
     // Helper method to get authentication headers for video requests
@@ -517,7 +545,8 @@ class ImmichService: ObservableObject {
         
         return [
             "Authorization": "Bearer \(accessToken)",
-            "Accept": "application/octet-stream"
+            "Accept": "video/*, application/octet-stream",
+            "User-Agent": "ImmichGallery-tvOS/1.0"
         ]
     }
    
