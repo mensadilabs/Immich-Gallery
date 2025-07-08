@@ -33,8 +33,7 @@ struct FullScreenImageView: View {
     
     var body: some View {
         ZStack {
-            Color.black
-                .ignoresSafeArea()
+            SharedOpaqueBackground()
             
             if currentAsset.type == .video {
                 // Use VideoPlayerView for videos
