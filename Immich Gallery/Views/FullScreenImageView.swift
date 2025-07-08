@@ -47,8 +47,7 @@ struct FullScreenImageView: View {
                 } else if let image = image {
                     GeometryReader { geometry in
                         ZStack {
-                            Color.black
-                                .ignoresSafeArea()
+                            SharedOpaqueBackground()
                             
                             Image(uiImage: image)
                                 .resizable()
