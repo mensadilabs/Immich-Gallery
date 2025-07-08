@@ -19,16 +19,7 @@ struct SignInView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                LinearGradient(
-                    gradient: Gradient(colors: [
-                        Color.blue.opacity(0.3),
-                        Color.purple.opacity(0.2),
-                        Color.gray.opacity(0.4)
-                    ]),
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .ignoresSafeArea()  
+                SharedGradientBackground()
             VStack(spacing: 30) {
                 // Header
                 VStack(spacing: 16) {

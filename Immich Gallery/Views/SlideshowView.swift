@@ -22,8 +22,7 @@ struct SlideshowView: View {
     
     var body: some View {
         ZStack {
-            Color.black
-                .ignoresSafeArea()
+            SharedOpaqueBackground()
             
             if assets.isEmpty {
                 VStack {
@@ -41,7 +40,7 @@ struct SlideshowView: View {
                         .foregroundColor(.white)
                         .scaleEffect(1.5)
                 } else if let image = currentImage {
-                                        GeometryReader { geometry in
+                    GeometryReader { geometry in
                         ZStack {
                             Color.black
                                 .ignoresSafeArea()

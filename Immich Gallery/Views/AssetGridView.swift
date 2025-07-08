@@ -35,16 +35,7 @@ struct AssetGridView: View {
     var body: some View {
         ZStack {
             // Background
-            LinearGradient(
-                gradient: Gradient(colors: [
-                    Color.blue.opacity(0.3),
-                    Color.purple.opacity(0.2),
-                    Color.gray.opacity(0.4)
-                ]),
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
+            SharedGradientBackground()
             
             if isLoading {
                 ProgressView("Loading photos...")
