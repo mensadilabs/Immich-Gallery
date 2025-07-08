@@ -225,3 +225,103 @@ struct ContentAwareModifier: ViewModifier {
         }
     }
 }
+
+// MARK: - Preview
+#Preview {
+    let sampleAsset = ImmichAsset(
+        id: "sample-1",
+        deviceAssetId: "device-1",
+        deviceId: "device-1",
+        ownerId: "owner-1",
+        libraryId: "library-1",
+        type: .image,
+        originalPath: "/sample/path",
+        originalFileName: "sample.jpg",
+        originalMimeType: "image/jpeg",
+        resized: false,
+        thumbhash: nil,
+        fileModifiedAt: "2024-01-01T00:00:00Z",
+        fileCreatedAt: "2024-01-01T00:00:00Z",
+        localDateTime: "2024-01-01T00:00:00Z",
+        updatedAt: "2024-01-01T00:00:00Z",
+        isFavorite: false,
+        isArchived: false,
+        isOffline: false,
+        isTrashed: false,
+        checksum: "sample-checksum",
+        duration: nil,
+        hasMetadata: true,
+        livePhotoVideoId: nil,
+        people: [],
+        visibility: "VISIBLE",
+        duplicateId: nil,
+        exifInfo: ExifInfo(
+            make: "Apple",
+            model: "iPhone 15",
+            imageName: "Sample Image",
+            exifImageWidth: 1080,
+            exifImageHeight: 1920,
+            dateTimeOriginal: "2024-01-01T00:00:00Z",
+            modifyDate: "2024-01-01T00:00:00Z",
+            lensModel: "iPhone 15 back camera",
+            fNumber: 1.8,
+            focalLength: 26.0,
+            iso: 100,
+            exposureTime: "1/60",
+            latitude: 37.7749,
+            longitude: -122.4194,
+            city: "San Francisco",
+            state: "CA",
+            country: "USA",
+            timeZone: "America/Los_Angeles",
+            description: "Sample image for preview",
+            fileSizeInByte: 1024000,
+            orientation: "1",
+            projectionType: nil,
+            rating: 5
+        )
+    )
+    
+    let sampleAssets = [
+        sampleAsset,
+        ImmichAsset(
+            id: "sample-2",
+            deviceAssetId: "device-2",
+            deviceId: "device-2",
+            ownerId: "owner-1",
+            libraryId: "library-1",
+            type: .image,
+            originalPath: "/sample/path2",
+            originalFileName: "sample2.jpg",
+            originalMimeType: "image/jpeg",
+            resized: false,
+            thumbhash: nil,
+            fileModifiedAt: "2024-01-02T00:00:00Z",
+            fileCreatedAt: "2024-01-02T00:00:00Z",
+            localDateTime: "2024-01-02T00:00:00Z",
+            updatedAt: "2024-01-02T00:00:00Z",
+            isFavorite: true,
+            isArchived: false,
+            isOffline: false,
+            isTrashed: false,
+            checksum: "sample-checksum-2",
+            duration: nil,
+            hasMetadata: true,
+            livePhotoVideoId: nil,
+            people: [],
+            visibility: "VISIBLE",
+            duplicateId: nil,
+            exifInfo: nil
+        )
+    ]
+    
+    // Use the shared mock service
+    let mockService = MockImmichService()
+    
+    return FullScreenImageView(
+        asset: sampleAsset,
+        assets: sampleAssets,
+        currentIndex: 0,
+        immichService: mockService
+    )
+}

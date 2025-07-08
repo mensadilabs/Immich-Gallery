@@ -633,4 +633,4 @@ enum ImmichError: Error, LocalizedError {
             return "Network error occurred"
         }
     }
-} 
+}

@@ -39,5 +39,5 @@ struct SharedOpaqueBackground: View {
 }
 
 #Preview {
-    SharedGradientBackground()
+    SharedOpaqueBackground()
 } 
