@@ -9,7 +9,7 @@ import SwiftUI
 
 struct CacheManagementView: View {
     @ObservedObject private var thumbnailCache = ThumbnailCache.shared
-    @ObservedObject var immichService: ImmichService
+    @ObservedObject var authService: AuthenticationService
     @State private var showingClearCacheAlert = false
     @State private var showingSignOutAlert = false
     @State private var showingAddUser = false
@@ -39,7 +39,7 @@ struct CacheManagementView: View {
                                 .foregroundColor(.primary)
                             
                             // Current User Display
-                            if let user = immichService.currentUser {
+                            if let user = authService.currentUser {
                                 HStack {
                                     Image(systemName: "person.circle.fill")
                                         .foregroundColor(.blue)
@@ -75,7 +75,7 @@ struct CacheManagementView: View {
                                         .font(.headline)
                                         .foregroundColor(.primary)
                                     
-                                    ForEach(savedUsers.filter { $0.email != immichService.currentUser?.email }, id: \.id) { user in
+                                    ForEach(savedUsers.filter { $0.email != authService.currentUser?.email }, id: \.id) { user in
                                         HStack {
                                             Button(action: {
                                                 switchToUser(user)
@@ -147,13 +147,13 @@ struct CacheManagementView: View {
                                 .fontWeight(.bold)
                                 .foregroundColor(.primary)
                             
-                            if let user = immichService.currentUser {
+                            if let user = authService.currentUser {
                                 HStack {
                                     Image(systemName: "server.rack")
                                         .foregroundColor(.green)
                                     Text("Server")
                                     Spacer()
-                                    Text(immichService.baseURL)
+                                    Text(authService.baseURL)
                                         .font(.caption)
                                         .foregroundColor(.secondary)
                                 }
@@ -339,7 +339,7 @@ struct CacheManagementView: View {
             .alert("Sign Out", isPresented: $showingSignOutAlert) {
                 Button("Cancel", role: .cancel) { }
                 Button("Sign Out", role: .destructive) {
-                    immichService.signOut()
+                    authService.signOut()
                 }
             } message: {
                 Text("Are you sure you want to sign out? You'll need to sign in again to access your photos.")
@@ -354,13 +354,13 @@ struct CacheManagementView: View {
         savedUsers = []
         
         // Load current user if authenticated
-        if let currentUser = immichService.currentUser {
+        if let currentUser = authService.currentUser {
             let currentUserId = getCurrentUserId()
             savedUsers.append(SavedUser(
                 id: currentUserId,
                 email: currentUser.email,
                 name: currentUser.name,
-                serverURL: immichService.baseURL
+                serverURL: authService.baseURL
             ))
         }
         
@@ -372,7 +372,7 @@ struct CacheManagementView: View {
             if let userData = userDefaults.data(forKey: key),
                let user = try? JSONDecoder().decode(SavedUser.self, from: userData) {
                 // Don't add if it's the current user
-                if user.email != immichService.currentUser?.email {
+                if user.email != authService.currentUser?.email {
                     savedUsers.append(user)
                 }
             }
@@ -381,7 +381,7 @@ struct CacheManagementView: View {
     
     private func switchToUser(_ user: SavedUser) {
         // Save current user if authenticated
-        if let currentUser = immichService.currentUser {
+        if let currentUser = authService.currentUser {
             saveCurrentUser()
         }
         
@@ -390,7 +390,7 @@ struct CacheManagementView: View {
         
         if let token = token {
             // Switch to the selected user
-            immichService.switchUser(
+            authService.switchUser(
                 serverURL: user.serverURL,
                 accessToken: token,
                 email: user.email,
@@ -400,7 +400,7 @@ struct CacheManagementView: View {
             // Fetch user details
             Task {
                 do {
-                    try await immichService.fetchUserInfo()
+                    try await authService.fetchUserInfo()
                     DispatchQueue.main.async {
                         self.loadSavedUsers()
                         // Refresh the app by posting a notification
@@ -414,15 +414,15 @@ struct CacheManagementView: View {
     }
     
     private func saveCurrentUser() {
-        guard let currentUser = immichService.currentUser,
-              let accessToken = immichService.accessToken else { return }
+        guard let currentUser = authService.currentUser,
+              let accessToken = authService.accessToken else { return }
         
         let userId = getCurrentUserId()
         let user = SavedUser(
             id: userId,
             email: currentUser.email,
             name: currentUser.name,
-            serverURL: immichService.baseURL
+            serverURL: authService.baseURL
         )
         
         // Save user data
@@ -445,7 +445,7 @@ struct CacheManagementView: View {
     
     private func getCurrentUserId() -> String {
         // Use email as user ID for simplicity
-        return immichService.currentUser?.email ?? "unknown"
+        return authService.currentUser?.email ?? "unknown"
     }
     
     private func formatBytes(_ bytes: Int) -> String {
@@ -697,5 +697,7 @@ struct AddUserView: View {
 }
 
 #Preview {
-    CacheManagementView(immichService: ImmichService())
+    let networkService = NetworkService()
+    let authService = AuthenticationService(networkService: networkService)
+    CacheManagementView(authService: authService)
 } 

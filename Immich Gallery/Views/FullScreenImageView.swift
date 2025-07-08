@@ -11,7 +11,8 @@ struct FullScreenImageView: View {
     let asset: ImmichAsset
     let assets: [ImmichAsset]
     let currentIndex: Int
-    @ObservedObject var immichService: ImmichService
+    @ObservedObject var assetService: AssetService
+    @ObservedObject var authenticationService: AuthenticationService
     @Environment(\.dismiss) private var dismiss
     @State private var image: UIImage?
     @State private var isLoading = true
@@ -22,11 +23,12 @@ struct FullScreenImageView: View {
     @FocusState private var isFocused: Bool
     @State private var refreshToggle = false
     
-    init(asset: ImmichAsset, assets: [ImmichAsset], currentIndex: Int, immichService: ImmichService) {
+    init(asset: ImmichAsset, assets: [ImmichAsset], currentIndex: Int, assetService: AssetService, authenticationService: AuthenticationService) {
         self.asset = asset
         self.assets = assets
         self.currentIndex = currentIndex
-        self.immichService = immichService
+        self.assetService = assetService
+        self.authenticationService = authenticationService
         self._currentAssetIndex = State(initialValue: currentIndex)
         self._currentAsset = State(initialValue: asset)
     }
@@ -37,7 +39,7 @@ struct FullScreenImageView: View {
             
             if currentAsset.type == .video {
                 // Use VideoPlayerView for videos
-                VideoPlayerView(asset: currentAsset, immichService: immichService)
+                VideoPlayerView(asset: currentAsset, assetService: assetService, authenticationService: authenticationService)
             } else {
                 // Use image view for photos
                 if isLoading {
@@ -140,7 +142,7 @@ struct FullScreenImageView: View {
         Task {
             do {
                 print("Loading full image for asset \(currentAsset.id)")
-                let fullImage = try await immichService.loadFullImage(from: currentAsset)
+                let fullImage = try await assetService.loadFullImage(asset: currentAsset)
                 await MainActor.run {
                     print("Loaded image for asset \(currentAsset.id)")
                     self.image = fullImage
@@ -316,12 +318,15 @@ struct ContentAwareModifier: ViewModifier {
     ]
     
     // Use the shared mock service
-    let mockService = MockImmichService()
+    let networkService = NetworkService()
+    let authenticationService = AuthenticationService(networkService: networkService)
+    let assetService = AssetService(networkService: networkService)
     
-    return FullScreenImageView(
+    FullScreenImageView(
         asset: sampleAsset,
         assets: sampleAssets,
         currentIndex: 0,
-        immichService: mockService
+        assetService: assetService,
+        authenticationService: authenticationService
     )
 }

@@ -16,11 +16,13 @@ class VideoPlayerViewModel: NSObject, ObservableObject, AVAssetResourceLoaderDel
     @Published var isReadyToPlay = false
     
     let asset: ImmichAsset
-    let immichService: ImmichService
+    let assetService: AssetService
+    let authenticationService: AuthenticationService
     
-    init(asset: ImmichAsset, immichService: ImmichService) {
+    init(asset: ImmichAsset, assetService: AssetService, authenticationService: AuthenticationService) {
         self.asset = asset
-        self.immichService = immichService
+        self.assetService = assetService
+        self.authenticationService = authenticationService
         super.init()
     }
     
@@ -39,7 +41,7 @@ class VideoPlayerViewModel: NSObject, ObservableObject, AVAssetResourceLoaderDel
         
         Task {
             do {
-                let videoURL = try await immichService.loadVideoURL(from: asset)
+                let videoURL = try await assetService.loadVideoURL(asset: asset)
                 print("🎥 Video URL created: \(videoURL)")
                 
                 await MainActor.run {
@@ -62,11 +64,11 @@ class VideoPlayerViewModel: NSObject, ObservableObject, AVAssetResourceLoaderDel
         // Create AVURLAsset with custom options
         let asset = AVURLAsset(url: url, options: [
             "AVURLAssetOutOfBandMIMETypeKey": mimeType,
-            "AVURLAssetHTTPHeaderFieldsKey": immichService.getVideoAuthHeaders()
+            "AVURLAssetHTTPHeaderFieldsKey": getVideoAuthHeaders()
         ])
         
         // Set up authentication delegate
-        asset.resourceLoader.setDelegate(self, queue: .main)
+        asset.resourceLoader.setDelegate(self, queue: DispatchQueue.main)
         
         // Create player item with the asset
         let playerItem = AVPlayerItem(asset: asset)
@@ -205,6 +207,13 @@ class VideoPlayerViewModel: NSObject, ObservableObject, AVAssetResourceLoaderDel
         print("🧹 Video player cleaned up")
     }
     
+    private func getVideoAuthHeaders() -> [String: String] {
+        guard let accessToken = authenticationService.accessToken else {
+            return [:]
+        }
+        return ["Authorization": "Bearer \(accessToken)"]
+    }
+    
     // MARK: - AVAssetResourceLoaderDelegate
     
     func resourceLoader(_ resourceLoader: AVAssetResourceLoader, shouldWaitForLoadingOfRequestedResource loadingRequest: AVAssetResourceLoadingRequest) -> Bool {
@@ -216,7 +225,7 @@ class VideoPlayerViewModel: NSObject, ObservableObject, AVAssetResourceLoaderDel
         }
         
         // Get authentication headers
-        let authHeaders = immichService.getVideoAuthHeaders()
+        let authHeaders = getVideoAuthHeaders()
         
         // Create authenticated request
         var request = URLRequest(url: url)
@@ -285,13 +294,15 @@ class VideoPlayerViewModel: NSObject, ObservableObject, AVAssetResourceLoaderDel
 
 struct VideoPlayerView: View {
     let asset: ImmichAsset
-    @ObservedObject var immichService: ImmichService
+    @ObservedObject var assetService: AssetService
+    @ObservedObject var authenticationService: AuthenticationService
     @StateObject private var viewModel: VideoPlayerViewModel
     
-    init(asset: ImmichAsset, immichService: ImmichService) {
+    init(asset: ImmichAsset, assetService: AssetService, authenticationService: AuthenticationService) {
         self.asset = asset
-        self.immichService = immichService
-        self._viewModel = StateObject(wrappedValue: VideoPlayerViewModel(asset: asset, immichService: immichService))
+        self.assetService = assetService
+        self.authenticationService = authenticationService
+        self._viewModel = StateObject(wrappedValue: VideoPlayerViewModel(asset: asset, assetService: assetService, authenticationService: authenticationService))
     }
     
     var body: some View {
@@ -363,4 +374,43 @@ struct ImprovedVideoPlayerView: UIViewControllerRepresentable {
             uiViewController.player = player
         }
     }
+}
+
+#Preview {
+    let networkService = NetworkService()
+    let authenticationService = AuthenticationService(networkService: networkService)
+    let assetService = AssetService(networkService: networkService)
+    
+    // Create mock video asset for preview
+    let mockVideoAsset = ImmichAsset(
+        id: "mock-video-id",
+        deviceAssetId: "mock-device-video-id",
+        deviceId: "mock-device",
+        ownerId: "mock-owner",
+        libraryId: nil,
+        type: .video,
+        originalPath: "/mock/video/path",
+        originalFileName: "mock.mp4",
+        originalMimeType: "video/mp4",
+        resized: false,
+        thumbhash: nil,
+        fileModifiedAt: "2023-01-01",
+        fileCreatedAt: "2023-01-01",
+        localDateTime: "2023-01-01",
+        updatedAt: "2023-01-01",
+        isFavorite: false,
+        isArchived: false,
+        isOffline: false,
+        isTrashed: false,
+        checksum: "mock-video-checksum",
+        duration: "PT1M30S",
+        hasMetadata: false,
+        livePhotoVideoId: nil,
+        people: [],
+        visibility: "public",
+        duplicateId: nil,
+        exifInfo: nil
+    )
+    
+    VideoPlayerView(asset: mockVideoAsset, assetService: assetService, authenticationService: authenticationService)
 } 

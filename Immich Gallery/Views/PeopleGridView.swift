@@ -8,7 +8,9 @@
 import SwiftUI
 
 struct PeopleGridView: View {
-    @ObservedObject var immichService: ImmichService
+    @ObservedObject var peopleService: PeopleService
+    @ObservedObject var authService: AuthenticationService
+    @ObservedObject var assetService: AssetService
     @State private var people: [Person] = []
     @State private var isLoading = false
     @State private var errorMessage: String?
@@ -72,7 +74,7 @@ struct PeopleGridView: View {
                             }) {
                                 PersonThumbnailView(
                                     person: person,
-                                    immichService: immichService,
+                                    peopleService: peopleService,
                                     isFocused: focusedPersonId == person.id
                                 )
                             }
@@ -90,10 +92,11 @@ struct PeopleGridView: View {
         }
         .fullScreenCover(isPresented: $showingPersonPhotos) {
             if let selectedPerson = selectedPerson {
-                PersonPhotosView(person: selectedPerson, immichService: immichService)
+                PersonPhotosView(person: selectedPerson, peopleService: peopleService, authService: authService, assetService: assetService)
             }
         }
         .onAppear {
+            print("PeopleGridView: View appeared, people count: \(people.count), isLoading: \(isLoading), errorMessage: \(errorMessage ?? "nil")")
             if people.isEmpty {
                 loadPeople()
             }
@@ -101,25 +104,33 @@ struct PeopleGridView: View {
     }
     
     private func loadPeople() {
-        guard immichService.isAuthenticated else {
+        print("PeopleGridView: loadPeople called - isAuthenticated: \(authService.isAuthenticated)")
+        guard authService.isAuthenticated else {
             errorMessage = "Not authenticated. Please check your credentials."
             return
         }
         
+        print("Loading people - isAuthenticated: \(authService.isAuthenticated), baseURL: \(authService.baseURL)")
+        
         isLoading = true
         errorMessage = nil
+        print("PeopleGridView: Set loading state to true")
         
         Task {
             do {
-                let fetchedPeople = try await immichService.getAllPeople()
+                let fetchedPeople = try await peopleService.getAllPeople()
+                print("Successfully fetched \(fetchedPeople.count) people")
                 await MainActor.run {
                     self.people = fetchedPeople
                     self.isLoading = false
+                    print("PeopleGridView: Updated UI with \(self.people.count) people, isLoading: \(self.isLoading)")
                 }
             } catch {
+                print("Error fetching people: \(error)")
                 await MainActor.run {
                     self.errorMessage = error.localizedDescription
                     self.isLoading = false
+                    print("PeopleGridView: Set error state, isLoading: \(self.isLoading)")
                 }
             }
         }
@@ -128,7 +139,7 @@ struct PeopleGridView: View {
 
 struct PersonThumbnailView: View {
     let person: Person
-    @ObservedObject var immichService: ImmichService
+    @ObservedObject var peopleService: PeopleService
     @State private var image: UIImage?
     @State private var isLoading = true
     let isFocused: Bool
@@ -197,7 +208,7 @@ struct PersonThumbnailView: View {
     private func loadPersonThumbnail() {
         Task {
             do {
-                let thumbnail = try await immichService.loadPersonThumbnail(personId: person.id)
+                let thumbnail = try await peopleService.loadPersonThumbnail(personId: person.id)
                 await MainActor.run {
                     self.image = thumbnail
                     self.isLoading = false
@@ -227,7 +238,9 @@ struct PersonThumbnailView: View {
 
 struct PersonPhotosView: View {
     let person: Person
-    @ObservedObject var immichService: ImmichService
+    @ObservedObject var peopleService: PeopleService
+    @ObservedObject var authService: AuthenticationService
+    @ObservedObject var assetService: AssetService
     @Environment(\.dismiss) private var dismiss
     @State private var showingSlideshow = false
     @State private var personAssets: [ImmichAsset] = []
@@ -238,11 +251,11 @@ struct PersonPhotosView: View {
                 Color.black
                     .ignoresSafeArea()
                 
-                // Use existing AssetGridView with personIds filter
                 AssetGridView(
-                    immichService: immichService, 
+                    assetService: assetService, 
+                    authService: authService, 
                     albumId: nil, 
-                    personId: person.id, 
+                    personId: person.id,
                     onAssetsLoaded: { loadedAssets in
                         self.personAssets = loadedAssets
                     }
@@ -269,7 +282,7 @@ struct PersonPhotosView: View {
         .fullScreenCover(isPresented: $showingSlideshow) {
             let imageAssets = personAssets.filter { $0.type == .image }
             if !imageAssets.isEmpty {
-                SlideshowView(assets: imageAssets, immichService: immichService)
+                SlideshowView(assets: imageAssets, assetService: assetService)
             }
         }
     }
@@ -283,5 +296,9 @@ struct PersonPhotosView: View {
 }
 
 #Preview {
-    PeopleGridView(immichService: ImmichService())
+    let networkService = NetworkService()
+    let peopleService = PeopleService(networkService: networkService)
+    let authService = AuthenticationService(networkService: networkService)
+    let assetService = AssetService(networkService: networkService)
+    PeopleGridView(peopleService: peopleService, authService: authService, assetService: assetService)
 } 

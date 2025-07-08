@@ -9,7 +9,7 @@ import SwiftUI
 
 struct SlideshowView: View {
     let assets: [ImmichAsset]
-    let immichService: ImmichService
+    let assetService: AssetService
     @Environment(\.dismiss) private var dismiss
     
     @State private var currentIndex = 0
@@ -42,25 +42,24 @@ struct SlideshowView: View {
                 } else if let image = currentImage {
                     GeometryReader { geometry in
                         ZStack {
-                            Color.black
-                                .ignoresSafeArea()
-                    Image(uiImage: image)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .ignoresSafeArea()
-                        .opacity(isTransitioning ? 0.0 : 1.0)
-                        .animation(.easeInOut(duration: 0.8), value: isTransitioning)
-                        .overlay(
-                            // Lock screen style overlay in slideshow mode
-                            VStack {
-                                HStack {
-                                    Spacer()
-                                    LockScreenStyleOverlay(asset: assets[currentIndex], isSlideshowMode: true)
-                                        .opacity(isTransitioning ? 0.0 : 1.0)
-                                        .animation(.easeInOut(duration: 0.8), value: isTransitioning)
+                           SharedOpaqueBackground()
+                        Image(uiImage: image)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .ignoresSafeArea()
+                            .opacity(isTransitioning ? 0.0 : 1.0)
+                            .animation(.easeInOut(duration: 0.8), value: isTransitioning)
+                            .overlay(
+                                // Lock screen style overlay in slideshow mode
+                                VStack {
+                                    HStack {
+                                        Spacer()
+                                        LockScreenStyleOverlay(asset: assets[currentIndex], isSlideshowMode: true)
+                                            .opacity(isTransitioning ? 0.0 : 1.0)
+                                            .animation(.easeInOut(duration: 0.8), value: isTransitioning)
+                                    }
                                 }
-                            }
-                        )
+                            )
                         }
                     }
                     .ignoresSafeArea()
@@ -82,7 +81,7 @@ struct SlideshowView: View {
             loadCurrentImage()
             startAutoAdvance()
         }
-        .onDisappear {
+         .onDisappear {
             stopAutoAdvance()
         }
         .onTapGesture {
@@ -98,7 +97,7 @@ struct SlideshowView: View {
         
         Task {
             do {
-                let image = try await immichService.loadFullImage(from: asset)
+                let image = try await assetService.loadFullImage(asset: asset)
                 await MainActor.run {
                     self.currentImage = image
                     self.isLoading = false
@@ -167,4 +166,44 @@ struct SlideshowView: View {
         autoAdvanceTimer?.invalidate()
         autoAdvanceTimer = nil
     }
+}
+
+#Preview {
+    let networkService = NetworkService()
+    let assetService = AssetService(networkService: networkService)
+    
+    // Create mock assets for preview
+    let mockAssets = [
+        ImmichAsset(
+            id: "mock-1",
+            deviceAssetId: "mock-device-1",
+            deviceId: "mock-device",
+            ownerId: "mock-owner",
+            libraryId: nil,
+            type: .image,
+            originalPath: "/mock/path1",
+            originalFileName: "mock1.jpg",
+            originalMimeType: "image/jpeg",
+            resized: false,
+            thumbhash: nil,
+            fileModifiedAt: "2023-01-01",
+            fileCreatedAt: "2023-01-01",
+            localDateTime: "2023-01-01",
+            updatedAt: "2023-01-01",
+            isFavorite: false,
+            isArchived: false,
+            isOffline: false,
+            isTrashed: false,
+            checksum: "mock-checksum-1",
+            duration: nil,
+            hasMetadata: false,
+            livePhotoVideoId: nil,
+            people: [],
+            visibility: "public",
+            duplicateId: nil,
+            exifInfo: nil
+        )
+    ]
+    
+    SlideshowView(assets: mockAssets, assetService: assetService)
 } 
