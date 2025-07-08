@@ -8,7 +8,8 @@
 import SwiftUI
 
 struct AssetGridView: View {
-    @ObservedObject var immichService: ImmichService
+    @ObservedObject var assetService: AssetService
+    @ObservedObject var authService: AuthenticationService
     @ObservedObject private var thumbnailCache = ThumbnailCache.shared
     let albumId: String? // Optional album ID to filter assets
     let personId: String? // Optional person ID to filter assets
@@ -35,16 +36,7 @@ struct AssetGridView: View {
     var body: some View {
         ZStack {
             // Background
-            LinearGradient(
-                gradient: Gradient(colors: [
-                    Color.blue.opacity(0.3),
-                    Color.purple.opacity(0.2),
-                    Color.gray.opacity(0.4)
-                ]),
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
+            SharedGradientBackground()
             
             if isLoading {
                 ProgressView("Loading photos...")
@@ -90,7 +82,7 @@ struct AssetGridView: View {
                                 }) {
                                     AssetThumbnailView(
                                         asset: asset,
-                                        immichService: immichService,
+                                        assetService: assetService,
                                         isFocused: focusedAssetId == asset.id
                                     )
                                 }
@@ -131,7 +123,7 @@ struct AssetGridView: View {
         }
         .fullScreenCover(isPresented: $showingFullScreen) {
             if let selectedAsset = selectedAsset {
-                FullScreenImageView(asset: selectedAsset, assets: assets, currentIndex: assets.firstIndex(of: selectedAsset) ?? 0, immichService: immichService)
+                FullScreenImageView(asset: selectedAsset, assets: assets, currentIndex: assets.firstIndex(of: selectedAsset) ?? 0, assetService: assetService, authenticationService: authService)
             }
         }
         .onAppear {
@@ -146,7 +138,7 @@ struct AssetGridView: View {
     }
     
     private func loadAssets() {
-        guard immichService.isAuthenticated else {
+        guard authService.isAuthenticated else {
             errorMessage = "Not authenticated. Please check your credentials."
             return
         }
@@ -158,7 +150,7 @@ struct AssetGridView: View {
         
         Task {
             do {
-                let searchResult = try await immichService.fetchAssets(page: 1, limit: 100, albumId: albumId, personId: personId)
+                let searchResult = try await assetService.fetchAssets(page: 1, limit: 100, albumId: albumId, personId: personId)
                 await MainActor.run {
                     self.assets = searchResult.assets
                     self.nextPage = searchResult.nextPage
@@ -207,7 +199,7 @@ struct AssetGridView: View {
             do {
                 // Extract page number from nextPage string
                 let pageNumber = extractPageFromNextPage(nextPage!)
-                let searchResult = try await immichService.fetchAssets(page: pageNumber, limit: 100, albumId: albumId, personId: personId)
+                let searchResult = try await assetService.fetchAssets(page: pageNumber, limit: 100, albumId: albumId, personId: personId)
                 
                 await MainActor.run {
                     if !searchResult.assets.isEmpty {
@@ -271,4 +263,11 @@ struct AssetGridView: View {
             return "Your photos will appear here"
         }
     }
+}
+
+#Preview {
+    let networkService = NetworkService()
+    let assetService = AssetService(networkService: networkService)
+    let authService = AuthenticationService(networkService: networkService)
+    AssetGridView(assetService: assetService, authService: authService, albumId: nil, personId: nil, onAssetsLoaded: nil)
 }

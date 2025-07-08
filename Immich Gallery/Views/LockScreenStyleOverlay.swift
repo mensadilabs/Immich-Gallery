@@ -57,7 +57,7 @@ struct LockScreenStyleOverlay: View {
             
             Spacer() // Pushes content to the top (or bottom if this is the only spacer)
             
-            VStack(alignment: .trailing, spacing: 2) { // This VStack will get the single background and shadow
+            VStack(alignment: .trailing, spacing: 0) { // This VStack will get the single background and shadow
                 // MARK: - Group for internal padding (all text/HStacks inside this will share the padding)
                 Group {
                     // MARK: - People names with elegant styling
@@ -71,7 +71,7 @@ struct LockScreenStyleOverlay: View {
 
                     // MARK: - Location with elegant styling
                     if let location = getLocationString() {
-                        HStack(spacing: 1) {
+                        HStack(spacing: 0) {
                             Image(systemName: "location.fill")
                                 .font(.system(size: 20))
                                 .foregroundColor(.white.opacity(0.85))
@@ -82,7 +82,7 @@ struct LockScreenStyleOverlay: View {
                     }
 
                     // MARK: - Date with elegant styling
-                    HStack(spacing: 1) {
+                    HStack(spacing: 0) {
                         Image(systemName: "calendar")
                             .font(.system(size: 20))
                             .foregroundColor(.white.opacity(0.85))
@@ -91,8 +91,8 @@ struct LockScreenStyleOverlay: View {
                             .foregroundColor(.white)
                     }
                 }
-                .padding(.horizontal, 24) // <<< THIS IS THE KEY CHANGE: INTERNAL PADDING for the content
-                .padding(.vertical, 12)   // <<< before the background is applied to the VStack
+                .padding(.horizontal, 24) 
+                .padding(.vertical, 12)  
             }
             .background(
                 RoundedRectangle(cornerRadius: 16)

@@ -11,7 +11,8 @@ struct FullScreenImageView: View {
     let asset: ImmichAsset
     let assets: [ImmichAsset]
     let currentIndex: Int
-    @ObservedObject var immichService: ImmichService
+    @ObservedObject var assetService: AssetService
+    @ObservedObject var authenticationService: AuthenticationService
     @Environment(\.dismiss) private var dismiss
     @State private var image: UIImage?
     @State private var isLoading = true
@@ -22,23 +23,23 @@ struct FullScreenImageView: View {
     @FocusState private var isFocused: Bool
     @State private var refreshToggle = false
     
-    init(asset: ImmichAsset, assets: [ImmichAsset], currentIndex: Int, immichService: ImmichService) {
+    init(asset: ImmichAsset, assets: [ImmichAsset], currentIndex: Int, assetService: AssetService, authenticationService: AuthenticationService) {
         self.asset = asset
         self.assets = assets
         self.currentIndex = currentIndex
-        self.immichService = immichService
+        self.assetService = assetService
+        self.authenticationService = authenticationService
         self._currentAssetIndex = State(initialValue: currentIndex)
         self._currentAsset = State(initialValue: asset)
     }
     
     var body: some View {
         ZStack {
-            Color.black
-                .ignoresSafeArea()
+            SharedOpaqueBackground()
             
             if currentAsset.type == .video {
                 // Use VideoPlayerView for videos
-                VideoPlayerView(asset: currentAsset, immichService: immichService)
+                VideoPlayerView(asset: currentAsset, assetService: assetService, authenticationService: authenticationService)
             } else {
                 // Use image view for photos
                 if isLoading {
@@ -48,8 +49,7 @@ struct FullScreenImageView: View {
                 } else if let image = image {
                     GeometryReader { geometry in
                         ZStack {
-                            Color.black
-                                .ignoresSafeArea()
+                            SharedOpaqueBackground()
                             
                             Image(uiImage: image)
                                 .resizable()
@@ -142,7 +142,7 @@ struct FullScreenImageView: View {
         Task {
             do {
                 print("Loading full image for asset \(currentAsset.id)")
-                let fullImage = try await immichService.loadFullImage(from: currentAsset)
+                let fullImage = try await assetService.loadFullImage(asset: currentAsset)
                 await MainActor.run {
                     print("Loaded image for asset \(currentAsset.id)")
                     self.image = fullImage
@@ -226,4 +226,107 @@ struct ContentAwareModifier: ViewModifier {
                 }
         }
     }
+}
+
+// MARK: - Preview
+#Preview {
+    let sampleAsset = ImmichAsset(
+        id: "sample-1",
+        deviceAssetId: "device-1",
+        deviceId: "device-1",
+        ownerId: "owner-1",
+        libraryId: "library-1",
+        type: .image,
+        originalPath: "/sample/path",
+        originalFileName: "sample.jpg",
+        originalMimeType: "image/jpeg",
+        resized: false,
+        thumbhash: nil,
+        fileModifiedAt: "2024-01-01T00:00:00Z",
+        fileCreatedAt: "2024-01-01T00:00:00Z",
+        localDateTime: "2024-01-01T00:00:00Z",
+        updatedAt: "2024-01-01T00:00:00Z",
+        isFavorite: false,
+        isArchived: false,
+        isOffline: false,
+        isTrashed: false,
+        checksum: "sample-checksum",
+        duration: nil,
+        hasMetadata: true,
+        livePhotoVideoId: nil,
+        people: [],
+        visibility: "VISIBLE",
+        duplicateId: nil,
+        exifInfo: ExifInfo(
+            make: "Apple",
+            model: "iPhone 15",
+            imageName: "Sample Image",
+            exifImageWidth: 1080,
+            exifImageHeight: 1920,
+            dateTimeOriginal: "2024-01-01T00:00:00Z",
+            modifyDate: "2024-01-01T00:00:00Z",
+            lensModel: "iPhone 15 back camera",
+            fNumber: 1.8,
+            focalLength: 26.0,
+            iso: 100,
+            exposureTime: "1/60",
+            latitude: 37.7749,
+            longitude: -122.4194,
+            city: "San Francisco",
+            state: "CA",
+            country: "USA",
+            timeZone: "America/Los_Angeles",
+            description: "Sample image for preview",
+            fileSizeInByte: 1024000,
+            orientation: "1",
+            projectionType: nil,
+            rating: 5
+        )
+    )
+    
+    let sampleAssets = [
+        sampleAsset,
+        ImmichAsset(
+            id: "sample-2",
+            deviceAssetId: "device-2",
+            deviceId: "device-2",
+            ownerId: "owner-1",
+            libraryId: "library-1",
+            type: .image,
+            originalPath: "/sample/path2",
+            originalFileName: "sample2.jpg",
+            originalMimeType: "image/jpeg",
+            resized: false,
+            thumbhash: nil,
+            fileModifiedAt: "2024-01-02T00:00:00Z",
+            fileCreatedAt: "2024-01-02T00:00:00Z",
+            localDateTime: "2024-01-02T00:00:00Z",
+            updatedAt: "2024-01-02T00:00:00Z",
+            isFavorite: true,
+            isArchived: false,
+            isOffline: false,
+            isTrashed: false,
+            checksum: "sample-checksum-2",
+            duration: nil,
+            hasMetadata: true,
+            livePhotoVideoId: nil,
+            people: [],
+            visibility: "VISIBLE",
+            duplicateId: nil,
+            exifInfo: nil
+        )
+    ]
+    
+    // Use the shared mock service
+    let networkService = NetworkService()
+    let authenticationService = AuthenticationService(networkService: networkService)
+    let assetService = AssetService(networkService: networkService)
+    
+    FullScreenImageView(
+        asset: sampleAsset,
+        assets: sampleAssets,
+        currentIndex: 0,
+        assetService: assetService,
+        authenticationService: authenticationService
+    )
 }

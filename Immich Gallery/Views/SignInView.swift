@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct SignInView: View {
-    @ObservedObject var immichService: ImmichService
+    @ObservedObject var authService: AuthenticationService
     @State private var serverURL = ""
     @State private var email = ""
     @State private var password = ""
@@ -19,16 +19,7 @@ struct SignInView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                LinearGradient(
-                    gradient: Gradient(colors: [
-                        Color.blue.opacity(0.3),
-                        Color.purple.opacity(0.2),
-                        Color.gray.opacity(0.4)
-                    ]),
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .ignoresSafeArea()  
+                SharedGradientBackground()
             VStack(spacing: 30) {
                 // Header
                 VStack(spacing: 16) {
@@ -163,7 +154,7 @@ struct SignInView: View {
             return
         }
         
-        immichService.signIn(serverURL: cleanURL, email: email, password: password) { success, error in
+        authService.signIn(serverURL: cleanURL, email: email, password: password) { success, error in
             DispatchQueue.main.async {
                 isLoading = false
                 
@@ -177,6 +168,8 @@ struct SignInView: View {
 }
 
 #Preview {
-    SignInView(immichService: ImmichService())
+    let networkService = NetworkService()
+    let authService = AuthenticationService(networkService: networkService)
+    SignInView(authService: authService)
 }
 
