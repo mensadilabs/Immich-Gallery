@@ -9,7 +9,7 @@ import SwiftUI
 
 struct AssetThumbnailView: View {
     let asset: ImmichAsset
-    @ObservedObject var immichService: ImmichService
+    @ObservedObject var assetService: AssetService
     @State private var image: UIImage?
     @State private var isLoading = true
     let isFocused: Bool
@@ -36,7 +36,7 @@ struct AssetThumbnailView: View {
                     .foregroundColor(.gray)
             }
             
-                        // Video indicator
+            // Video indicator
             if asset.type == .video {
                 // Play button at top right
                 VStack {
@@ -65,7 +65,6 @@ struct AssetThumbnailView: View {
                                 .background(Color.black.opacity(0.7))
                                 .cornerRadius(4)
                                 .padding(8)
-                            Spacer()
                         }
                     }
                 }
@@ -94,7 +93,7 @@ struct AssetThumbnailView: View {
     private func loadThumbnail() {
         Task {
             do {
-                let thumbnail = try await immichService.loadImage(from: asset, size: "preview")
+                let thumbnail = try await assetService.loadImage(asset: asset, size: "preview")
                 await MainActor.run {
                     self.image = thumbnail
                     self.isLoading = false
@@ -141,4 +140,43 @@ struct AssetThumbnailView: View {
         
         return String(format: "%d:%02d", minutes, seconds)
     }
+}
+
+#Preview {
+    let networkService = NetworkService()
+    let assetService = AssetService(networkService: networkService)
+    
+    // Create a mock asset for preview
+    let mockAsset = ImmichAsset(
+        id: "mock-id",
+        deviceAssetId: "mock-device-id",
+        deviceId: "mock-device",
+        ownerId: "mock-owner",
+        libraryId: nil,
+        type: .image,
+        originalPath: "/mock/path",
+        originalFileName: "mock.jpg",
+        originalMimeType: "image/jpeg",
+        resized: false,
+        thumbhash: nil,
+        fileModifiedAt: "2023-01-01",
+        fileCreatedAt: "2023-01-01",
+        localDateTime: "2023-01-01",
+        updatedAt: "2023-01-01",
+        isFavorite: false,
+        isArchived: false,
+        isOffline: false,
+        isTrashed: false,
+        checksum: "mock-checksum",
+        duration: nil,
+        hasMetadata: false,
+        livePhotoVideoId: nil,
+        people: [],
+        visibility: "public",
+        duplicateId: nil,
+        exifInfo: nil
+    )
+    
+    AssetThumbnailView(asset: mockAsset, assetService: assetService, isFocused: false)
 } 
+

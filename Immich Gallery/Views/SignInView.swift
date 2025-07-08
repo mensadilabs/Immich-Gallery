@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct SignInView: View {
-    @ObservedObject var immichService: ImmichService
+    @ObservedObject var authService: AuthenticationService
     @State private var serverURL = ""
     @State private var email = ""
     @State private var password = ""
@@ -154,7 +154,7 @@ struct SignInView: View {
             return
         }
         
-        immichService.signIn(serverURL: cleanURL, email: email, password: password) { success, error in
+        authService.signIn(serverURL: cleanURL, email: email, password: password) { success, error in
             DispatchQueue.main.async {
                 isLoading = false
                 
@@ -168,6 +168,8 @@ struct SignInView: View {
 }
 
 #Preview {
-    SignInView(immichService: ImmichService())
+    let networkService = NetworkService()
+    let authService = AuthenticationService(networkService: networkService)
+    SignInView(authService: authService)
 }
 
