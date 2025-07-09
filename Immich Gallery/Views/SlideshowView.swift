@@ -22,7 +22,8 @@ struct SlideshowView: View {
     
     var body: some View {
         ZStack {
-            SharedOpaqueBackground()
+            Color.white
+                .ignoresSafeArea()
             
             if assets.isEmpty {
                 VStack {
@@ -41,28 +42,52 @@ struct SlideshowView: View {
                         .scaleEffect(1.5)
                 } else if let image = currentImage {
                     GeometryReader { geometry in
-                        ZStack {
-                           SharedOpaqueBackground()
-                        Image(uiImage: image)
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .ignoresSafeArea()
-                            .opacity(isTransitioning ? 0.0 : 1.0)
-                            .animation(.easeInOut(duration: 0.8), value: isTransitioning)
-                            .overlay(
-                                // Lock screen style overlay in slideshow mode
-                                VStack {
-                                    HStack {
-                                        Spacer()
-                                        LockScreenStyleOverlay(asset: assets[currentIndex], isSlideshowMode: true)
-                                            .opacity(isTransitioning ? 0.0 : 1.0)
-                                            .animation(.easeInOut(duration: 0.8), value: isTransitioning)
+                        let imageWidth = geometry.size.width * 0.9
+                        let imageHeight = geometry.size.height * 0.9
+
+                        VStack(spacing: 20) {
+                            // Main image
+                            Image(uiImage: image)
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(width: imageWidth, height: imageHeight)
+                                .shadow(color: .black.opacity(0.4), radius: 30, x: 0, y: 15)
+                                .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 5)
+                                .opacity(isTransitioning ? 0.0 : 1.0)
+                                .animation(.easeInOut(duration: 0.8), value: isTransitioning)
+                                .overlay(
+                                    VStack {
+                                        HStack {
+                                            Spacer()
+                                            LockScreenStyleOverlay(asset: assets[currentIndex], isSlideshowMode: true)
+                                                .opacity(isTransitioning ? 0.0 : 1.0)
+                                                .animation(.easeInOut(duration: 0.8), value: isTransitioning)
+                                        }
                                     }
-                                }
-                            )
+                                )
+                                
+                            // Reflection
+                            Image(uiImage: image)
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .scaleEffect(y: -1)
+                                .frame(width: imageWidth, height: imageHeight)
+                                .offset(y: -imageHeight * 0.2)
+                                .clipped()
+                                .mask(
+                                    LinearGradient(
+                                        colors: [.black.opacity(0.9), .clear],
+                                        startPoint: .top,
+                                        endPoint: .center
+                                    )
+                                )
+                                .opacity(0.4)
+                                .opacity(isTransitioning ? 0.0 : 1.0)
+                                .animation(.easeInOut(duration: 0.8), value: isTransitioning)
                         }
+                        .frame(maxWidth: .infinity, alignment: .center)
                     }
-                    .ignoresSafeArea()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     VStack {
                         Image(systemName: "photo")
@@ -81,7 +106,7 @@ struct SlideshowView: View {
             loadCurrentImage()
             startAutoAdvance()
         }
-         .onDisappear {
+        .onDisappear {
             stopAutoAdvance()
         }
         .onTapGesture {
@@ -169,8 +194,7 @@ struct SlideshowView: View {
 }
 
 #Preview {
-    let networkService = NetworkService()
-    let assetService = AssetService(networkService: networkService)
+    let (_, _, assetService, _, _) = MockServiceFactory.createMockServices()
     
     // Create mock assets for preview
     let mockAssets = [
@@ -206,4 +230,4 @@ struct SlideshowView: View {
     ]
     
     SlideshowView(assets: mockAssets, assetService: assetService)
-} 
+}
