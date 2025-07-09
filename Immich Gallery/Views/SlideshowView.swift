@@ -45,7 +45,7 @@ struct SlideshowView: View {
                         let imageWidth = geometry.size.width * 0.9
                         let imageHeight = geometry.size.height * 0.9
 
-                        VStack(spacing: 10) {
+                        VStack(spacing: 20) {
                             // Main image
                             Image(uiImage: image)
                                 .resizable()
@@ -54,15 +54,14 @@ struct SlideshowView: View {
                                 .shadow(color: .black.opacity(0.4), radius: 30, x: 0, y: 15)
                                 .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 5)
                                 .opacity(isTransitioning ? 0.0 : 1.0)
-                                .scaleEffect(isTransitioning ? 0.98 : 1.0)
-                                .animation(.spring(response: 0.9, dampingFraction: 0.85, blendDuration: 0.2), value: isTransitioning)
+                                .animation(.easeInOut(duration: 0.8), value: isTransitioning)
                                 .overlay(
                                     VStack {
                                         HStack {
                                             Spacer()
                                             LockScreenStyleOverlay(asset: assets[currentIndex], isSlideshowMode: true)
                                                 .opacity(isTransitioning ? 0.0 : 1.0)
-                                                .animation(.spring(response: 0.9, dampingFraction: 0.85, blendDuration: 0.2), value: isTransitioning)
+                                                .animation(.easeInOut(duration: 0.8), value: isTransitioning)
                                         }
                                     }
                                 )
@@ -76,15 +75,15 @@ struct SlideshowView: View {
                                 .offset(y: -imageHeight * 0.2)
                                 .clipped()
                                 .mask(
-                                    VStack(spacing: 0) {
-                                        Rectangle()
-                                            .frame(height: imageHeight * 0.3) // Show only bottom 30%
-                                                                                    Spacer()
-                                    }
+                                    LinearGradient(
+                                        colors: [.black.opacity(0.9), .clear],
+                                        startPoint: .top,
+                                        endPoint: .center
+                                    )
                                 )
                                 .opacity(0.4)
                                 .opacity(isTransitioning ? 0.0 : 1.0)
-                                .animation(.spring(response: 0.9, dampingFraction: 0.85, blendDuration: 0.2), value: isTransitioning)
+                                .animation(.easeInOut(duration: 0.8), value: isTransitioning)
                         }
                         .frame(maxWidth: .infinity, alignment: .center)
                     }
@@ -166,7 +165,6 @@ struct SlideshowView: View {
             // Fade in will be triggered in loadCurrentImage after image loads
         }
     }
-    
     
     private func startAutoAdvance() {
         stopAutoAdvance()

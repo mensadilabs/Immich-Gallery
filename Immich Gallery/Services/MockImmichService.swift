@@ -112,17 +112,21 @@ class MockAssetService: AssetService {
     }
     
     override func loadImage(asset: ImmichAsset, size: String = "thumbnail") async throws -> UIImage? {
-        // Fetch a random image from picsum.photos
-        let url = URL(string: "https://picsum.photos/300/300")!
-        let (data, _) = try await URLSession.shared.data(from: url)
-        return UIImage(data: data)
+        // Return a mock image (solid color)
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: 300, height: 300))
+        return renderer.image { context in
+            UIColor.systemBlue.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 300, height: 300))
+        }
     }
     
     override func loadFullImage(asset: ImmichAsset) async throws -> UIImage? {
-        // Fetch a random full-size image from picsum.photos
-        let url = URL(string: "https://picsum.photos/1920/1080")!
-        let (data, _) = try await URLSession.shared.data(from: url)
-        return UIImage(data: data)
+        // Return a mock full-size image
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: 1920, height: 1080))
+        return renderer.image { context in
+            UIColor.systemGreen.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 1920, height: 1080))
+        }
     }
     
     override func loadVideoURL(asset: ImmichAsset) async throws -> URL {
@@ -173,10 +177,12 @@ class MockAlbumService: AlbumService {
     }
     
     override func loadAlbumThumbnail(albumId: String, thumbnailAssetId: String, size: String = "thumbnail") async throws -> UIImage? {
-        // Fetch a random album thumbnail from picsum.photos
-        let url = URL(string: "https://picsum.photos/300/300")!
-        let (data, _) = try await URLSession.shared.data(from: url)
-        return UIImage(data: data)
+        // Return a mock thumbnail
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: 300, height: 300))
+        return renderer.image { context in
+            UIColor.systemPurple.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 300, height: 300))
+        }
     }
 }
 
@@ -215,10 +221,12 @@ class MockPeopleService: PeopleService {
     }
     
     override func loadPersonThumbnail(personId: String) async throws -> UIImage? {
-        // Fetch a random person thumbnail from picsum.photos
-        let url = URL(string: "https://picsum.photos/300/300")!
-        let (data, _) = try await URLSession.shared.data(from: url)
-        return UIImage(data: data)
+        // Return a mock person thumbnail
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: 300, height: 300))
+        return renderer.image { context in
+            UIColor.systemOrange.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 300, height: 300))
+        }
     }
 }
 
