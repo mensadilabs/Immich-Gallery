@@ -1,5 +1,5 @@
 //
-//  CacheManagementView.swift
+//  SettingsView.swift
 //  Immich Gallery
 //
 //  Created by mensadi-labs on 2025-06-29.
@@ -7,13 +7,14 @@
 
 import SwiftUI
 
-struct CacheManagementView: View {
+struct SettingsView: View {
     @ObservedObject private var thumbnailCache = ThumbnailCache.shared
     @ObservedObject var authService: AuthenticationService
     @State private var showingClearCacheAlert = false
     @State private var showingSignOutAlert = false
     @State private var showingAddUser = false
     @State private var savedUsers: [SavedUser] = []
+    @AppStorage("hideImageOverlay") private var hideImageOverlay = false
     
     var body: some View {
         NavigationView {
@@ -176,6 +177,35 @@ struct CacheManagementView: View {
                                 .background(Color.orange.opacity(0.1))
                                 .cornerRadius(12)
                             }.buttonStyle(.plain)
+                        }
+                        
+                        // Display Settings Section
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text("Display Settings")
+                                .font(.title2)
+                                .fontWeight(.bold)
+                                .foregroundColor(.primary)
+                            
+                            VStack(alignment: .leading, spacing: 12) {
+                                HStack {
+                                    Image(systemName: "eye.slash")
+                                        .foregroundColor(.blue)
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Hide Image Overlays")
+                                            .font(.subheadline)
+                                            .foregroundColor(.primary)
+                                        Text("Hide date, location, and other info overlays on images")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    Spacer()
+                                    Toggle("", isOn: $hideImageOverlay)
+                                        .labelsHidden()
+                                }
+                                .padding()
+                                .background(Color.gray.opacity(0.1))
+                                .cornerRadius(12)
+                            }
                         }
                         
                         // Cache Management Section
@@ -456,6 +486,14 @@ struct CacheManagementView: View {
     }
 }
 
+// Extension to make overlay setting easily accessible throughout the app
+extension UserDefaults {
+    var hideImageOverlay: Bool {
+        get { bool(forKey: "hideImageOverlay") }
+        set { set(newValue, forKey: "hideImageOverlay") }
+    }
+}
+
 struct SavedUser: Codable, Identifiable {
     let id: String
     let email: String
@@ -699,5 +737,5 @@ struct AddUserView: View {
 #Preview {
     let networkService = NetworkService()
     let authService = AuthenticationService(networkService: networkService)
-    CacheManagementView(authService: authService)
+    SettingsView(authService: authService)
 } 

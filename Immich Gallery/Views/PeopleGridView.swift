@@ -80,7 +80,7 @@ struct PeopleGridView: View {
                             }
                             .frame(width: 300, height: 360)
                             .focused($focusedPersonId, equals: person.id)
-                            .scaleEffect(focusedPersonId == person.id ? 1.05 : 1.0)
+                            .scaleEffect(focusedPersonId == person.id ? 1.1 : 1.0)
                             .animation(.easeInOut(duration: 0.2), value: focusedPersonId)
                         }
                     }

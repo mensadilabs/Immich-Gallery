@@ -20,7 +20,10 @@ struct AssetGridView: View {
     @State private var errorMessage: String?
     @State private var selectedAsset: ImmichAsset?
     @State private var showingFullScreen = false
+    @State private var currentAssetIndex: Int = 0 // Track current asset index for highlighting
     @FocusState private var focusedAssetId: String?
+    @State private var isProgrammaticFocusChange = false // Flag to track programmatic focus changes
+    @State private var shouldScrollToAsset: String? // Asset ID to scroll to
     @State private var nextPage: String?
     @State private var hasMoreAssets = true
     @State private var loadMoreTask: Task<Void, Never>?
@@ -72,12 +75,17 @@ struct AssetGridView: View {
                 }
             } else {
                 VStack {
-                    ScrollView {
-                        LazyVGrid(columns: columns, spacing: 50) {
+                    ScrollViewReader { proxy in
+                        ScrollView {
+                            LazyVGrid(columns: columns, spacing: 50) {
                             ForEach(assets) { asset in
                                 UIKitFocusable(action: {
-                                    print("Asset selected: \(asset.id)")
+                                    print("AssetGridView: Asset selected: \(asset.id)")
                                     selectedAsset = asset
+                                    if let index = assets.firstIndex(of: asset) {
+                                        currentAssetIndex = index
+                                        print("AssetGridView: Set currentAssetIndex to \(index)")
+                                    }
                                     showingFullScreen = true
                                 }) {
                                     AssetThumbnailView(
@@ -87,8 +95,9 @@ struct AssetGridView: View {
                                     )
                                 }
                                 .frame(width: 300, height: 360)
+                                .id(asset.id) // Add id for ScrollViewReader
                                 .focused($focusedAssetId, equals: asset.id)
-                                .scaleEffect(focusedAssetId == asset.id ? 1.05 : 1.0)
+                                .scaleEffect(focusedAssetId == asset.id ? 1.1 : 1.0)
                                 .animation(.easeInOut(duration: 0.2), value: focusedAssetId)
                                 .onAppear {
                                     // More efficient index check using enumerated
@@ -96,6 +105,11 @@ struct AssetGridView: View {
                                         let threshold = max(assets.count - 8, 0) // Load when 8 items away from end
                                         if index >= threshold && hasMoreAssets && !isLoadingMore {
                                             debouncedLoadMore()
+                                        }
+                                        
+                                        // Check if this is the asset we need to scroll to
+                                        if shouldScrollToAsset == asset.id {
+                                            print("AssetGridView: Target asset appeared in grid - \(asset.id)")
                                         }
                                     }
                                 }
@@ -117,13 +131,54 @@ struct AssetGridView: View {
                         .padding(.horizontal)
                         .padding(.top, 20)
                         .padding(.bottom, 40)
+                        .onChange(of: focusedAssetId) { newFocusedId in
+                            print("AssetGridView: focusedAssetId changed to \(newFocusedId ?? "nil"), isProgrammatic: \(isProgrammaticFocusChange)")
+                            // Scroll to the focused asset when it changes
+                            if let focusedId = newFocusedId {
+                                if isProgrammaticFocusChange {
+                                    print("AssetGridView: Programmatic focus change - scrolling to asset ID: \(focusedId)")
+                                    withAnimation(.easeInOut(duration: 0.5)) {
+                                        proxy.scrollTo(focusedId, anchor: .center)
+                                    }
+                                    // Reset the flag after scrolling
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                        isProgrammaticFocusChange = false
+                                    }
+                                } else {
+                                    print("AssetGridView: User navigation - not scrolling")
+                                }
+                            }
+                        }
+                        .onChange(of: shouldScrollToAsset) { assetId in
+                            if let assetId = assetId {
+                                print("AssetGridView: shouldScrollToAsset triggered - scrolling to asset ID: \(assetId)")
+                                // Use a more robust scrolling approach with proper timing
+                                DispatchQueue.main.async {
+                                    withAnimation(.easeInOut(duration: 0.5)) {
+                                        proxy.scrollTo(assetId, anchor: .center)
+                                    }
+                                }
+                                // Clear the trigger after a longer delay to ensure scroll completes
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                                    shouldScrollToAsset = nil
+                                }
+                            }
+                        }
                     }
+                }
                 }
             }
         }
         .fullScreenCover(isPresented: $showingFullScreen) {
             if let selectedAsset = selectedAsset {
-                FullScreenImageView(asset: selectedAsset, assets: assets, currentIndex: assets.firstIndex(of: selectedAsset) ?? 0, assetService: assetService, authenticationService: authService)
+                FullScreenImageView(
+                    asset: selectedAsset, 
+                    assets: assets, 
+                    currentIndex: assets.firstIndex(of: selectedAsset) ?? 0, 
+                    assetService: assetService, 
+                    authenticationService: authService,
+                    currentAssetIndex: $currentAssetIndex
+                )
             }
         }
         .onAppear {
@@ -134,6 +189,30 @@ struct AssetGridView: View {
         .onDisappear {
             // Cancel any pending load more tasks when view disappears
             loadMoreTask?.cancel()
+        }
+        .onChange(of: showingFullScreen) { isShowing in
+            print("AssetGridView: showingFullScreen changed to \(isShowing)")
+            // When fullscreen is dismissed, highlight the current asset
+            if !isShowing && currentAssetIndex < assets.count {
+                let currentAsset = assets[currentAssetIndex]
+                print("AssetGridView: Fullscreen dismissed, currentAssetIndex: \(currentAssetIndex), asset ID: \(currentAsset.id)")
+                
+                // Use a more robust approach with proper state management
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    // First, trigger the scroll
+                    print("AssetGridView: Setting shouldScrollToAsset to \(currentAsset.id)")
+                    shouldScrollToAsset = currentAsset.id
+                    
+                    // Then set the focus after a short delay to ensure scroll starts
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        print("AssetGridView: Setting focusedAssetId to \(currentAsset.id)")
+                        print("AssetGridView: Setting isProgrammaticFocusChange to true")
+                        isProgrammaticFocusChange = true
+                        focusedAssetId = currentAsset.id
+                        print("AssetGridView: focusedAssetId set to \(currentAsset.id)")
+                    }
+                }
+            }
         }
     }
     

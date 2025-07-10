@@ -31,15 +31,15 @@ struct LockScreenStyleOverlay: View {
             VStack(alignment: .trailing, spacing: 12) { // Increased spacing
                 // Current time in large text
                 Text(formatCurrentTime())
-                    .font(.system(size: isSlideshowMode ? 64 : 48, weight: .medium, design: .rounded)) // Larger sizes
-                    .foregroundColor(.white)
-                    .shadow(color: .black.opacity(0.6), radius: 6, x: 0, y: 3) // Slightly stronger shadow
+                    .font(.system(size: isSlideshowMode ? 100 : 48, weight: .light, design: .default)) // Larger sizes
+                    .foregroundColor(.black)
+                    .shadow(color: .white.opacity(0.6), radius: 6, x: 0, y: 3) // Slightly stronger shadow
                 
                 // Current date
                 Text(formatCurrentDate())
-                    .font(.system(size: isSlideshowMode ? 28 : 22, weight: .regular, design: .rounded)) // Larger sizes
-                    .foregroundColor(.white.opacity(0.95))
-                    .shadow(color: .black.opacity(0.6), radius: 6, x: 0, y: 3)
+                    .font(.system(size: isSlideshowMode ? 32 : 22, weight: .regular, design: .default)) // Larger sizes
+                    .foregroundColor(.black.opacity(0.95))
+                    .shadow(color: .white.opacity(0.6), radius: 6, x: 0, y: 3)
             }
             .padding(.horizontal, 32) // Increased padding
             .padding(.vertical, 24)    // Increased padding
@@ -192,4 +192,45 @@ struct LockScreenStyleOverlay: View {
         timeUpdateTimer?.invalidate()
         timeUpdateTimer = nil
     }
+}
+
+
+
+#Preview {
+    let (_, _, assetService, _, _) = MockServiceFactory.createMockServices()
+    
+    // Create mock assets for preview
+    let mockAssets = [
+        ImmichAsset(
+            id: "mock-1",
+            deviceAssetId: "mock-device-1",
+            deviceId: "mock-device",
+            ownerId: "mock-owner",
+            libraryId: nil,
+            type: .image,
+            originalPath: "/mock/path1",
+            originalFileName: "mock1.jpg",
+            originalMimeType: "image/jpeg",
+            resized: false,
+            thumbhash: nil,
+            fileModifiedAt: "2023-01-01",
+            fileCreatedAt: "2023-01-01",
+            localDateTime: "2023-01-01",
+            updatedAt: "2023-01-01",
+            isFavorite: false,
+            isArchived: false,
+            isOffline: false,
+            isTrashed: false,
+            checksum: "mock-checksum-1",
+            duration: nil,
+            hasMetadata: false,
+            livePhotoVideoId: nil,
+            people: [],
+            visibility: "public",
+            duplicateId: nil,
+            exifInfo: nil
+        )
+    ]
+    
+    SlideshowView(assets: mockAssets, assetService: assetService)
 }
