@@ -1,12 +1,18 @@
 ## Note 1: As you can probabaly tell, AI was used in writing this. However, it is not "vibe coded". I have checked every line and edited things manually to get this working. As it is my side project and pretty much an experiment, I didn't want to spend time typing every line. 
-
-## Note 2: There are places where UIKit is used instead of SwiftUI, it is because I couldn't figure out how to handle navigations in TvOs using swiftUI and could only find UIKit documentation on Apple dev docs. If you have suggestions, would apprecitae some links to read. 
-
-## Note 3: Some of the readme maybe outdated. I change code and I forget to update README. 
+## Note 2: Some of the readme maybe outdated. I change code and I forget to update README. 
 
 # Immich Gallery for Apple TV
 
 A native Apple TV app for browsing your Immich photo library with a beautiful, TV-optimized interface.
+
+## Features
+
+- 👥 **Multi User Support**: Alows more than one user to be logged in at the same time, with easy user switching. 
+- 📱 **TV-Optimized Interface**: Designed specifically for Apple TV with large, easy-to-navigate elements
+- 🖼️ **Photo Grid View**: Browse all your photos in a responsive grid layout
+- 👥 **People Tab**: View and browse photos by people detected in your library
+- 📁 **Album Support**: View and navigate through your Immich albums
+- **Slideshow** : Works like a screensaver, if you like. You can either disable or enable a clock overlay. 
 
 ![Login page](https://github.com/user-attachments/assets/64f526eb-d89e-4959-8be0-b7411f8fdc90)
 
@@ -22,15 +28,6 @@ https://github.com/user-attachments/assets/78987a7a-ef62-497c-828f-f7b99851ffb3
 
 <img width="1926" alt="image" src="https://github.com/user-attachments/assets/b2384524-77b6-44c5-a51f-d894e5a27eeb" />
 
-
-
-## Features
-
-- 👥 **Multi User Support**: Alows more than one user to be logged in at the same time, with easy user switching. 
-- 📱 **TV-Optimized Interface**: Designed specifically for Apple TV with large, easy-to-navigate elements
-- 🖼️ **Photo Grid View**: Browse all your photos in a responsive grid layout
-- 👥 **People Tab**: View and browse photos by people detected in your library
-- 📁 **Album Support**: View and navigate through your Immich albums
 
 ## Setup Instructions
 
@@ -147,3 +144,5 @@ This app is built with:
 - URLSession for network requests
 - UserDefaults for secure credential storage
 - Core Image for image processing and caching
+
+![Alt](https://repobeats.axiom.co/api/embed/3fea253de89fc88824c16adb77a456f7e7d657b7.svg "Repobeats analytics image")
