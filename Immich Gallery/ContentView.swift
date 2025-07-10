@@ -63,7 +63,7 @@ struct ContentView: View {
                             }
                             .tag(2)
                         
-                        CacheManagementView(authService: authService)
+                        SettingsView(authService: authService)
                             .tabItem {
                                 Image(systemName: "gear")
                                 Text("Settings")

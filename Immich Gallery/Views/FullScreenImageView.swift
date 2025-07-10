@@ -69,11 +69,15 @@ struct FullScreenImageView: View {
                                 .aspectRatio(contentMode: .fit)
                                 .overlay(
                                     // Lock screen style overlay in bottom right
-                                    VStack {
-                                        Spacer()
-                                        HStack {
-                                            Spacer()
-                                            LockScreenStyleOverlay(asset: currentAsset)
+                                    Group {
+                                        if !UserDefaults.standard.hideImageOverlay {
+                                            VStack {
+                                                Spacer()
+                                                HStack {
+                                                    Spacer()
+                                                    LockScreenStyleOverlay(asset: currentAsset)
+                                                }
+                                            }
                                         }
                                     }
                                 )
@@ -327,11 +331,15 @@ struct VideoThumbnailView: View {
                             )
                             .overlay(
                                 // Lock screen style overlay in bottom right
-                                VStack {
-                                    Spacer()
-                                    HStack {
-                                        Spacer()
-                                        LockScreenStyleOverlay(asset: asset)
+                                Group {
+                                    if !UserDefaults.standard.hideImageOverlay {
+                                        VStack {
+                                            Spacer()
+                                            HStack {
+                                                Spacer()
+                                                LockScreenStyleOverlay(asset: asset)
+                                            }
+                                        }
                                     }
                                 }
                             )

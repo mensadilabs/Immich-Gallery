@@ -72,12 +72,16 @@ struct SlideshowView: View {
                                 .animation(.easeInOut(duration: 1.2), value: isTransitioning)
                                 .animation(.easeInOut(duration: 1.2), value: slideDirection)
                                 .overlay(
-                                    VStack {
-                                        HStack {
-                                            Spacer()
-                                            LockScreenStyleOverlay(asset: assets[currentIndex], isSlideshowMode: true)
-                                                .opacity(isTransitioning ? 0.0 : 1.0)
-                                                .animation(.easeInOut(duration: 1.2), value: isTransitioning)
+                                    Group {
+                                        if !UserDefaults.standard.hideImageOverlay {
+                                            VStack {
+                                                HStack {
+                                                    Spacer()
+                                                    LockScreenStyleOverlay(asset: assets[currentIndex], isSlideshowMode: true)
+                                                        .opacity(isTransitioning ? 0.0 : 1.0)
+                                                        .animation(.easeInOut(duration: 1.2), value: isTransitioning)
+                                                }
+                                            }
                                         }
                                     }
                                 )
