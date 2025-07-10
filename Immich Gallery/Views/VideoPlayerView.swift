@@ -161,6 +161,7 @@ class VideoPlayerViewModel: NSObject, ObservableObject, AVAssetResourceLoaderDel
             print("✅ Player item is ready to play")
             isLoading = false
             isReadyToPlay = true
+            // Auto-play when opened from thumbnail view
             player?.play()
         case .failed:
             let error = playerItem.error?.localizedDescription ?? "Unknown error"

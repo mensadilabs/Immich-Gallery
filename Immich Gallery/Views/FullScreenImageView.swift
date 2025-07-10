@@ -22,6 +22,7 @@ struct FullScreenImageView: View {
     @State private var showingSwipeHint = false
     @FocusState private var isFocused: Bool
     @State private var refreshToggle = false
+    @State private var showingVideoPlayer = false
     
     init(asset: ImmichAsset, assets: [ImmichAsset], currentIndex: Int, assetService: AssetService, authenticationService: AuthenticationService) {
         self.asset = asset
@@ -38,8 +39,19 @@ struct FullScreenImageView: View {
             SharedOpaqueBackground()
             
             if currentAsset.type == .video {
-                // Use VideoPlayerView for videos
-                VideoPlayerView(asset: currentAsset, assetService: assetService, authenticationService: authenticationService)
+                if showingVideoPlayer {
+                    // Use VideoPlayerView for videos when user clicked play
+                    VideoPlayerView(asset: currentAsset, assetService: assetService, authenticationService: authenticationService)
+                } else {
+                    // Show video thumbnail with play button overlay
+                    VideoThumbnailView(
+                        asset: currentAsset,
+                        assetService: assetService,
+                        onPlayButtonTapped: {
+                            showingVideoPlayer = true
+                        }
+                    )
+                }
             } else {
                 // Use image view for photos
                 if isLoading {
@@ -109,6 +121,13 @@ struct FullScreenImageView: View {
             }
         }
         .id(refreshToggle)
+        .onExitCommand {
+            if showingVideoPlayer {
+                showingVideoPlayer = false
+            } else {
+                dismiss()
+            }
+        }
         .modifier(ContentAwareModifier(
             isVideo: currentAsset.type == .video,
             currentAssetIndex: currentAssetIndex,
@@ -117,7 +136,11 @@ struct FullScreenImageView: View {
             showingSwipeHint: $showingSwipeHint,
             onNavigate: navigateToImage,
             onDismiss: { dismiss() },
-            onLoadImage: loadFullImage
+            onLoadImage: loadFullImage,
+            showingVideoPlayer: showingVideoPlayer,
+            onPlayButtonTapped: {
+                showingVideoPlayer = true
+            }
         ))
     }
     
@@ -131,7 +154,11 @@ struct FullScreenImageView: View {
         currentAssetIndex = index
         currentAsset = assets[index]
         refreshToggle.toggle() // Force UI update
-        if currentAsset.type != .video {
+        
+        // Reset video player state when navigating
+        if currentAsset.type == .video {
+            showingVideoPlayer = false
+        } else {
             image = nil
             isLoading = true
             loadFullImage()
@@ -168,10 +195,13 @@ struct ContentAwareModifier: ViewModifier {
     let onNavigate: (Int) -> Void
     let onDismiss: () -> Void
     let onLoadImage: () -> Void
+    let showingVideoPlayer: Bool
+    let onPlayButtonTapped: () -> Void
+
     
     func body(content: Content) -> some View {
-        if isVideo {
-            // For videos: no focus, no gestures, no interference
+        if isVideo && showingVideoPlayer {
+            // For video players: no focus, no gestures, no interference
             content
         } else {
             // For images: full navigation support
@@ -222,8 +252,128 @@ struct ContentAwareModifier: ViewModifier {
                 }
                 .contentShape(Rectangle())
                 .onTapGesture {
-                    onDismiss()
+                    // Only dismiss on tap for photos, not video thumbnails
+                    print("FullScreenImageView: Tap gesture detected - isVideo: \(isVideo)")
+                    if isVideo {
+                        onPlayButtonTapped()
+                    }
                 }
+        }
+    }
+}
+
+// MARK: - Video Thumbnail View
+struct VideoThumbnailView: View {
+    let asset: ImmichAsset
+    let assetService: AssetService
+    let onPlayButtonTapped: () -> Void
+    
+    @State private var thumbnail: UIImage?
+    @State private var isLoading = true
+    @State private var errorMessage: String?
+    @FocusState private var isFocused: Bool
+    
+    var body: some View {
+        ZStack {
+            SharedOpaqueBackground()
+            
+            if isLoading {
+                ProgressView("Loading thumbnail...")
+                    .foregroundColor(.white)
+                    .scaleEffect(1.5)
+            } else if let errorMessage = errorMessage {
+                VStack {
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.system(size: 60))
+                        .foregroundColor(.orange)
+                    Text("Error Loading Video")
+                        .font(.title)
+                        .foregroundColor(.white)
+                    Text(errorMessage)
+                        .foregroundColor(.gray)
+                        .multilineTextAlignment(.center)
+                        .padding()
+                    Button("Retry") {
+                        loadThumbnail()
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+            } else if let thumbnail = thumbnail {
+                GeometryReader { geometry in
+                    ZStack {
+                        SharedOpaqueBackground()
+                        
+                        Image(uiImage: thumbnail)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .overlay(
+                                // Play button overlay
+                                ZStack {
+                                    Circle()
+                                        .fill(Color.black.opacity(0.7))
+                                        .frame(width: 120, height: 120)
+                                    
+                                    Image(systemName: "play.fill")
+                                        .font(.system(size: 50))
+                                        .foregroundColor(.white)
+                                        .offset(x: 5) // Slight offset to center the play icon
+                                }
+                                .scaleEffect(isFocused ? 1.1 : 1.0)
+                                .animation(.easeInOut(duration: 0.2), value: isFocused)
+                            )
+                            .overlay(
+                                // Lock screen style overlay in bottom right
+                                VStack {
+                                    Spacer()
+                                    HStack {
+                                        Spacer()
+                                        LockScreenStyleOverlay(asset: asset)
+                                    }
+                                }
+                            )
+                    }
+                }
+                .ignoresSafeArea()
+            } else {
+                VStack {
+                    Image(systemName: "video")
+                        .font(.system(size: 60))
+                        .foregroundColor(.gray)
+                    Text("Failed to load video thumbnail")
+                        .foregroundColor(.gray)
+                }
+            }
+        }
+        .focusable(true)
+        .focused($isFocused)
+        .onAppear {
+            loadThumbnail()
+        }
+        .onTapGesture {
+            onPlayButtonTapped()
+        }
+    }
+    
+    private func loadThumbnail() {
+        isLoading = true
+        errorMessage = nil
+        
+        Task {
+            do {
+                print("Loading thumbnail for video asset \(asset.id)")
+                let thumbnailImage = try await assetService.loadImage(asset: asset, size: "thumbnail")
+                await MainActor.run {
+                    print("Loaded thumbnail for video asset \(asset.id)")
+                    self.thumbnail = thumbnailImage
+                    self.isLoading = false
+                }
+            } catch {
+                print("Failed to load thumbnail for video asset \(asset.id): \(error)")
+                await MainActor.run {
+                    self.errorMessage = error.localizedDescription
+                    self.isLoading = false
+                }
+            }
         }
     }
 }
