@@ -13,24 +13,25 @@ struct FullScreenImageView: View {
     let currentIndex: Int
     @ObservedObject var assetService: AssetService
     @ObservedObject var authenticationService: AuthenticationService
+    @Binding var currentAssetIndex: Int // Add binding to track current index
     @Environment(\.dismiss) private var dismiss
     @State private var image: UIImage?
     @State private var isLoading = true
 
-    @State private var currentAssetIndex: Int
     @State private var currentAsset: ImmichAsset
     @State private var showingSwipeHint = false
     @FocusState private var isFocused: Bool
     @State private var refreshToggle = false
     @State private var showingVideoPlayer = false
     
-    init(asset: ImmichAsset, assets: [ImmichAsset], currentIndex: Int, assetService: AssetService, authenticationService: AuthenticationService) {
+    init(asset: ImmichAsset, assets: [ImmichAsset], currentIndex: Int, assetService: AssetService, authenticationService: AuthenticationService, currentAssetIndex: Binding<Int>) {
+        print("FullScreenImageView: Initializing with currentIndex: \(currentIndex)")
         self.asset = asset
         self.assets = assets
         self.currentIndex = currentIndex
         self.assetService = assetService
         self.authenticationService = authenticationService
-        self._currentAssetIndex = State(initialValue: currentIndex)
+        self._currentAssetIndex = currentAssetIndex
         self._currentAsset = State(initialValue: asset)
     }
     
@@ -122,9 +123,11 @@ struct FullScreenImageView: View {
         }
         .id(refreshToggle)
         .onExitCommand {
+            print("FullScreenImageView: Exit command triggered")
             if showingVideoPlayer {
                 showingVideoPlayer = false
             } else {
+                print("FullScreenImageView: Dismissing fullscreen view")
                 dismiss()
             }
         }
@@ -151,7 +154,8 @@ struct FullScreenImageView: View {
             return
         }
         print("FullScreenImageView: Navigating to asset ID: \(assets[index].id)")
-        currentAssetIndex = index
+        currentAssetIndex = index // This now updates the binding
+        print("FullScreenImageView: Updated currentAssetIndex binding to \(index)")
         currentAsset = assets[index]
         refreshToggle.toggle() // Force UI update
         
@@ -477,6 +481,7 @@ struct VideoThumbnailView: View {
         assets: sampleAssets,
         currentIndex: 0,
         assetService: assetService,
-        authenticationService: authenticationService
+        authenticationService: authenticationService,
+        currentAssetIndex: .constant(0)
     )
 }
