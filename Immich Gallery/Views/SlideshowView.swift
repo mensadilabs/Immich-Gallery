@@ -18,7 +18,21 @@ struct SlideshowView: View {
     @State private var slideInterval: TimeInterval = 6.0
     @State private var autoAdvanceTimer: Timer?
     @State private var isTransitioning = false
+    @State private var slideDirection: SlideDirection = .right
     @FocusState private var isFocused: Bool
+    
+    enum SlideDirection {
+        case left, right, up, down
+        
+        var offset: CGSize {
+            switch self {
+            case .left: return CGSize(width: -1000, height: 0)
+            case .right: return CGSize(width: 1000, height: 0)
+            case .up: return CGSize(width: 0, height: -1000)
+            case .down: return CGSize(width: 0, height: 1000)
+            }
+        }
+    }
     
     var body: some View {
         ZStack {
@@ -53,15 +67,17 @@ struct SlideshowView: View {
                                 .frame(width: imageWidth, height: imageHeight)
                                 .shadow(color: .black.opacity(0.4), radius: 30, x: 0, y: 15)
                                 .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 5)
+                                .offset(isTransitioning ? slideDirection.offset : .zero)
                                 .opacity(isTransitioning ? 0.0 : 1.0)
-                                .animation(.easeInOut(duration: 0.8), value: isTransitioning)
+                                .animation(.easeInOut(duration: 1.2), value: isTransitioning)
+                                .animation(.easeInOut(duration: 1.2), value: slideDirection)
                                 .overlay(
                                     VStack {
                                         HStack {
                                             Spacer()
                                             LockScreenStyleOverlay(asset: assets[currentIndex], isSlideshowMode: true)
                                                 .opacity(isTransitioning ? 0.0 : 1.0)
-                                                .animation(.easeInOut(duration: 0.8), value: isTransitioning)
+                                                .animation(.easeInOut(duration: 1.2), value: isTransitioning)
                                         }
                                     }
                                 )
@@ -82,8 +98,10 @@ struct SlideshowView: View {
                                     )
                                 )
                                 .opacity(0.4)
-                                .opacity(isTransitioning ? 0.0 : 1.0)
-                                .animation(.easeInOut(duration: 0.8), value: isTransitioning)
+                                .offset(isTransitioning ? slideDirection.offset : .zero)
+                                .opacity(isTransitioning ? 0.0 : 0.4)
+                                .animation(.easeInOut(duration: 1.2), value: isTransitioning)
+                                .animation(.easeInOut(duration: 1.2), value: slideDirection)
                         }
                         .frame(maxWidth: .infinity, alignment: .center)
                     }
@@ -127,9 +145,9 @@ struct SlideshowView: View {
                     self.currentImage = image
                     self.isLoading = false
                     
-                    // Ensure fade in animation plays after image loads
+                    // Ensure slide-in animation plays after image loads
                     if isTransitioning {
-                        withAnimation(.easeInOut(duration: 1)) {
+                        withAnimation(.easeInOut(duration: 1.2)) {
                             isTransitioning = false
                         }
                     }
@@ -139,9 +157,9 @@ struct SlideshowView: View {
                     self.currentImage = nil
                     self.isLoading = false
                     
-                    // Still fade in even if image failed to load
+                    // Still slide in even if image failed to load
                     if isTransitioning {
-                        withAnimation(.easeInOut(duration: 1)) {
+                        withAnimation(.easeInOut(duration: 1.2)) {
                             isTransitioning = false
                         }
                     }
@@ -153,16 +171,20 @@ struct SlideshowView: View {
     private func nextImage() {
         guard currentIndex < assets.count - 1 else { return }
         
-        // Start fade out animation
-        withAnimation(.easeInOut(duration: 0.5)) {
+        // Randomly select slide direction for variety
+        let directions: [SlideDirection] = [.left, .right, .up, .down]
+        slideDirection = directions.randomElement() ?? .right
+        
+        // Start slide out animation
+        withAnimation(.easeInOut(duration: 0.8)) {
             isTransitioning = true
         }
         
-        // Wait for fade out, then change image
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+        // Wait for slide out, then change image
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
             currentIndex += 1
             loadCurrentImage()
-            // Fade in will be triggered in loadCurrentImage after image loads
+            // Slide in will be triggered in loadCurrentImage after image loads
         }
     }
     
@@ -173,15 +195,18 @@ struct SlideshowView: View {
             if currentIndex < assets.count - 1 {
                 nextImage()
             } else {
-                // Loop back to the beginning with animation
-                withAnimation(.easeInOut(duration: 0.5)) {
+                // Loop back to the beginning with slide animation
+                let directions: [SlideDirection] = [.left, .right, .up, .down]
+                slideDirection = directions.randomElement() ?? .right
+                
+                withAnimation(.easeInOut(duration: 0.8)) {
                     isTransitioning = true
                 }
                 
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
                     currentIndex = 0
                     loadCurrentImage()
-                    // Fade in will be triggered in loadCurrentImage after image loads
+                    // Slide in will be triggered in loadCurrentImage after image loads
                 }
             }
         }
