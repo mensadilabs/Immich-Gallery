@@ -9,12 +9,19 @@
 A native Apple TV app for browsing your Immich photo library with a beautiful, TV-optimized interface.
 
 ![Login page](https://github.com/user-attachments/assets/64f526eb-d89e-4959-8be0-b7411f8fdc90)
+
+
+https://github.com/user-attachments/assets/78987a7a-ef62-497c-828f-f7b99851ffb3
+
+
 ![Gallery view](https://github.com/user-attachments/assets/6afe210d-6f6e-45a3-89d2-19ed48fce643)
 ![Full screen view](https://github.com/user-attachments/assets/6ab63005-bbcf-468a-9b83-b93f265fa348)
 ![Full screen view with people](https://github.com/user-attachments/assets/16b56fc4-ee74-4506-984a-46884bc65228)
 ![Album tab](https://github.com/user-attachments/assets/1dafee22-a04d-43c3-b0fc-a6ff01036b60)
-![People tab](https://github.com/user-attachments/assets/057fef75-ebdb-40f1-ad07-349b0ddf740b)
-<img width="1910" alt="Settings tab" src="https://github.com/user-attachments/assets/d5eae253-0475-47a4-8058-731c6e0fb85c" />
+<img width="1917" alt="image" src="https://github.com/user-attachments/assets/7a8eb077-0811-4101-8e7c-69b34b03a536" />
+
+<img width="1926" alt="image" src="https://github.com/user-attachments/assets/b2384524-77b6-44c5-a51f-d894e5a27eeb" />
+
 
 
 ## Features
