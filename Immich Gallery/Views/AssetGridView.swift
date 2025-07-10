@@ -97,7 +97,7 @@ struct AssetGridView: View {
                                 .frame(width: 300, height: 360)
                                 .id(asset.id) // Add id for ScrollViewReader
                                 .focused($focusedAssetId, equals: asset.id)
-                                .scaleEffect(focusedAssetId == asset.id ? 1.05 : 1.0)
+                                .scaleEffect(focusedAssetId == asset.id ? 1.1 : 1.0)
                                 .animation(.easeInOut(duration: 0.2), value: focusedAssetId)
                                 .onAppear {
                                     // More efficient index check using enumerated
@@ -105,6 +105,11 @@ struct AssetGridView: View {
                                         let threshold = max(assets.count - 8, 0) // Load when 8 items away from end
                                         if index >= threshold && hasMoreAssets && !isLoadingMore {
                                             debouncedLoadMore()
+                                        }
+                                        
+                                        // Check if this is the asset we need to scroll to
+                                        if shouldScrollToAsset == asset.id {
+                                            print("AssetGridView: Target asset appeared in grid - \(asset.id)")
                                         }
                                     }
                                 }
@@ -147,11 +152,14 @@ struct AssetGridView: View {
                         .onChange(of: shouldScrollToAsset) { assetId in
                             if let assetId = assetId {
                                 print("AssetGridView: shouldScrollToAsset triggered - scrolling to asset ID: \(assetId)")
-                                withAnimation(.easeInOut(duration: 0.5)) {
-                                    proxy.scrollTo(assetId, anchor: .center)
+                                // Use a more robust scrolling approach with proper timing
+                                DispatchQueue.main.async {
+                                    withAnimation(.easeInOut(duration: 0.5)) {
+                                        proxy.scrollTo(assetId, anchor: .center)
+                                    }
                                 }
-                                // Clear the trigger
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                // Clear the trigger after a longer delay to ensure scroll completes
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
                                     shouldScrollToAsset = nil
                                 }
                             }
@@ -189,19 +197,20 @@ struct AssetGridView: View {
                 let currentAsset = assets[currentAssetIndex]
                 print("AssetGridView: Fullscreen dismissed, currentAssetIndex: \(currentAssetIndex), asset ID: \(currentAsset.id)")
                 
-                // Set focus and scroll to the current asset
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    // Longer delay to ensure the view has fully updated
-                    print("AssetGridView: Setting focusedAssetId to \(currentAsset.id)")
-                    print("AssetGridView: Setting isProgrammaticFocusChange to true")
-                    isProgrammaticFocusChange = true
-                    print("AssetGridView: About to set focusedAssetId")
-                    focusedAssetId = currentAsset.id
-                    print("AssetGridView: focusedAssetId set to \(currentAsset.id)")
-                    
-                    // Trigger scrolling using the shouldScrollToAsset state
+                // Use a more robust approach with proper state management
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    // First, trigger the scroll
                     print("AssetGridView: Setting shouldScrollToAsset to \(currentAsset.id)")
                     shouldScrollToAsset = currentAsset.id
+                    
+                    // Then set the focus after a short delay to ensure scroll starts
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        print("AssetGridView: Setting focusedAssetId to \(currentAsset.id)")
+                        print("AssetGridView: Setting isProgrammaticFocusChange to true")
+                        isProgrammaticFocusChange = true
+                        focusedAssetId = currentAsset.id
+                        print("AssetGridView: focusedAssetId set to \(currentAsset.id)")
+                    }
                 }
             }
         }

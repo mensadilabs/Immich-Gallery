@@ -77,7 +77,7 @@ struct AlbumListView: View {
                             }
                             .frame(width: 490, height: 400)
                             .focused($focusedAlbumId, equals: album.id)
-                            .scaleEffect(focusedAlbumId == album.id ? 1.02 : 1.0)
+                            .scaleEffect(focusedAlbumId == album.id ? 1.1 : 1.0)
                             .animation(.easeInOut(duration: 0.2), value: focusedAlbumId)
                             .padding(10) // ✅ adds spacing around every item
                         }
