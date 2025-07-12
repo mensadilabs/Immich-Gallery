@@ -275,6 +275,7 @@ struct VideoThumbnailView: View {
     let asset: ImmichAsset
     let assetService: AssetService
     let onPlayButtonTapped: () -> Void
+    @ObservedObject private var thumbnailCache = ThumbnailCache.shared
     
     @State private var thumbnail: UIImage?
     @State private var isLoading = true
@@ -373,7 +374,10 @@ struct VideoThumbnailView: View {
         Task {
             do {
                 print("Loading thumbnail for video asset \(asset.id)")
-                let thumbnailImage = try await assetService.loadImage(asset: asset, size: "thumbnail")
+                let thumbnailImage = try await thumbnailCache.getThumbnail(for: asset.id, size: "thumbnail") {
+                    // Load from server if not in cache
+                    try await assetService.loadImage(asset: asset, size: "thumbnail")
+                }
                 await MainActor.run {
                     print("Loaded thumbnail for video asset \(asset.id)")
                     self.thumbnail = thumbnailImage

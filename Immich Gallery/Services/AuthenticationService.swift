@@ -116,6 +116,7 @@ class AuthenticationService: ObservableObject {
     }
     
     func switchUser(serverURL: String, accessToken: String, email: String, name: String) {
+        print("AuthenticationService: Switching to user \(email)")
         networkService.saveCredentials(serverURL: serverURL, token: accessToken)
         isAuthenticated = true
         
@@ -128,9 +129,11 @@ class AuthenticationService: ObservableObject {
             avatarColor: "primary"
         )
     }
+
     
     // MARK: - User Management
     func fetchUserInfo() async throws {
+        print("AuthenticationService: Fetching user info from server")
         let user: User = try await networkService.makeRequest(
             endpoint: "/api/users/me",
             responseType: User.self
@@ -146,6 +149,7 @@ class AuthenticationService: ObservableObject {
         )
         
         DispatchQueue.main.async {
+            print("AuthenticationService: Updating currentUser to \(owner.email)")
             self.currentUser = owner
         }
     }

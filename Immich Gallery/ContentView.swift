@@ -8,7 +8,7 @@
 import SwiftUI
 
 extension Notification.Name {
-    static let userSwitched = Notification.Name("userSwitched")
+    static let refreshAllTabs = Notification.Name("refreshAllTabs")
 }
 
 struct ContentView: View {
@@ -81,8 +81,8 @@ struct ContentView: View {
             .navigationBarHidden(true)
         }
         .navigationViewStyle(StackNavigationViewStyle())
-        .onReceive(NotificationCenter.default.publisher(for: .userSwitched)) { _ in
-            // Refresh the app by generating a new UUID
+        .onReceive(NotificationCenter.default.publisher(for: .refreshAllTabs)) { _ in
+            // Refresh all tabs by generating a new UUID
             refreshTrigger = UUID()
         }
     }

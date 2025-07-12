@@ -15,7 +15,7 @@ struct SlideshowView: View {
     @State private var currentIndex = 0
     @State private var currentImage: UIImage?
     @State private var isLoading = true
-    @State private var slideInterval: TimeInterval = 6.0
+    @State private var slideInterval: TimeInterval = UserDefaults.standard.slideshowInterval
     @State private var autoAdvanceTimer: Timer?
     @State private var isTransitioning = false
     @State private var slideDirection: SlideDirection = .right
@@ -36,7 +36,7 @@ struct SlideshowView: View {
     
     var body: some View {
         ZStack {
-            Color.white
+            getBackgroundColor(UserDefaults.standard.slideshowBackgroundColor)
                 .ignoresSafeArea()
             
             if assets.isEmpty {
@@ -131,6 +131,16 @@ struct SlideshowView: View {
         .onDisappear {
             stopAutoAdvance()
         }
+        .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
+            // Update slide interval if it changed in settings
+            let newInterval = UserDefaults.standard.slideshowInterval
+            if newInterval != slideInterval {
+                slideInterval = newInterval
+                // Restart timer with new interval
+                stopAutoAdvance()
+                startAutoAdvance()
+            }
+        }
         .onTapGesture {
             dismiss()
         }
@@ -220,6 +230,8 @@ struct SlideshowView: View {
         autoAdvanceTimer?.invalidate()
         autoAdvanceTimer = nil
     }
+    
+
 }
 
 #Preview {

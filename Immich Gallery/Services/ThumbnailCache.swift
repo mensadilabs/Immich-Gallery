@@ -154,6 +154,11 @@ class ThumbnailCache: NSObject, ObservableObject {
             try? FileManager.default.createDirectory(at: self.cacheDirectory, withIntermediateDirectories: true)
             self.calculateDiskCacheSize()
         }
+        
+        // Force refresh statistics
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            self.refreshCacheStatistics()
+        }
     }
     
     /// Clear expired cache entries
@@ -161,6 +166,17 @@ class ThumbnailCache: NSObject, ObservableObject {
         diskCacheQueue.async {
             self.removeExpiredCacheEntries()
         }
+        
+        // Force refresh statistics after clearing
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            self.refreshCacheStatistics()
+        }
+    }
+    
+    /// Refresh cache statistics (call this to update the UI)
+    func refreshCacheStatistics() {
+        calculateDiskCacheSize()
+        updateMemoryCacheStatistics()
     }
     
     // MARK: - Private Methods
@@ -188,7 +204,7 @@ class ThumbnailCache: NSObject, ObservableObject {
     }
     
     private func loadFromDisk(cacheKey: String) async -> UIImage? {
-        return await withCheckedContinuation { continuation in
+        return await withCheckedContinuation { (continuation: CheckedContinuation<UIImage?, Never>) in
             diskCacheQueue.async {
                 // Ensure directory exists before checking for files
                 self.ensureCacheDirectoryExists()
@@ -208,7 +224,7 @@ class ThumbnailCache: NSObject, ObservableObject {
     }
     
     private func storeOnDisk(imageData: Data, cacheKey: String) async {
-        await withCheckedContinuation { continuation in
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
             diskCacheQueue.async {
                 // Ensure directory exists before writing
                 self.ensureCacheDirectoryExists()
@@ -224,6 +240,7 @@ class ThumbnailCache: NSObject, ObservableObject {
                 do {
                     try imageData.write(to: fileURL)
                     print("✅ Cached thumbnail to disk: \(cacheKey) (\(imageData.count) bytes)")
+                    print("📊 Cache directory now contains: \(try? FileManager.default.contentsOfDirectory(at: self.cacheDirectory, includingPropertiesForKeys: nil).count ?? 0) files")
                     self.calculateDiskCacheSize()
                     
                     // Check if we need to clean up old files
@@ -241,7 +258,7 @@ class ThumbnailCache: NSObject, ObservableObject {
     }
     
     private func isCachedOnDisk(cacheKey: String) async -> Bool {
-        return await withCheckedContinuation { continuation in
+        return await withCheckedContinuation { (continuation: CheckedContinuation<Bool, Never>) in
             diskCacheQueue.async {
                 // Ensure directory exists before checking for files
                 self.ensureCacheDirectoryExists()
@@ -262,6 +279,7 @@ class ThumbnailCache: NSObject, ObservableObject {
             }
             
             print("📊 Disk cache calculation: \(fileURLs.count) files, \(totalSize) bytes")
+            print("📊 Cache directory: \(cacheDirectory.path)")
             
             DispatchQueue.main.async {
                 self.diskCacheSize = totalSize
@@ -270,6 +288,7 @@ class ThumbnailCache: NSObject, ObservableObject {
         } catch {
             print("❌ Failed to calculate disk cache size: \(error)")
             print("❌ Cache directory: \(cacheDirectory.path)")
+            print("❌ Error details: \(error.localizedDescription)")
         }
     }
     
@@ -324,8 +343,21 @@ class ThumbnailCache: NSObject, ObservableObject {
     }
     
     private func updateMemoryCacheStatistics() {
-        // This method is no longer needed as we track statistics directly
-        // when adding/removing objects from the cache
+        // Calculate actual memory cache statistics from the NSCache
+        var totalSize = 0
+        var count = 0
+        
+        // Note: NSCache doesn't provide direct access to all objects, so we'll use our tracking
+        // but also recalculate disk cache size periodically
+        DispatchQueue.main.async {
+            // Only log if there are significant changes or for debugging
+            if self.memoryCacheSize > 0 || self.memoryCacheCount > 0 {
+                print("📊 Memory cache stats - Size: \(self.memoryCacheSize), Count: \(self.memoryCacheCount)")
+            }
+        }
+        
+        // Recalculate disk cache size periodically
+        calculateDiskCacheSize()
     }
     
     private func ensureCacheDirectoryExists() {

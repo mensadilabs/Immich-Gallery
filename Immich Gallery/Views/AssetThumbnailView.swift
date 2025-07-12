@@ -10,6 +10,7 @@ import SwiftUI
 struct AssetThumbnailView: View {
     let asset: ImmichAsset
     @ObservedObject var assetService: AssetService
+    @ObservedObject private var thumbnailCache = ThumbnailCache.shared
     @State private var image: UIImage?
     @State private var isLoading = true
     let isFocused: Bool
@@ -93,7 +94,10 @@ struct AssetThumbnailView: View {
     private func loadThumbnail() {
         Task {
             do {
-                let thumbnail = try await assetService.loadImage(asset: asset, size: "preview")
+                let thumbnail = try await thumbnailCache.getThumbnail(for: asset.id, size: "preview") {
+                    // Load from server if not in cache
+                    try await assetService.loadImage(asset: asset, size: "preview")
+                }
                 await MainActor.run {
                     self.image = thumbnail
                     self.isLoading = false

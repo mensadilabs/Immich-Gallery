@@ -126,6 +126,7 @@ struct AlbumListView: View {
 struct AlbumRowView: View {
     let album: ImmichAlbum
     @ObservedObject var albumService: AlbumService
+    @ObservedObject private var thumbnailCache = ThumbnailCache.shared
     @State private var thumbnailImage: UIImage?
     let isFocused: Bool
     
@@ -200,28 +201,20 @@ struct AlbumRowView: View {
         
         Task {
             do {
-                // First try to load the thumbnail directly
-                let thumbnail = try await albumService.loadAlbumThumbnail(
-                    albumId: album.id,
-                    thumbnailAssetId: thumbnailAssetId,
-                    size: "thumbnail"
-                )
+                // Use thumbnail cache for album thumbnails
+                let thumbnail = try await thumbnailCache.getThumbnail(for: thumbnailAssetId, size: "thumbnail") {
+                    // Load from server if not in cache
+                    try await albumService.loadAlbumThumbnail(
+                        albumId: album.id,
+                        thumbnailAssetId: thumbnailAssetId,
+                        size: "thumbnail"
+                    )
+                }
                 await MainActor.run {
                     self.thumbnailImage = thumbnail
                 }
             } catch {
-                // If direct loading fails, try to get album info and find the asset
-                do {
-                    let albumInfo = try await albumService.getAlbumInfo(albumId: album.id, withoutAssets: false)
-                    if let thumbnailAsset = albumInfo.assets.first(where: { $0.id == thumbnailAssetId }) {
-                        // Note: This would need AssetService to load the image
-                        // For now, we'll just keep the folder icon if thumbnail loading fails
-                        print("Thumbnail asset found but AssetService not available in this context")
-                    }
-                } catch {
-                    // Thumbnail loading failed, keep default folder icon
-                    print("Failed to load album thumbnail: \(error)")
-                }
+                print("Failed to load album thumbnail: \(error)")
             }
         }
     }

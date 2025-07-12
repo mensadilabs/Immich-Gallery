@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-// MARK: - Shared Gradient Background
+// Shared background gradient for consistent styling across the app
 struct SharedGradientBackground: View {
     var body: some View {
         LinearGradient(
@@ -20,6 +20,57 @@ struct SharedGradientBackground: View {
             endPoint: .bottomTrailing
         )
         .ignoresSafeArea()
+    }
+}
+
+// Shared utility function for background colors
+func getBackgroundColor(_ colorString: String) -> Color {
+    switch colorString {
+    case "black":
+        return .black
+    case "white":
+        return .white
+    case "gray":
+        return .gray
+    case "blue":
+        return .blue
+    case "purple":
+        return .purple
+    default:
+        return .black
+    }
+}
+
+// Custom button style to remove default tvOS focus ring
+struct CustomFocusButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.95 : 1.0)
+            .animation(.easeInOut(duration: 0.1), value: configuration.isPressed)
+    }
+}
+
+// Custom focusable button style for color selection
+struct ColorSelectionButtonStyle: ButtonStyle {
+    @FocusState private var isFocused: Bool
+    
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.95 : 1.0)
+            .scaleEffect(isFocused ? 1.1 : 1.0)
+            .animation(.easeInOut(duration: 0.2), value: configuration.isPressed)
+            .animation(.easeInOut(duration: 0.2), value: isFocused)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(isFocused ? Color.blue.opacity(0.2) : Color.clear)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(isFocused ? Color.blue : Color.clear, lineWidth: 2)
+                    )
+                    .scaleEffect(isFocused ? 1.5 : 1.0)
+            )
+            .shadow(color: isFocused ? .blue.opacity(0.3) : .clear, radius: 8, x: 0, y: 4)
+            .focused($isFocused)
     }
 }
 
