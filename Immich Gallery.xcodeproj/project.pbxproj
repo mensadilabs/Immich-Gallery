@@ -29,9 +29,22 @@
 		2F23BA872E1234CA005C563C /* Immich GalleryUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Immich GalleryUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		2F11124E2E2084C80065F999 /* Exceptions for "Immich Gallery" folder in "Immich Gallery" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				"Immich-Gallery-Info.plist",
+			);
+			target = 2F23BA6C2E1234C8005C563C /* Immich Gallery */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		2F23BA6F2E1234C8005C563C /* Immich Gallery */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				2F11124E2E2084C80065F999 /* Exceptions for "Immich Gallery" folder in "Immich Gallery" target */,
+			);
 			path = "Immich Gallery";
 			sourceTree = "<group>";
 		};
@@ -400,6 +413,7 @@
 				DEVELOPMENT_TEAM = 2F58933V55;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Immich-Gallery-Info.plist";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UIUserInterfaceStyle = Automatic;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -407,7 +421,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.mensadi.Immich-Gallery";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.sanketh.dev.Immich-Gallery";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -427,6 +441,7 @@
 				DEVELOPMENT_TEAM = 2F58933V55;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Immich-Gallery-Info.plist";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UIUserInterfaceStyle = Automatic;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -434,7 +449,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.mensadi.Immich-Gallery";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.sanketh.dev.Immich-Gallery";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
