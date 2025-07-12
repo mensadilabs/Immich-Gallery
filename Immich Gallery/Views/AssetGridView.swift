@@ -27,6 +27,7 @@ struct AssetGridView: View {
     @State private var nextPage: String?
     @State private var hasMoreAssets = true
     @State private var loadMoreTask: Task<Void, Never>?
+    @State private var showingSlideshow = false
     
     private let columns = [
         GridItem(.fixed(300), spacing: 50),
@@ -75,6 +76,34 @@ struct AssetGridView: View {
                 }
             } else {
                 VStack {
+                    // Slideshow button
+                    HStack {
+                        Spacer()
+                        Button(action: {
+                            if !assets.isEmpty {
+                                showingSlideshow = true
+                            }
+                        }) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "play.rectangle.fill")
+                                    .font(.title2)
+                                Text("Slideshow")
+                                    .font(.headline)
+                            }
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 12)
+                            .background(Color.blue.opacity(0.8))
+                            .cornerRadius(25)
+                            .shadow(color: .black.opacity(0.3), radius: 8, x: 0, y: 4)
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(assets.isEmpty)
+                        .opacity(assets.isEmpty ? 0.5 : 1.0)
+                    }
+                    .padding(.horizontal, 30)
+                    .padding(.top, 20)
+                    
                     ScrollViewReader { proxy in
                         ScrollView {
                             LazyVGrid(columns: columns, spacing: 50) {
@@ -180,6 +209,9 @@ struct AssetGridView: View {
                     currentAssetIndex: $currentAssetIndex
                 )
             }
+        }
+        .fullScreenCover(isPresented: $showingSlideshow) {
+            SlideshowView(assets: assets, assetService: assetService)
         }
         .onAppear {
             if assets.isEmpty {
