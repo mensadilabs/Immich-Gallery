@@ -1,21 +1,9 @@
 ## Note 1: As you can probabaly tell, AI was used in writing this. However, it is not "vibe coded". I have checked every line and edited things manually to get this working. As it is my side project and pretty much an experiment, I didn't want to spend time typing every line. 
-
-## Note 2: There are places where UIKit is used instead of SwiftUI, it is because I couldn't figure out how to handle navigations in TvOs using swiftUI and could only find UIKit documentation on Apple dev docs. If you have suggestions, would apprecitae some links to read. 
-
-## Note 3: Some of the readme maybe outdated. I change code and I forget to update README. 
+## Note 2: Some of the readme maybe outdated. I change code and I forget to update README. 
 
 # Immich Gallery for Apple TV
 
 A native Apple TV app for browsing your Immich photo library with a beautiful, TV-optimized interface.
-
-![Login page](https://github.com/user-attachments/assets/64f526eb-d89e-4959-8be0-b7411f8fdc90)
-![Gallery view](https://github.com/user-attachments/assets/6afe210d-6f6e-45a3-89d2-19ed48fce643)
-![Full screen view](https://github.com/user-attachments/assets/6ab63005-bbcf-468a-9b83-b93f265fa348)
-![Full screen view with people](https://github.com/user-attachments/assets/16b56fc4-ee74-4506-984a-46884bc65228)
-![Album tab](https://github.com/user-attachments/assets/1dafee22-a04d-43c3-b0fc-a6ff01036b60)
-![People tab](https://github.com/user-attachments/assets/057fef75-ebdb-40f1-ad07-349b0ddf740b)
-<img width="1910" alt="Settings tab" src="https://github.com/user-attachments/assets/d5eae253-0475-47a4-8058-731c6e0fb85c" />
-
 
 ## Features
 
@@ -24,6 +12,22 @@ A native Apple TV app for browsing your Immich photo library with a beautiful, T
 - 🖼️ **Photo Grid View**: Browse all your photos in a responsive grid layout
 - 👥 **People Tab**: View and browse photos by people detected in your library
 - 📁 **Album Support**: View and navigate through your Immich albums
+- **Slideshow** : Works like a screensaver, if you like. You can either disable or enable a clock overlay. 
+
+![Login page](https://github.com/user-attachments/assets/64f526eb-d89e-4959-8be0-b7411f8fdc90)
+
+
+https://github.com/user-attachments/assets/78987a7a-ef62-497c-828f-f7b99851ffb3
+
+
+![Gallery view](https://github.com/user-attachments/assets/6afe210d-6f6e-45a3-89d2-19ed48fce643)
+![Full screen view](https://github.com/user-attachments/assets/6ab63005-bbcf-468a-9b83-b93f265fa348)
+![Full screen view with people](https://github.com/user-attachments/assets/16b56fc4-ee74-4506-984a-46884bc65228)
+![Album tab](https://github.com/user-attachments/assets/1dafee22-a04d-43c3-b0fc-a6ff01036b60)
+<img width="1917" alt="image" src="https://github.com/user-attachments/assets/7a8eb077-0811-4101-8e7c-69b34b03a536" />
+
+<img width="1926" alt="image" src="https://github.com/user-attachments/assets/b2384524-77b6-44c5-a51f-d894e5a27eeb" />
+
 
 ## Setup Instructions
 
@@ -140,3 +144,5 @@ This app is built with:
 - URLSession for network requests
 - UserDefaults for secure credential storage
 - Core Image for image processing and caching
+
+![Alt](https://repobeats.axiom.co/api/embed/3fea253de89fc88824c16adb77a456f7e7d657b7.svg "Repobeats analytics image")
