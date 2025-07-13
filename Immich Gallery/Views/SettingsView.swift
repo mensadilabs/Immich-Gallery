@@ -99,6 +99,7 @@ struct SettingsView: View {
     @AppStorage("slideshowBackgroundColor") private var slideshowBackgroundColor = "white"
     @AppStorage("showTagsTab") private var showTagsTab = false
     @AppStorage("assetSortOrder") private var assetSortOrder = "desc"
+    @AppStorage("use24HourClock") private var use24HourClock = true
     @FocusState private var isMinusFocused: Bool
     @FocusState private var isPlusFocused: Bool
     @FocusState private var focusedColor: String?
@@ -296,12 +297,7 @@ struct SettingsView: View {
                         // Display Settings Section
                         SettingsSection(title: "Customization") {
                             AnyView(VStack(spacing: 12) {
-                                SettingsRow(
-                                    icon: "eye.slash",
-                                    title: "Hide Image Overlays",
-                                    subtitle: "Hide date, location, and other info overlays",
-                                    content: AnyView(Toggle("", isOn: $hideImageOverlay).labelsHidden())
-                                )
+                                
                                 
                                 SettingsRow(
                                     icon: "tag",
@@ -319,14 +315,16 @@ struct SettingsView: View {
                                             Text("Newest First").tag("desc")
                                             Text("Oldest First").tag("asc")
                                         }
-                                        .pickerStyle(.segmented)
-                                        .frame(width: 500)
+                                            .pickerStyle(.segmented)
+                                            .frame(width: 500)
                                     )
                                 )
                                 
                                 SlideshowSettings(
                                     slideshowInterval: $slideshowInterval,
                                     slideshowBackgroundColor: $slideshowBackgroundColor,
+                                    use24HourClock: $use24HourClock,
+                                    hideOverlay: $hideImageOverlay,
                                     isMinusFocused: $isMinusFocused,
                                     isPlusFocused: $isPlusFocused,
                                     focusedColor: $focusedColor
@@ -343,9 +341,9 @@ struct SettingsView: View {
                     .padding()
                 }
             }
-                            .sheet(isPresented: $showingAddUser) {
-                    AddUserView(onUserAdded: loadSavedUsers, authService: authService)
-                }
+            .sheet(isPresented: $showingAddUser) {
+                AddUserView(onUserAdded: loadSavedUsers, authService: authService)
+            }
             .alert("Clear Cache", isPresented: $showingClearCacheAlert) {
                 Button("Cancel", role: .cancel) { }
                 Button("Clear All", role: .destructive) {
@@ -457,9 +455,9 @@ struct SettingsView: View {
     
     private func saveCurrentUser() {
         guard let currentUser = authService.currentUser,
-              let accessToken = authService.accessToken else { 
+              let accessToken = authService.accessToken else {
             print("SettingsView: Cannot save current user - missing user or token")
-            return 
+            return
         }
         
         let userId = getCurrentUserId()
@@ -501,7 +499,7 @@ struct SettingsView: View {
         return generateUserIdForUser(email: currentUser.email, serverURL: authService.baseURL)
     }
     
-
+    
     
     private func refreshServerConnection() {
         Task {
@@ -542,6 +540,11 @@ extension UserDefaults {
     var showTagsTab: Bool {
         get { bool(forKey: "showTagsTab") }
         set { set(newValue, forKey: "showTagsTab") }
+    }
+    
+    var use24HourClock: Bool {
+        get { bool(forKey: "use24HourClock") }
+        set { set(newValue, forKey: "use24HourClock") }
     }
 }
 
@@ -813,9 +816,12 @@ struct AddUserView: View {
 struct SlideshowSettings: View {
     @Binding var slideshowInterval: Double
     @Binding var slideshowBackgroundColor: String
+    @Binding var use24HourClock: Bool
+    @Binding var hideOverlay: Bool
     @FocusState.Binding var isMinusFocused: Bool
     @FocusState.Binding var isPlusFocused: Bool
     @FocusState.Binding var focusedColor: String?
+    
     
     var body: some View {
         VStack(spacing: 12) {
@@ -886,6 +892,28 @@ struct SlideshowSettings: View {
                         }
                     }
                 )
+            )
+            
+            // Clock Format Setting
+            SettingsRow(
+                icon: "clock",
+                title: "Clock Format",
+                subtitle: "Time format for slideshow overlay",
+                content: AnyView(
+                    Picker("Clock Format", selection: $use24HourClock) {
+                        Text("12 Hour").tag(false)
+                        Text("24 Hour").tag(true)
+                    }
+                        .pickerStyle(.segmented)
+                        .frame(width: 300)
+                )
+            )
+            
+            SettingsRow(
+                icon: "eye.slash",
+                title: "Hide Image Overlays",
+                subtitle: "Hide clocl, date, location, overlay from slideshow and full screen view",
+                content: AnyView(Toggle("", isOn: $hideOverlay).labelsHidden())
             )
         }
     }
@@ -1034,4 +1062,4 @@ struct CacheSection: View {
     SettingsView(authService: authService)
 }
 
- 
+
