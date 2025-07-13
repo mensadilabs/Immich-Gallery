@@ -361,7 +361,7 @@ struct ImprovedVideoPlayerView: UIViewControllerRepresentable {
         controller.showsPlaybackControls = true
         
         // Configure for better tvOS experience
-        controller.allowsPictureInPicturePlayback = false
+        controller.allowsPictureInPicturePlayback = true
         
         // Set up custom styling to avoid layout conflicts
         controller.view.backgroundColor = UIColor.black

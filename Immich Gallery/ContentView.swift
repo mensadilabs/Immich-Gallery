@@ -70,10 +70,9 @@ struct ContentView: View {
                             }
                             .tag(3)
                     }
-                    .onChange(of: selectedTab) { newValue in
-                        print("ContentView: Tab changed to \(newValue)")
-                    }
-                    .id(refreshTrigger) // Force refresh when user switches
+                    .onChange(of: selectedTab) { oldValue, newValue in
+                        print("Tab changed from \(oldValue) to \(newValue)")
+                    }                    .id(refreshTrigger) // Force refresh when user switches
                     // .accentColor(.blue)
                 }
             }

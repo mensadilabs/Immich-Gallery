@@ -205,7 +205,7 @@ struct ContentAwareModifier: ViewModifier {
     let onLoadImage: () -> Void
     let showingVideoPlayer: Bool
     let onPlayButtonTapped: () -> Void
-
+    
     
     func body(content: Content) -> some View {
         if isVideo && showingVideoPlayer {
@@ -228,8 +228,15 @@ struct ContentAwareModifier: ViewModifier {
                     }
                     isFocused = true
                 }
-                .onChange(of: isFocused) { focused in
-                    print("FullScreenImageView focus: \(focused)")
+                .onTapGesture {
+                    // Only dismiss on tap for photos, not video thumbnails
+                    print("FullScreenImageView: Tap gesture detected - isVideo: \(isVideo)")
+                    if isVideo {
+                        onPlayButtonTapped()
+                    }
+                }
+                .onChange(of: isFocused) { oldValue, newValue in
+                    print("FullScreenImageView focus: \(newValue)")
                 }
                 .onMoveCommand { direction in
                     switch direction {
@@ -258,14 +265,10 @@ struct ContentAwareModifier: ViewModifier {
                         print("FullScreenImageView: Unknown direction")
                     }
                 }
+                .onPlayPauseCommand(perform: {
+                    print("Play pause tapped")
+                })
                 .contentShape(Rectangle())
-                .onTapGesture {
-                    // Only dismiss on tap for photos, not video thumbnails
-                    print("FullScreenImageView: Tap gesture detected - isVideo: \(isVideo)")
-                    if isVideo {
-                        onPlayButtonTapped()
-                    }
-                }
         }
     }
 }
@@ -327,8 +330,8 @@ struct VideoThumbnailView: View {
                                         .foregroundColor(.white)
                                         .offset(x: 5) // Slight offset to center the play icon
                                 }
-                                .scaleEffect(isFocused ? 1.1 : 1.0)
-                                .animation(.easeInOut(duration: 0.2), value: isFocused)
+                                    .scaleEffect(isFocused ? 1.1 : 1.0)
+                                    .animation(.easeInOut(duration: 0.2), value: isFocused)
                             )
                             .overlay(
                                 // Lock screen style overlay in bottom right
