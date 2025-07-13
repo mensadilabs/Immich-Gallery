@@ -260,6 +260,7 @@ struct PersonPhotosView: View {
                     authService: authService, 
                     albumId: nil, 
                     personId: person.id,
+                    tagId: nil,
                     onAssetsLoaded: { loadedAssets in
                         self.personAssets = loadedAssets
                     }

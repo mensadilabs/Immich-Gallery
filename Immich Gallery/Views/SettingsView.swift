@@ -17,6 +17,7 @@ struct SettingsView: View {
     @AppStorage("hideImageOverlay") private var hideImageOverlay = true
     @AppStorage("slideshowInterval") private var slideshowInterval: Double = 6.0
     @AppStorage("slideshowBackgroundColor") private var slideshowBackgroundColor = "white"
+    @AppStorage("showTagsTab") private var showTagsTab = false
     @FocusState private var isMinusFocused: Bool
     @FocusState private var isPlusFocused: Bool
     @FocusState private var focusedColor: String?
@@ -238,6 +239,31 @@ struct SettingsView: View {
                                     Spacer()
                                     
                                     Toggle("", isOn: $hideImageOverlay)
+                                        .labelsHidden()
+                                }
+                                .padding(16)
+                                .background(Color.gray.opacity(0.05))
+                                .cornerRadius(12)
+                                
+                                // Tags Tab Setting
+                                HStack {
+                                    Image(systemName: "tag")
+                                        .foregroundColor(.blue)
+                                        .font(.title3)
+                                        .frame(width: 24)
+                                    
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Show Tags Tab")
+                                            .font(.subheadline)
+                                            .foregroundColor(.primary)
+                                        Text("Enable the tags tab in the main navigation")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    
+                                    Spacer()
+                                    
+                                    Toggle("", isOn: $showTagsTab)
                                         .labelsHidden()
                                 }
                                 .padding(16)
@@ -714,6 +740,11 @@ extension UserDefaults {
     var slideshowBackgroundColor: String {
         get { string(forKey: "slideshowBackgroundColor") ?? "black" }
         set { set(newValue, forKey: "slideshowBackgroundColor") }
+    }
+    
+    var showTagsTab: Bool {
+        get { bool(forKey: "showTagsTab") }
+        set { set(newValue, forKey: "showTagsTab") }
     }
 }
 

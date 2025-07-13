@@ -254,6 +254,7 @@ struct AlbumDetailView: View {
                     authService: authService, 
                     albumId: album.id, 
                     personId: nil,
+                    tagId: nil,
                     onAssetsLoaded: { loadedAssets in
                         self.albumAssets = loadedAssets
                     }

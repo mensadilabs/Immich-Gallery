@@ -17,8 +17,10 @@ struct ContentView: View {
     @StateObject private var assetService: AssetService
     @StateObject private var albumService: AlbumService
     @StateObject private var peopleService: PeopleService
+    @StateObject private var tagService: TagService
     @State private var selectedTab = 0
     @State private var refreshTrigger = UUID()
+    @AppStorage("showTagsTab") private var showTagsTab = false
     
     init() {
         let networkService = NetworkService()
@@ -27,6 +29,7 @@ struct ContentView: View {
         _assetService = StateObject(wrappedValue: AssetService(networkService: networkService))
         _albumService = StateObject(wrappedValue: AlbumService(networkService: networkService))
         _peopleService = StateObject(wrappedValue: PeopleService(networkService: networkService))
+        _tagService = StateObject(wrappedValue: TagService(networkService: networkService))
     }
     
     var body: some View {
@@ -42,7 +45,7 @@ struct ContentView: View {
                 } else {
                     // Main app interface
                     TabView(selection: $selectedTab) {
-                        AssetGridView(assetService: assetService, authService: authService, albumId: nil, personId: nil, onAssetsLoaded: nil)
+                        AssetGridView(assetService: assetService, authService: authService, albumId: nil, personId: nil, tagId: nil, onAssetsLoaded: nil)
                             .tabItem {
                                 Image(systemName: "photo.on.rectangle")
                                 Text("Photos")
@@ -63,12 +66,21 @@ struct ContentView: View {
                             }
                             .tag(2)
                         
+                        if showTagsTab {
+                            TagsGridView(tagService: tagService, authService: authService, assetService: assetService)
+                                .tabItem {
+                                    Image(systemName: "tag")
+                                    Text("Tags")
+                                }
+                                .tag(3)
+                        }
+                        
                         SettingsView(authService: authService)
                             .tabItem {
                                 Image(systemName: "gear")
                                 Text("Settings")
                             }
-                            .tag(3)
+                            .tag(showTagsTab ? 4 : 3)
                     }
                     .onChange(of: selectedTab) { oldValue, newValue in
                         print("Tab changed from \(oldValue) to \(newValue)")

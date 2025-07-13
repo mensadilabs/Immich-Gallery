@@ -41,7 +41,7 @@ class MockAssetService: AssetService {
         super.init(networkService: networkService)
     }
     
-    override func fetchAssets(page: Int = 1, limit: Int = 50, albumId: String? = nil, personId: String? = nil) async throws -> SearchResult {
+     func fetchAssets(page: Int = 1, limit: Int = 50, albumId: String? = nil, personId: String? = nil) async throws -> SearchResult {
         // Return mock assets
         let mockAssets = [
             ImmichAsset(

@@ -13,6 +13,7 @@ struct AssetGridView: View {
     @ObservedObject private var thumbnailCache = ThumbnailCache.shared
     let albumId: String? // Optional album ID to filter assets
     let personId: String? // Optional person ID to filter assets
+    let tagId: String? // Optional tag ID to filter assets
     let onAssetsLoaded: (([ImmichAsset]) -> Void)? // Callback for when assets are loaded
     @State private var assets: [ImmichAsset] = []
     @State private var isLoading = false
@@ -229,7 +230,7 @@ struct AssetGridView: View {
         
         Task {
             do {
-                let searchResult = try await assetService.fetchAssets(page: 1, limit: 100, albumId: albumId, personId: personId)
+                let searchResult = try await assetService.fetchAssets(page: 1, limit: 100, albumId: albumId, personId: personId, tagId: tagId)
                 await MainActor.run {
                     self.assets = searchResult.assets
                     self.nextPage = searchResult.nextPage
@@ -278,7 +279,7 @@ struct AssetGridView: View {
             do {
                 // Extract page number from nextPage string
                 let pageNumber = extractPageFromNextPage(nextPage!)
-                let searchResult = try await assetService.fetchAssets(page: pageNumber, limit: 100, albumId: albumId, personId: personId)
+                let searchResult = try await assetService.fetchAssets(page: pageNumber, limit: 100, albumId: albumId, personId: personId, tagId: tagId)
                 
                 await MainActor.run {
                     if !searchResult.assets.isEmpty {
@@ -348,5 +349,5 @@ struct AssetGridView: View {
     let networkService = NetworkService()
     let assetService = AssetService(networkService: networkService)
     let authService = AuthenticationService(networkService: networkService)
-    AssetGridView(assetService: assetService, authService: authService, albumId: nil, personId: nil, onAssetsLoaded: nil)
+    AssetGridView(assetService: assetService, authService: authService, albumId: nil, personId: nil, tagId: nil, onAssetsLoaded: nil)
 }
