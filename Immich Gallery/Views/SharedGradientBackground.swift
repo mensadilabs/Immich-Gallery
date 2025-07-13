@@ -26,6 +26,8 @@ struct SharedGradientBackground: View {
 // Shared utility function for background colors
 func getBackgroundColor(_ colorString: String) -> Color {
     switch colorString {
+    case "auto":
+        return .black // Fallback for non-slideshow contexts
     case "black":
         return .black
     case "white":

@@ -801,6 +801,7 @@ struct AddUserView: View {
     
     private func getBackgroundColor(_ colorName: String) -> Color {
         switch colorName {
+        case "auto": return .black // Fallback for preview, actual auto color is handled in slideshow
         case "black": return .black
         case "white": return .white
         case "gray": return .gray
@@ -874,13 +875,29 @@ struct SlideshowSettings: View {
                 subtitle: "Background color for slideshow mode",
                 content: AnyView(
                     HStack(spacing: 12) {
-                        ForEach(["black", "white", "gray", "blue", "purple"], id: \.self) { color in
+                        ForEach(["auto", "black", "white", "gray", "blue", "purple"], id: \.self) { color in
                             Button(action: {
                                 slideshowBackgroundColor = color
                             }) {
-                                Circle()
-                                    .fill(getBackgroundColor(color))
-                                    .frame(width: 32, height: 32)
+                                Group {
+                                    if color == "auto" {
+                                        ZStack {
+                                            Circle()
+                                                .fill(LinearGradient(
+                                                    colors: [.red, .orange, .yellow, .green, .blue, .purple],
+                                                    startPoint: .topLeading,
+                                                    endPoint: .bottomTrailing
+                                                ))
+                                            Image(systemName: "paintpalette.fill")
+                                                .foregroundColor(.white)
+                                                .font(.caption)
+                                        }
+                                    } else {
+                                        Circle()
+                                            .fill(getBackgroundColor(color))
+                                    }
+                                }
+                                .frame(width: 32, height: 32)
                                     .overlay(
                                         Circle()
                                             .stroke(slideshowBackgroundColor == color ? Color.accentColor : Color.clear, lineWidth: 3)
@@ -927,6 +944,7 @@ struct SlideshowSettings: View {
     
     private func getBackgroundColor(_ colorName: String) -> Color {
         switch colorName {
+        case "auto": return .black // Fallback for preview, actual auto color is handled in slideshow
         case "black": return .black
         case "white": return .white
         case "gray": return .gray

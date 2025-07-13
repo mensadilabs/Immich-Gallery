@@ -77,31 +77,6 @@ struct AssetGridView: View {
                 }
             } else {
                 VStack {
-                    // Slideshow button
-                    HStack {
-                        Spacer()
-                        Button(action: startSlideshow) {
-                            HStack(spacing: 8) {
-                                Image(systemName: "play.circle.fill")
-                                    .font(.title2)
-                                Text("Start Slideshow")
-                                    .font(.headline)
-                            }
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 12)
-                            .background(Color.blue)
-                            .foregroundColor(.white)
-                            .cornerRadius(25)
-                        }
-                        .buttonStyle(.plain)
-                        .disabled(assets.filter { $0.type == .image }.isEmpty)
-                        .opacity(assets.filter { $0.type == .image }.isEmpty ? 0.6 : 1.0)
-                        Spacer()
-                    }
-                    .padding(.horizontal)
-                    .padding(.top, 10)
-                    .padding(.bottom, 5)
-                    
                     ScrollViewReader { proxy in
                         ScrollView {
                             LazyVGrid(columns: columns, spacing: 50) {
@@ -189,10 +164,10 @@ struct AssetGridView: View {
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
                                     shouldScrollToAsset = nil
                                 }
+                                }
                             }
                         }
                     }
-                }
                 }
             }
         }
@@ -214,6 +189,10 @@ struct AssetGridView: View {
                 SlideshowView(assets: imageAssets, assetService: assetService)
             }
         }
+        .onPlayPauseCommand(perform: {
+            print("Play pause tapped in AssetGridView - starting slideshow")
+            startSlideshow()
+        })
         .onAppear {
             if assets.isEmpty {
                 loadAssets()
@@ -384,9 +363,3 @@ struct AssetGridView: View {
     }
 }
 
-#Preview {
-    let networkService = NetworkService()
-    let assetService = AssetService(networkService: networkService)
-    let authService = AuthenticationService(networkService: networkService)
-    AssetGridView(assetService: assetService, authService: authService, albumId: nil, personId: nil, tagId: nil, onAssetsLoaded: nil)
-}
