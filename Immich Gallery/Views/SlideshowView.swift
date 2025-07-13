@@ -74,12 +74,43 @@ struct SlideshowView: View {
                                 .overlay(
                                     Group {
                                         if !UserDefaults.standard.hideImageOverlay {
-                                            VStack {
-                                                HStack {
-                                                    Spacer()
-                                                    LockScreenStyleOverlay(asset: assets[currentIndex], isSlideshowMode: true)
-                                                        .opacity(isTransitioning ? 0.0 : 1.0)
-                                                        .animation(.easeInOut(duration: 1.2), value: isTransitioning)
+                                            // Calculate actual image display size within the frame
+                                            GeometryReader { imageGeometry in
+                                                let actualImageSize = calculateActualImageSize(
+                                                    imageSize: CGSize(width: image.size.width, height: image.size.height),
+                                                    containerSize: CGSize(width: imageWidth, height: imageHeight)
+                                                )
+                                                let screenWidth = geometry.size.width
+                                                let isSmallWidth = actualImageSize.width < (screenWidth / 2)
+                                                
+                                                if isSmallWidth {
+                                                    // For small images, show overlay outside (original behavior)
+                                                    VStack {
+                                                        HStack {
+                                                            Spacer()
+                                                            LockScreenStyleOverlay(asset: assets[currentIndex], isSlideshowMode: true)
+                                                                .opacity(isTransitioning ? 0.0 : 1.0)
+                                                                .animation(.easeInOut(duration: 1.2), value: isTransitioning)
+                                                        }
+                                                    }
+                                                } else {
+                                                    // For larger images, constrain overlay inside image
+                                                    let xOffset = (imageWidth - actualImageSize.width) / 2
+                                                    let yOffset = (imageHeight - actualImageSize.height) / 2
+                                                    
+                                                    VStack {
+                                                        Spacer()
+                                                        HStack {
+                                                            Spacer()
+                                                            LockScreenStyleOverlay(asset: assets[currentIndex], isSlideshowMode: true)
+                                                                .opacity(isTransitioning ? 0.0 : 1.0)
+                                                                .animation(.easeInOut(duration: 1.2), value: isTransitioning)
+                                                                .padding(.trailing, 20)
+                                                                .padding(.bottom, 20)
+                                                        }
+                                                    }
+                                                    .frame(width: actualImageSize.width, height: actualImageSize.height)
+                                                    .offset(x: xOffset, y: yOffset)
                                                 }
                                             }
                                         }
@@ -233,6 +264,23 @@ struct SlideshowView: View {
     private func stopAutoAdvance() {
         autoAdvanceTimer?.invalidate()
         autoAdvanceTimer = nil
+    }
+    
+    private func calculateActualImageSize(imageSize: CGSize, containerSize: CGSize) -> CGSize {
+        let imageAspectRatio = imageSize.width / imageSize.height
+        let containerAspectRatio = containerSize.width / containerSize.height
+        
+        if imageAspectRatio > containerAspectRatio {
+            // Image is wider than container - width will be constrained
+            let actualWidth = containerSize.width
+            let actualHeight = actualWidth / imageAspectRatio
+            return CGSize(width: actualWidth, height: actualHeight)
+        } else {
+            // Image is taller than container - height will be constrained
+            let actualHeight = containerSize.height
+            let actualWidth = actualHeight * imageAspectRatio
+            return CGSize(width: actualWidth, height: actualHeight)
+        }
     }
 }
 

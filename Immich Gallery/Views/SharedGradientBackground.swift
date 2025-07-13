@@ -52,25 +52,10 @@ struct CustomFocusButtonStyle: ButtonStyle {
 
 // Custom focusable button style for color selection
 struct ColorSelectionButtonStyle: ButtonStyle {
-    @FocusState private var isFocused: Bool
-    
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .scaleEffect(configuration.isPressed ? 0.95 : 1.0)
-            .scaleEffect(isFocused ? 1.1 : 1.0)
             .animation(.easeInOut(duration: 0.2), value: configuration.isPressed)
-            .animation(.easeInOut(duration: 0.2), value: isFocused)
-            .background(
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(isFocused ? Color.blue.opacity(0.2) : Color.clear)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(isFocused ? Color.blue : Color.clear, lineWidth: 2)
-                    )
-                    .scaleEffect(isFocused ? 1.5 : 1.0)
-            )
-            .shadow(color: isFocused ? .blue.opacity(0.3) : .clear, radius: 8, x: 0, y: 4)
-            .focused($isFocused)
     }
 }
 

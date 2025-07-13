@@ -28,6 +28,7 @@ struct AssetGridView: View {
     @State private var nextPage: String?
     @State private var hasMoreAssets = true
     @State private var loadMoreTask: Task<Void, Never>?
+    @State private var showingSlideshow = false
     
     private let columns = [
         GridItem(.fixed(300), spacing: 50),
@@ -76,6 +77,31 @@ struct AssetGridView: View {
                 }
             } else {
                 VStack {
+                    // Slideshow button
+                    HStack {
+                        Spacer()
+                        Button(action: startSlideshow) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "play.circle.fill")
+                                    .font(.title2)
+                                Text("Start Slideshow")
+                                    .font(.headline)
+                            }
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 12)
+                            .background(Color.blue)
+                            .foregroundColor(.white)
+                            .cornerRadius(25)
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(assets.filter { $0.type == .image }.isEmpty)
+                        .opacity(assets.filter { $0.type == .image }.isEmpty ? 0.6 : 1.0)
+                        Spacer()
+                    }
+                    .padding(.horizontal)
+                    .padding(.top, 10)
+                    .padding(.bottom, 5)
+                    
                     ScrollViewReader { proxy in
                         ScrollView {
                             LazyVGrid(columns: columns, spacing: 50) {
@@ -180,6 +206,12 @@ struct AssetGridView: View {
                     authenticationService: authService,
                     currentAssetIndex: $currentAssetIndex
                 )
+            }
+        }
+        .fullScreenCover(isPresented: $showingSlideshow) {
+            let imageAssets = assets.filter { $0.type == .image }
+            if !imageAssets.isEmpty {
+                SlideshowView(assets: imageAssets, assetService: assetService)
             }
         }
         .onAppear {
@@ -341,6 +373,13 @@ struct AssetGridView: View {
             return "This album is empty"
         } else {
             return "Your photos will appear here"
+        }
+    }
+    
+    private func startSlideshow() {
+        let imageAssets = assets.filter { $0.type == .image }
+        if !imageAssets.isEmpty {
+            showingSlideshow = true
         }
     }
 }

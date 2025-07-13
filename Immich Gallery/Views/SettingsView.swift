@@ -886,6 +886,13 @@ struct SlideshowSettings: View {
                                             .stroke(slideshowBackgroundColor == color ? Color.accentColor : Color.clear, lineWidth: 3)
                                     )
                                     .scaleEffect(slideshowBackgroundColor == color ? 1.18 : 1.0)
+                                    .scaleEffect(focusedColor == color ? 1.3 : 1.0)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 20)
+                                            .stroke(focusedColor == color ? Color.white : Color.clear, lineWidth: 2)
+                                            .scaleEffect(1.4)
+                                    )
+                                    .shadow(color: focusedColor == color ? .white.opacity(0.5) : .clear, radius: 8, x: 0, y: 4)
                             }
                             .buttonStyle(ColorSelectionButtonStyle())
                             .focused($focusedColor, equals: color)
