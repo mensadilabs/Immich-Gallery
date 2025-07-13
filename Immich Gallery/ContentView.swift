@@ -42,10 +42,12 @@ struct ContentView: View {
                 if !authService.isAuthenticated {
                     // Show sign-in view
                     SignInView(authService: authService)
+                        .errorBoundary(context: "Authentication")
                 } else {
                     // Main app interface
                     TabView(selection: $selectedTab) {
                         AssetGridView(assetService: assetService, authService: authService, albumId: nil, personId: nil, tagId: nil, onAssetsLoaded: nil)
+                            .errorBoundary(context: "Photos Tab")
                             .tabItem {
                                 Image(systemName: "photo.on.rectangle")
                                 Text("Photos")
@@ -53,6 +55,7 @@ struct ContentView: View {
                             .tag(0)
                         
                         AlbumListView(albumService: albumService, authService: authService, assetService: assetService)
+                            .errorBoundary(context: "Albums Tab")
                             .tabItem {
                                 Image(systemName: "folder")
                                 Text("Albums")
@@ -60,6 +63,7 @@ struct ContentView: View {
                             .tag(1)
                         
                         PeopleGridView(peopleService: peopleService, authService: authService, assetService: assetService)
+                            .errorBoundary(context: "People Tab")
                             .tabItem {
                                 Image(systemName: "person.crop.circle")
                                 Text("People")
@@ -68,6 +72,7 @@ struct ContentView: View {
                         
                         if showTagsTab {
                             TagsGridView(tagService: tagService, authService: authService, assetService: assetService)
+                                .errorBoundary(context: "Tags Tab")
                                 .tabItem {
                                     Image(systemName: "tag")
                                     Text("Tags")
@@ -76,6 +81,7 @@ struct ContentView: View {
                         }
                         
                         SettingsView(authService: authService)
+                            .errorBoundary(context: "Settings Tab")
                             .tabItem {
                                 Image(systemName: "gear")
                                 Text("Settings")

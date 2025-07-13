@@ -145,9 +145,11 @@ struct SlideshowView: View {
             dismiss()
         }
     }
-    
     private func loadCurrentImage() {
-        guard currentIndex < assets.count else { return }
+        guard currentIndex >= 0 && currentIndex < assets.count else { 
+            print("SlideshowView: Index out of bounds - \(currentIndex), assets count: \(assets.count)")
+            return 
+        }
         
         let asset = assets[currentIndex]
         isLoading = true
@@ -167,6 +169,7 @@ struct SlideshowView: View {
                     }
                 }
             } catch {
+                print("SlideshowView: Failed to load image for asset \(asset.id): \(error)")
                 await MainActor.run {
                     self.currentImage = nil
                     self.isLoading = false
@@ -196,9 +199,10 @@ struct SlideshowView: View {
         
         // Wait for slide out, then change image
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-            currentIndex += 1
-            loadCurrentImage()
-            // Slide in will be triggered in loadCurrentImage after image loads
+            if self.currentIndex + 1 < self.assets.count {
+                self.currentIndex += 1
+                self.loadCurrentImage()
+            }
         }
     }
     
@@ -206,20 +210,20 @@ struct SlideshowView: View {
         stopAutoAdvance()
         
         autoAdvanceTimer = Timer.scheduledTimer(withTimeInterval: slideInterval, repeats: true) { _ in
-            if currentIndex < assets.count - 1 {
-                nextImage()
+            if self.currentIndex < self.assets.count - 1 {
+                self.nextImage()
             } else {
                 // Loop back to the beginning with slide animation
                 let directions: [SlideDirection] = [.left, .right, .up, .down]
-                slideDirection = directions.randomElement() ?? .right
+                self.slideDirection = directions.randomElement() ?? .right
                 
                 withAnimation(.easeInOut(duration: 0.8)) {
-                    isTransitioning = true
+                    self.isTransitioning = true
                 }
                 
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-                    currentIndex = 0
-                    loadCurrentImage()
+                    self.currentIndex = 0
+                    self.loadCurrentImage()
                     // Slide in will be triggered in loadCurrentImage after image loads
                 }
             }
@@ -230,8 +234,6 @@ struct SlideshowView: View {
         autoAdvanceTimer?.invalidate()
         autoAdvanceTimer = nil
     }
-    
-
 }
 
 #Preview {
