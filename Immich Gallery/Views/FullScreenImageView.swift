@@ -259,7 +259,7 @@ struct ContentAwareModifier: ViewModifier {
                             print("FullScreenImageView: Already at last photo, cannot navigate further")
                         }
                     case .up, .down:
-                        // Ignore up/down swipes
+                        print("Up/Down")
                         break
                     @unknown default:
                         print("FullScreenImageView: Unknown direction")
