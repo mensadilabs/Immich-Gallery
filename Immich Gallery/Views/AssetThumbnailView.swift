@@ -53,27 +53,26 @@ struct AssetThumbnailView: View {
                     }
                     Spacer()
                 }
-                
-                // Video duration at bottom right
-                if let duration = asset.duration, !duration.isEmpty {
-                    VStack {
-                        HStack {
-                            Text(formatVideoDuration(duration))
-                                .font(.caption2)
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(Color.black.opacity(0.7))
-                                .cornerRadius(4)
-                                .padding(8)
-                        }
+            
+            }
+            
+            // Favorite heart indicator at bottom left
+            if asset.isFavorite {
+                VStack {
+                    Spacer()
+                    HStack {
+                        Image(systemName: "heart.fill")
+                            .font(.caption2)
+                            .foregroundColor(.red)
+                            .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 1)
+                            .padding(8)
+                        Spacer()
                     }
                 }
             }
-            
             // Text overlay at bottom right
-            VStack(alignment: .trailing, spacing: 2) {                    
-                Text(formatDate(asset.fileCreatedAt))
+            VStack(alignment: .trailing, spacing: 2) {
+                Text(formatSpecificISO8601(asset.exifInfo?.dateTimeOriginal ?? asset.fileCreatedAt))
                     .font(.caption2)
                     .foregroundColor(.white.opacity(0.8))
             }
@@ -82,7 +81,7 @@ struct AssetThumbnailView: View {
                 RoundedRectangle(cornerRadius: 8)
                     .fill(Color.black.opacity(0.4))
             )
-            .padding(8)
+            
         }
         .frame(width: 320, height: 320)
         .shadow(color: .black.opacity(isFocused ? 0.5 : 0), radius: 15, y: 10)
@@ -111,38 +110,38 @@ struct AssetThumbnailView: View {
         }
     }
     
-    private func formatDate(_ dateString: String) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
-        formatter.timeZone = TimeZone(abbreviation: "UTC")
-        
-        if let date = formatter.date(from: dateString) {
-            let displayFormatter = DateFormatter()
-            displayFormatter.dateStyle = .medium
-            return displayFormatter.string(from: date)
-        }
-        
-        return dateString
-    }
     
-    private func formatVideoDuration(_ durationString: String) -> String {
-        // Parse duration string like "PT1M30S" (ISO 8601 duration format)
-        let duration = durationString.replacingOccurrences(of: "PT", with: "")
+    private func formatSpecificISO8601(_ utcTimestamp: String) -> String {
+        // Clean the input string
+        let cleanedTimestamp = utcTimestamp
+            .replacingOccurrences(of: "Optional(\"", with: "")
+            .replacingOccurrences(of: "\")", with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
         
-        var minutes = 0
-        var seconds = 0
+        let isoFormatter = ISO8601DateFormatter()
+        isoFormatter.timeZone = TimeZone(abbreviation: "UTC")
         
-        if let minuteRange = duration.range(of: "M") {
-            let minuteString = String(duration[..<minuteRange.lowerBound])
-            minutes = Int(minuteString) ?? 0
+        // Try different format options to handle both with and without fractional seconds
+        let formatOptions: [ISO8601DateFormatter.Options] = [
+            [.withInternetDateTime, .withFractionalSeconds],  // For formats with .000Z
+            [.withInternetDateTime],                          // For formats without fractional seconds
+            [.withFullDate, .withTime, .withTimeZone],       // Alternative for +00:00 format
+            [.withFullDate, .withTime, .withTimeZone, .withFractionalSeconds] // Alternative with fractional seconds
+        ]
+        
+        for options in formatOptions {
+            isoFormatter.formatOptions = options
+            if let date = isoFormatter.date(from: cleanedTimestamp) {
+                let outputFormatter = DateFormatter()
+                outputFormatter.dateFormat = "yyyy-MMM-dd"
+                outputFormatter.timeZone = TimeZone(abbreviation: "UTC")
+                outputFormatter.locale = Locale(identifier: "en_US_POSIX")
+                
+                return outputFormatter.string(from: date).uppercased()
+            }
         }
         
-        if let secondRange = duration.range(of: "S") {
-            let secondString = String(duration[..<secondRange.lowerBound])
-            seconds = Int(secondString) ?? 0
-        }
-        
-        return String(format: "%d:%02d", minutes, seconds)
+        return utcTimestamp
     }
 }
 
@@ -157,17 +156,17 @@ struct AssetThumbnailView: View {
         deviceId: "mock-device",
         ownerId: "mock-owner",
         libraryId: nil,
-        type: .image,
+        type: .video,
         originalPath: "/mock/path",
         originalFileName: "mock.jpg",
         originalMimeType: "image/jpeg",
         resized: false,
         thumbhash: nil,
-        fileModifiedAt: "2023-01-01",
-        fileCreatedAt: "2023-01-01",
+        fileModifiedAt: "2023-01-01 00:00:00",
+        fileCreatedAt: "2023-12-25T14:30:00Z",
         localDateTime: "2023-01-01",
         updatedAt: "2023-01-01",
-        isFavorite: false,
+        isFavorite: true,
         isArchived: false,
         isOffline: false,
         isTrashed: false,
