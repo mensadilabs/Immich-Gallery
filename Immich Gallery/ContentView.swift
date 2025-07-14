@@ -41,7 +41,7 @@ struct ContentView: View {
                 
                 if !authService.isAuthenticated {
                     // Show sign-in view
-                    SignInView(authService: authService)
+                    SignInView(authService: authService, mode: .signIn)
                         .errorBoundary(context: "Authentication")
                 } else {
                     // Main app interface
