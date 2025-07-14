@@ -24,7 +24,7 @@ struct SlideshowView: View {
     @FocusState private var isFocused: Bool
     
     enum SlideDirection {
-        case left, right, up, down, diagonal_up_left, diagonal_up_right, diagonal_down_left, diagonal_down_right, zoom_out, zoom_in
+        case left, right, up, down, diagonal_up_left, diagonal_up_right, diagonal_down_left, diagonal_down_right, zoom_out
         
         var offset: CGSize {
             switch self {
@@ -36,14 +36,13 @@ struct SlideshowView: View {
             case .diagonal_up_right: return CGSize(width: 1000, height: -1000)
             case .diagonal_down_left: return CGSize(width: -1000, height: 1000)
             case .diagonal_down_right: return CGSize(width: 1000, height: 1000)
-            case .zoom_out, .zoom_in: return CGSize.zero // No offset for zoom animations
+            case .zoom_out: return CGSize.zero // No offset for zoom animations
             }
         }
         
         var scale: CGFloat {
             switch self {
             case .zoom_out: return 0.1 // Scale down to nearly invisible
-            case .zoom_in: return 3.0  // Scale up significantly
             default: return 1.0 // Normal scale
             }
         }
@@ -289,7 +288,7 @@ struct SlideshowView: View {
         }
         
         // Randomly select slide direction for variety
-        let directions: [SlideDirection] = [.left, .right, .up, .down, .diagonal_up_left, .diagonal_up_right, .diagonal_down_left, .diagonal_down_right, .zoom_out, .zoom_in]
+        let directions: [SlideDirection] = [.left, .right, .up, .down, .diagonal_up_left, .diagonal_up_right, .diagonal_down_left, .diagonal_down_right, .zoom_out]
         slideDirection = directions.randomElement() ?? .right
         
         print("SlideshowView: Starting slide out animation")
@@ -321,7 +320,7 @@ struct SlideshowView: View {
             } else {
                 print("SlideshowView: Looping back to beginning")
                 // Loop back to the beginning with slide animation
-                let directions: [SlideDirection] = [.left, .right, .up, .down, .diagonal_up_left, .diagonal_up_right, .diagonal_down_left, .diagonal_down_right, .zoom_out, .zoom_in]
+                let directions: [SlideDirection] = [.left, .right, .up, .down, .diagonal_up_left, .diagonal_up_right, .diagonal_down_left, .diagonal_down_right, .zoom_out]
                 self.slideDirection = directions.randomElement() ?? .right
                 
                 withAnimation(.easeInOut(duration: 1.0)) {
