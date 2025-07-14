@@ -7,13 +7,19 @@
 
 import SwiftUI
 import AVKit
+import Combine
 
-class VideoPlayerViewModel: NSObject, ObservableObject, AVAssetResourceLoaderDelegate {
+
+class PlayerManager: NSObject, ObservableObject, AVAssetResourceLoaderDelegate {
+    @Published var player = AVPlayer()
     @Published var isLoading = true
     @Published var errorMessage: String?
-    @Published var player: AVPlayer?
-    @Published var playerItem: AVPlayerItem?
     @Published var isReadyToPlay = false
+    @Published var isPlaybackBufferEmpty = false
+    @Published var playbackRate: Float = 0.0
+    
+    private var playerItem: AVPlayerItem?
+    private var cancellables = Set<AnyCancellable>()
     
     let asset: ImmichAsset
     let assetService: AssetService
@@ -26,18 +32,12 @@ class VideoPlayerViewModel: NSObject, ObservableObject, AVAssetResourceLoaderDel
         super.init()
     }
     
-    func loadVideo() {
+    func initializePlayer() {
         isLoading = true
         errorMessage = nil
         isReadyToPlay = false
         
-        // Log asset information for debugging
-        print("🎬 Loading video for asset:")
-        print("   ID: \(asset.id)")
-        print("   Type: \(asset.type)")
-        print("   File: \(asset.originalFileName)")
-        print("   MIME: \(asset.originalMimeType ?? "unknown")")
-        print("   Duration: \(asset.duration ?? "unknown")")
+        print("🎬 Loading video for asset: \(asset.id)")
         
         Task {
             do {
@@ -72,33 +72,91 @@ class VideoPlayerViewModel: NSObject, ObservableObject, AVAssetResourceLoaderDel
         
         // Create player item with the asset
         let playerItem = AVPlayerItem(asset: asset)
-        
-        // Add observers for player item status
-        playerItem.addObserver(self, forKeyPath: #keyPath(AVPlayerItem.status), options: [.old, .new], context: nil)
-        playerItem.addObserver(self, forKeyPath: #keyPath(AVPlayerItem.isPlaybackLikelyToKeepUp), options: [.old, .new], context: nil)
-        
-        // Create player
-        let player = AVPlayer(playerItem: playerItem)
-        
-        // Store references
         self.playerItem = playerItem
-        self.player = player
         
-        // Set up periodic time observer
-        let interval = CMTime(seconds: 0.5, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
-        player.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] time in
-            // This helps keep the player active
-        }
+        // Watch for buffer issues (from Medium article)
+        playerItem.publisher(for: \.isPlaybackBufferEmpty)
+            .sink { [weak self] bufferEmpty in
+                DispatchQueue.main.async {
+                    self?.isPlaybackBufferEmpty = bufferEmpty
+                    if bufferEmpty {
+                        print("⚠️ Buffer is empty. Expect a hiccup on screen.")
+                    }
+                }
+            }
+            .store(in: &cancellables)
+        
+        // Keep an eye on playback rate (from Medium article)
+        player.publisher(for: \.rate)
+            .sink { [weak self] rate in
+                DispatchQueue.main.async {
+                    self?.playbackRate = rate
+                    print("▶️ Playback rate: \(rate)")
+                }
+            }
+            .store(in: &cancellables)
+        
+        // Observe overall status (from Medium article)
+        playerItem.publisher(for: \.status)
+            .sink { [weak self] status in
+                DispatchQueue.main.async {
+                    self?.handlePlayerItemStatusChange(status)
+                }
+            }
+            .store(in: &cancellables)
+        
+        // Optionally track if playback stalls (from Medium article)
+        NotificationCenter.default.publisher(for: .AVPlayerItemPlaybackStalled, object: playerItem)
+            .sink { [weak self] _ in
+                DispatchQueue.main.async {
+                    print("⚠️ Playback stalled. Possibly a slow connection.")
+                    self?.errorMessage = "Playback stalled - check your connection"
+                }
+            }
+            .store(in: &cancellables)
         
         // Add error observer
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(playerItemFailedToPlay),
-            name: .AVPlayerItemFailedToPlayToEndTime,
-            object: playerItem
-        )
+        NotificationCenter.default.publisher(for: .AVPlayerItemFailedToPlayToEndTime, object: playerItem)
+            .sink { [weak self] notification in
+                DispatchQueue.main.async {
+                    self?.handlePlaybackFailure(notification)
+                }
+            }
+            .store(in: &cancellables)
+        
+        // Replace current item
+        player.replaceCurrentItem(with: playerItem)
         
         print("▶️ Video player setup completed")
+    }
+    
+    private func handlePlayerItemStatusChange(_ status: AVPlayerItem.Status) {
+        switch status {
+        case .readyToPlay:
+            print("✅ Ready to play!")
+            isReadyToPlay = true
+            isLoading = false
+            // Auto-play when ready after 4 seconds
+            DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) { [weak self] in
+                self?.player.play()
+            }
+        case .failed:
+            print("❌ Something went wrong with playback.")
+            isLoading = false
+            errorMessage = "Video failed to load"
+        case .unknown:
+            print("⏳ Status changed: \(status.rawValue)")
+        @unknown default:
+            break
+        }
+    }
+    
+    private func handlePlaybackFailure(_ notification: Notification) {
+        if let error = notification.userInfo?[AVPlayerItemFailedToPlayToEndTimeErrorKey] as? Error {
+            print("❌ Player item failed to play to end: \(error)")
+            errorMessage = "Video playback failed: \(error.localizedDescription)"
+            isLoading = false
+        }
     }
     
     private func determineVideoMimeType() -> String {
@@ -128,83 +186,18 @@ class VideoPlayerViewModel: NSObject, ObservableObject, AVAssetResourceLoaderDel
         }
     }
     
-    @objc private func playerItemFailedToPlay(_ notification: Notification) {
-        DispatchQueue.main.async { [weak self] in
-            if let error = notification.userInfo?[AVPlayerItemFailedToPlayToEndTimeErrorKey] as? Error {
-                print("❌ Player item failed to play to end: \(error)")
-                self?.errorMessage = "Video playback failed: \(error.localizedDescription)"
-                self?.isLoading = false
-            }
-        }
-    }
-    
-    override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey : Any]?, context: UnsafeMutableRawPointer?) {
-        guard let playerItem = object as? AVPlayerItem else { return }
-        
-        switch keyPath {
-        case #keyPath(AVPlayerItem.status):
-            DispatchQueue.main.async { [weak self] in
-                self?.handlePlayerItemStatusChange(playerItem)
-            }
-        case #keyPath(AVPlayerItem.isPlaybackLikelyToKeepUp):
-            DispatchQueue.main.async { [weak self] in
-                self?.handlePlaybackLikelyToKeepUpChange(playerItem)
-            }
-        default:
-            super.observeValue(forKeyPath: keyPath, of: object, change: change, context: context)
-        }
-    }
-    
-    private func handlePlayerItemStatusChange(_ playerItem: AVPlayerItem) {
-        switch playerItem.status {
-        case .readyToPlay:
-            print("✅ Player item is ready to play")
-            isLoading = false
-            isReadyToPlay = true
-            // Auto-play when opened from thumbnail view
-            player?.play()
-        case .failed:
-            let error = playerItem.error?.localizedDescription ?? "Unknown error"
-            print("❌ Player item failed: \(error)")
-            isLoading = false
-            
-            // Provide more specific error messages
-            if error.contains("HTTP") || error.contains("404") {
-                errorMessage = "Video not found or access denied"
-            } else if error.contains("format") || error.contains("codec") {
-                errorMessage = "Video format not supported"
-            } else if error.contains("network") || error.contains("connection") {
-                errorMessage = "Network error - check your connection"
-            } else {
-                errorMessage = "Video failed to load: \(error)"
-            }
-        case .unknown:
-            print("⏳ Player item status unknown")
-        @unknown default:
-            break
-        }
-    }
-    
-    private func handlePlaybackLikelyToKeepUpChange(_ playerItem: AVPlayerItem) {
-        if playerItem.isPlaybackLikelyToKeepUp {
-            print("✅ Playback likely to keep up")
-        } else {
-            print("⚠️ Playback may not keep up")
-        }
-    }
     
     func cleanup() {
+        // Remove all cancellables
+        cancellables.removeAll()
+        
         // Remove notification observers
-        NotificationCenter.default.removeObserver(self, name: .AVPlayerItemFailedToPlayToEndTime, object: nil)
+        NotificationCenter.default.removeObserver(self)
         
-        if let playerItem = playerItem {
-            playerItem.removeObserver(self, forKeyPath: #keyPath(AVPlayerItem.status))
-            playerItem.removeObserver(self, forKeyPath: #keyPath(AVPlayerItem.isPlaybackLikelyToKeepUp))
-        }
-        
-        player?.pause()
-        player = nil
+        player.pause()
+        player = AVPlayer()
         playerItem = nil
+        
         print("🧹 Video player cleaned up")
     }
     
@@ -293,17 +286,18 @@ class VideoPlayerViewModel: NSObject, ObservableObject, AVAssetResourceLoaderDel
     }
 }
 
+// MARK: - Main Video Player View
 struct VideoPlayerView: View {
     let asset: ImmichAsset
     @ObservedObject var assetService: AssetService
     @ObservedObject var authenticationService: AuthenticationService
-    @StateObject private var viewModel: VideoPlayerViewModel
+    @StateObject private var playerManager: PlayerManager
     
     init(asset: ImmichAsset, assetService: AssetService, authenticationService: AuthenticationService) {
         self.asset = asset
         self.assetService = assetService
         self.authenticationService = authenticationService
-        self._viewModel = StateObject(wrappedValue: VideoPlayerViewModel(asset: asset, assetService: assetService, authenticationService: authenticationService))
+        self._playerManager = StateObject(wrappedValue: PlayerManager(asset: asset, assetService: assetService, authenticationService: authenticationService))
     }
     
     var body: some View {
@@ -311,7 +305,7 @@ struct VideoPlayerView: View {
             Color.black
                 .ignoresSafeArea()
             
-            if viewModel.isLoading {
+            if playerManager.isLoading {
                 VStack(spacing: 20) {
                     ProgressView()
                         .scaleEffect(1.5)
@@ -320,7 +314,7 @@ struct VideoPlayerView: View {
                         .foregroundColor(.white)
                         .font(.title2)
                 }
-            } else if let errorMessage = viewModel.errorMessage {
+            } else if let errorMessage = playerManager.errorMessage {
                 VStack(spacing: 20) {
                     Image(systemName: "exclamationmark.triangle")
                         .font(.system(size: 60))
@@ -333,20 +327,40 @@ struct VideoPlayerView: View {
                         .multilineTextAlignment(.center)
                         .padding(.horizontal)
                     Button("Retry") {
-                        viewModel.loadVideo()
+                        playerManager.initializePlayer()
                     }
                     .buttonStyle(.borderedProminent)
                 }
-            } else if let player = viewModel.player, viewModel.isReadyToPlay {
-                ImprovedVideoPlayerView(player: player)
+            } else if playerManager.isReadyToPlay {
+                ImprovedVideoPlayerView(player: playerManager.player)
                     .ignoresSafeArea()
+                
+                // Optional: Show buffer status overlay
+                if playerManager.isPlaybackBufferEmpty {
+                    let _ = print(playerManager.isPlaybackBufferEmpty)
+                    VStack {
+                        Spacer()
+                        HStack {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            Text("Buffering...")
+                                .foregroundColor(.white)
+                                .font(.caption)
+                        }
+                        .padding()
+                        .background(Color.black.opacity(0.7))
+                        .cornerRadius(8)
+                        .padding(.bottom, 50)
+                    }
+                }
             }
         }
         .onAppear {
-            viewModel.loadVideo()
+            playerManager.initializePlayer()
         }
         .onDisappear {
-            viewModel.cleanup()
+            playerManager.cleanup()
         }
     }
 }
@@ -361,7 +375,7 @@ struct ImprovedVideoPlayerView: UIViewControllerRepresentable {
         controller.showsPlaybackControls = true
         
         // Configure for better tvOS experience
-        controller.allowsPictureInPicturePlayback = false
+        controller.allowsPictureInPicturePlayback = true
         
         // Set up custom styling to avoid layout conflicts
         controller.view.backgroundColor = UIColor.black
@@ -376,42 +390,3 @@ struct ImprovedVideoPlayerView: UIViewControllerRepresentable {
         }
     }
 }
-
-#Preview {
-    let networkService = NetworkService()
-    let authenticationService = AuthenticationService(networkService: networkService)
-    let assetService = AssetService(networkService: networkService)
-    
-    // Create mock video asset for preview
-    let mockVideoAsset = ImmichAsset(
-        id: "mock-video-id",
-        deviceAssetId: "mock-device-video-id",
-        deviceId: "mock-device",
-        ownerId: "mock-owner",
-        libraryId: nil,
-        type: .video,
-        originalPath: "/mock/video/path",
-        originalFileName: "mock.mp4",
-        originalMimeType: "video/mp4",
-        resized: false,
-        thumbhash: nil,
-        fileModifiedAt: "2023-01-01",
-        fileCreatedAt: "2023-01-01",
-        localDateTime: "2023-01-01",
-        updatedAt: "2023-01-01",
-        isFavorite: false,
-        isArchived: false,
-        isOffline: false,
-        isTrashed: false,
-        checksum: "mock-video-checksum",
-        duration: "PT1M30S",
-        hasMetadata: false,
-        livePhotoVideoId: nil,
-        people: [],
-        visibility: "public",
-        duplicateId: nil,
-        exifInfo: nil
-    )
-    
-    VideoPlayerView(asset: mockVideoAsset, assetService: assetService, authenticationService: authenticationService)
-} 

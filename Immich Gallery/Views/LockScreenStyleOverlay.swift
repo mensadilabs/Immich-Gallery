@@ -17,6 +17,10 @@ struct LockScreenStyleOverlay: View {
     @State private var currentTime = Date()
     @State private var timeUpdateTimer: Timer?
     
+    private var use24HourClock: Bool {
+    UserDefaults.standard.bool(forKey: "use24HourClock")
+}
+
     init(asset: ImmichAsset, isSlideshowMode: Bool = false) {
         self.asset = asset
         self.isSlideshowMode = isSlideshowMode
@@ -165,7 +169,7 @@ struct LockScreenStyleOverlay: View {
     
     private func formatCurrentTime() -> String {
         let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm" // 24-hour format typical for digital clocks
+        formatter.dateFormat = use24HourClock ? "HH:mm" : "h:mm a"
         return formatter.string(from: currentTime)
     }
     

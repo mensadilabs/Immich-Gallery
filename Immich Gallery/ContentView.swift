@@ -8,7 +8,7 @@
 import SwiftUI
 
 extension Notification.Name {
-    static let userSwitched = Notification.Name("userSwitched")
+    static let refreshAllTabs = Notification.Name("refreshAllTabs")
 }
 
 struct ContentView: View {
@@ -17,8 +17,10 @@ struct ContentView: View {
     @StateObject private var assetService: AssetService
     @StateObject private var albumService: AlbumService
     @StateObject private var peopleService: PeopleService
+    @StateObject private var tagService: TagService
     @State private var selectedTab = 0
     @State private var refreshTrigger = UUID()
+    @AppStorage("showTagsTab") private var showTagsTab = false
     
     init() {
         let networkService = NetworkService()
@@ -27,6 +29,7 @@ struct ContentView: View {
         _assetService = StateObject(wrappedValue: AssetService(networkService: networkService))
         _albumService = StateObject(wrappedValue: AlbumService(networkService: networkService))
         _peopleService = StateObject(wrappedValue: PeopleService(networkService: networkService))
+        _tagService = StateObject(wrappedValue: TagService(networkService: networkService))
     }
     
     var body: some View {
@@ -39,10 +42,12 @@ struct ContentView: View {
                 if !authService.isAuthenticated {
                     // Show sign-in view
                     SignInView(authService: authService)
+                        .errorBoundary(context: "Authentication")
                 } else {
                     // Main app interface
                     TabView(selection: $selectedTab) {
-                        AssetGridView(assetService: assetService, authService: authService, albumId: nil, personId: nil, onAssetsLoaded: nil)
+                        AssetGridView(assetService: assetService, authService: authService, albumId: nil, personId: nil, tagId: nil, onAssetsLoaded: nil)
+                            .errorBoundary(context: "Photos Tab")
                             .tabItem {
                                 Image(systemName: "photo.on.rectangle")
                                 Text("Photos")
@@ -50,6 +55,7 @@ struct ContentView: View {
                             .tag(0)
                         
                         AlbumListView(albumService: albumService, authService: authService, assetService: assetService)
+                            .errorBoundary(context: "Albums Tab")
                             .tabItem {
                                 Image(systemName: "folder")
                                 Text("Albums")
@@ -57,23 +63,34 @@ struct ContentView: View {
                             .tag(1)
                         
                         PeopleGridView(peopleService: peopleService, authService: authService, assetService: assetService)
+                            .errorBoundary(context: "People Tab")
                             .tabItem {
                                 Image(systemName: "person.crop.circle")
                                 Text("People")
                             }
                             .tag(2)
                         
+                        if showTagsTab {
+                            TagsGridView(tagService: tagService, authService: authService, assetService: assetService)
+                                .errorBoundary(context: "Tags Tab")
+                                .tabItem {
+                                    Image(systemName: "tag")
+                                    Text("Tags")
+                                }
+                                .tag(3)
+                        }
+                        
                         SettingsView(authService: authService)
+                            .errorBoundary(context: "Settings Tab")
                             .tabItem {
                                 Image(systemName: "gear")
                                 Text("Settings")
                             }
-                            .tag(3)
+                            .tag(showTagsTab ? 4 : 3)
                     }
-                    .onChange(of: selectedTab) { newValue in
-                        print("ContentView: Tab changed to \(newValue)")
-                    }
-                    .id(refreshTrigger) // Force refresh when user switches
+                    .onChange(of: selectedTab) { oldValue, newValue in
+                        print("Tab changed from \(oldValue) to \(newValue)")
+                    }                    .id(refreshTrigger) // Force refresh when user switches
                     // .accentColor(.blue)
                 }
             }
@@ -81,8 +98,8 @@ struct ContentView: View {
             .navigationBarHidden(true)
         }
         .navigationViewStyle(StackNavigationViewStyle())
-        .onReceive(NotificationCenter.default.publisher(for: .userSwitched)) { _ in
-            // Refresh the app by generating a new UUID
+        .onReceive(NotificationCenter.default.publisher(for: .refreshAllTabs)) { _ in
+            // Refresh all tabs by generating a new UUID
             refreshTrigger = UUID()
         }
     }

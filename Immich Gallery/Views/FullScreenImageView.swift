@@ -205,7 +205,7 @@ struct ContentAwareModifier: ViewModifier {
     let onLoadImage: () -> Void
     let showingVideoPlayer: Bool
     let onPlayButtonTapped: () -> Void
-
+    
     
     func body(content: Content) -> some View {
         if isVideo && showingVideoPlayer {
@@ -228,8 +228,15 @@ struct ContentAwareModifier: ViewModifier {
                     }
                     isFocused = true
                 }
-                .onChange(of: isFocused) { focused in
-                    print("FullScreenImageView focus: \(focused)")
+                .onTapGesture {
+                    // Only dismiss on tap for photos, not video thumbnails
+                    print("FullScreenImageView: Tap gesture detected - isVideo: \(isVideo)")
+                    if isVideo {
+                        onPlayButtonTapped()
+                    }
+                }
+                .onChange(of: isFocused) { oldValue, newValue in
+                    print("FullScreenImageView focus: \(newValue)")
                 }
                 .onMoveCommand { direction in
                     switch direction {
@@ -252,20 +259,16 @@ struct ContentAwareModifier: ViewModifier {
                             print("FullScreenImageView: Already at last photo, cannot navigate further")
                         }
                     case .up, .down:
-                        // Ignore up/down swipes
+                        print("Up/Down")
                         break
                     @unknown default:
                         print("FullScreenImageView: Unknown direction")
                     }
                 }
+                .onPlayPauseCommand(perform: {
+                    print("Play pause tapped")
+                })
                 .contentShape(Rectangle())
-                .onTapGesture {
-                    // Only dismiss on tap for photos, not video thumbnails
-                    print("FullScreenImageView: Tap gesture detected - isVideo: \(isVideo)")
-                    if isVideo {
-                        onPlayButtonTapped()
-                    }
-                }
         }
     }
 }
@@ -275,6 +278,7 @@ struct VideoThumbnailView: View {
     let asset: ImmichAsset
     let assetService: AssetService
     let onPlayButtonTapped: () -> Void
+    @ObservedObject private var thumbnailCache = ThumbnailCache.shared
     
     @State private var thumbnail: UIImage?
     @State private var isLoading = true
@@ -326,8 +330,8 @@ struct VideoThumbnailView: View {
                                         .foregroundColor(.white)
                                         .offset(x: 5) // Slight offset to center the play icon
                                 }
-                                .scaleEffect(isFocused ? 1.1 : 1.0)
-                                .animation(.easeInOut(duration: 0.2), value: isFocused)
+                                    .scaleEffect(isFocused ? 1.1 : 1.0)
+                                    .animation(.easeInOut(duration: 0.2), value: isFocused)
                             )
                             .overlay(
                                 // Lock screen style overlay in bottom right
@@ -373,7 +377,10 @@ struct VideoThumbnailView: View {
         Task {
             do {
                 print("Loading thumbnail for video asset \(asset.id)")
-                let thumbnailImage = try await assetService.loadImage(asset: asset, size: "thumbnail")
+                let thumbnailImage = try await thumbnailCache.getThumbnail(for: asset.id, size: "thumbnail") {
+                    // Load from server if not in cache
+                    try await assetService.loadImage(asset: asset, size: "thumbnail")
+                }
                 await MainActor.run {
                     print("Loaded thumbnail for video asset \(asset.id)")
                     self.thumbnail = thumbnailImage

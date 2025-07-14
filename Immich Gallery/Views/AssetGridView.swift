@@ -13,6 +13,7 @@ struct AssetGridView: View {
     @ObservedObject private var thumbnailCache = ThumbnailCache.shared
     let albumId: String? // Optional album ID to filter assets
     let personId: String? // Optional person ID to filter assets
+    let tagId: String? // Optional tag ID to filter assets
     let onAssetsLoaded: (([ImmichAsset]) -> Void)? // Callback for when assets are loaded
     @State private var assets: [ImmichAsset] = []
     @State private var isLoading = false
@@ -27,6 +28,7 @@ struct AssetGridView: View {
     @State private var nextPage: String?
     @State private var hasMoreAssets = true
     @State private var loadMoreTask: Task<Void, Never>?
+    @State private var showingSlideshow = false
     
     private let columns = [
         GridItem(.fixed(300), spacing: 50),
@@ -162,10 +164,10 @@ struct AssetGridView: View {
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
                                     shouldScrollToAsset = nil
                                 }
+                                }
                             }
                         }
                     }
-                }
                 }
             }
         }
@@ -181,6 +183,16 @@ struct AssetGridView: View {
                 )
             }
         }
+        .fullScreenCover(isPresented: $showingSlideshow) {
+            let imageAssets = assets.filter { $0.type == .image }
+            if !imageAssets.isEmpty {
+                SlideshowView(assets: imageAssets, assetService: assetService)
+            }
+        }
+        .onPlayPauseCommand(perform: {
+            print("Play pause tapped in AssetGridView - starting slideshow")
+            startSlideshow()
+        })
         .onAppear {
             if assets.isEmpty {
                 loadAssets()
@@ -229,7 +241,7 @@ struct AssetGridView: View {
         
         Task {
             do {
-                let searchResult = try await assetService.fetchAssets(page: 1, limit: 100, albumId: albumId, personId: personId)
+                let searchResult = try await assetService.fetchAssets(page: 1, limit: 100, albumId: albumId, personId: personId, tagId: tagId)
                 await MainActor.run {
                     self.assets = searchResult.assets
                     self.nextPage = searchResult.nextPage
@@ -278,7 +290,7 @@ struct AssetGridView: View {
             do {
                 // Extract page number from nextPage string
                 let pageNumber = extractPageFromNextPage(nextPage!)
-                let searchResult = try await assetService.fetchAssets(page: pageNumber, limit: 100, albumId: albumId, personId: personId)
+                let searchResult = try await assetService.fetchAssets(page: pageNumber, limit: 100, albumId: albumId, personId: personId, tagId: tagId)
                 
                 await MainActor.run {
                     if !searchResult.assets.isEmpty {
@@ -342,11 +354,12 @@ struct AssetGridView: View {
             return "Your photos will appear here"
         }
     }
+    
+    private func startSlideshow() {
+        let imageAssets = assets.filter { $0.type == .image }
+        if !imageAssets.isEmpty {
+            showingSlideshow = true
+        }
+    }
 }
 
-#Preview {
-    let networkService = NetworkService()
-    let assetService = AssetService(networkService: networkService)
-    let authService = AuthenticationService(networkService: networkService)
-    AssetGridView(assetService: assetService, authService: authService, albumId: nil, personId: nil, onAssetsLoaded: nil)
-}

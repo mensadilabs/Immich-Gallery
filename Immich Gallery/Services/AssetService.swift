@@ -14,19 +14,23 @@ class AssetService: ObservableObject {
         self.networkService = networkService
     }
 
-    func fetchAssets(page: Int = 1, limit: Int = 50, albumId: String? = nil, personId: String? = nil) async throws -> SearchResult {
+    func fetchAssets(page: Int = 1, limit: Int = 50, albumId: String? = nil, personId: String? = nil, tagId: String? = nil) async throws -> SearchResult {
+        let sortOrder = UserDefaults.standard.string(forKey: "assetSortOrder") ?? "desc"
         var searchRequest: [String: Any] = [
             "page": page,
             "size": limit,
             "withPeople": true,
-            "order": "desc",
-            "withExif": true
+            "order": sortOrder,
+            "withExif": true,
         ]
         if let albumId = albumId {
             searchRequest["albumIds"] = [albumId]
         }
         if let personId = personId {
             searchRequest["personIds"] = [personId]
+        }
+        if let tagId = tagId {
+            searchRequest["tagIds"] = [tagId]
         }
         let result: SearchResponse = try await networkService.makeRequest(
             endpoint: "/api/search/metadata",

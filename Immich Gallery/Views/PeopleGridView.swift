@@ -140,6 +140,7 @@ struct PeopleGridView: View {
 struct PersonThumbnailView: View {
     let person: Person
     @ObservedObject var peopleService: PeopleService
+    @ObservedObject private var thumbnailCache = ThumbnailCache.shared
     @State private var image: UIImage?
     @State private var isLoading = true
     let isFocused: Bool
@@ -208,7 +209,10 @@ struct PersonThumbnailView: View {
     private func loadPersonThumbnail() {
         Task {
             do {
-                let thumbnail = try await peopleService.loadPersonThumbnail(personId: person.id)
+                let thumbnail = try await thumbnailCache.getThumbnail(for: person.id, size: "thumbnail") {
+                    // Load from server if not in cache
+                    try await peopleService.loadPersonThumbnail(personId: person.id)
+                }
                 await MainActor.run {
                     self.image = thumbnail
                     self.isLoading = false
@@ -256,6 +260,7 @@ struct PersonPhotosView: View {
                     authService: authService, 
                     albumId: nil, 
                     personId: person.id,
+                    tagId: nil,
                     onAssetsLoaded: { loadedAssets in
                         self.personAssets = loadedAssets
                     }
