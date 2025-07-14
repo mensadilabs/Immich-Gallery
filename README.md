@@ -1,3 +1,5 @@
+![Build Status](https://github.com/mensadilabs/Immich-Gallery/actions/workflows/objective-c-xcode.yml/badge.svg?branch=test)
+
 ## Note 1: As you can probabaly tell, AI was used in writing this. However, it is not "vibe coded". I have checked every line and edited things manually to get this working. As it is my side project and pretty much an experiment, I didn't want to spend time typing every line. 
 ## Note 2: Some of the readme maybe outdated. I change code and I forget to update README. 
 
