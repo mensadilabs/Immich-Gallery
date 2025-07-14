@@ -2,7 +2,7 @@ name: Xcode - Build and Analyze
 
 on:
   push:
-    branches: [main, test, dev]
+    branches: [main]
   pull_request:
     branches: [main]
 
@@ -18,6 +18,9 @@ jobs:
         with:
           xcode-version: '16.2'
 
-      - name: Build and analyze
+      - name: Build and analyze (tvOS Simulator)
         run: |
-           xcodebuild -project "Immich Gallery.xcodeproj" -scheme "Immich Gallery" -allowProvisioningUpdates build analyze
+          xcodebuild -project "Immich Gallery.xcodeproj" \
+            -scheme "Immich Gallery" \
+            -destination 'platform=tvOS Simulator,name=Apple TV 4K (3rd generation),OS=18.2' \
+            build analyze
