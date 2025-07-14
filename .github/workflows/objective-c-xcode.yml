@@ -20,4 +20,4 @@ jobs:
 
       - name: Build and analyze
         run: |
-          xcodebuild -project "Immich Gallery.xcodeproj" -scheme "Immich Gallery" build analyze
+           xcodebuild -project "Immich Gallery.xcodeproj" -scheme "Immich Gallery" -allowProvisioningUpdates build analyze
