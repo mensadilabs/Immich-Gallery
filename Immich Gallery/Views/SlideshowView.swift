@@ -58,6 +58,9 @@ struct SlideshowView: View {
         }
     }
     
+    // Global slide animation duration for both slide-in and slide-out
+    private let slideAnimationDuration: Double = 1.5
+    
     var body: some View {
         ZStack {
             // Use dominant color if available, otherwise fall back to user setting, and animate changes
@@ -96,8 +99,8 @@ struct SlideshowView: View {
                                 .offset(isTransitioning ? slideDirection.offset(for: geometry.size) : .zero)
                                 .scaleEffect(isTransitioning ? slideDirection.scale : 1.0)
                                 .opacity(isTransitioning ? slideDirection.opacity : 1.0)
-                                .animation(.easeInOut(duration: 1.0), value: isTransitioning)
-                                .animation(.easeInOut(duration: 1.0), value: slideDirection)
+                                .animation(.easeInOut(duration: slideAnimationDuration), value: isTransitioning)
+                                .animation(.easeInOut(duration: slideAnimationDuration), value: slideDirection)
                                 .overlay(
                                     Group {
                                         if !UserDefaults.standard.hideImageOverlay {
@@ -117,7 +120,7 @@ struct SlideshowView: View {
                                                             Spacer()
                                                             LockScreenStyleOverlay(asset: assets[currentIndex], isSlideshowMode: true)
                                                                 .opacity(isTransitioning ? 0.0 : 1.0)
-                                                                .animation(.easeInOut(duration: 1.0), value: isTransitioning)
+                                                                .animation(.easeInOut(duration: slideAnimationDuration), value: isTransitioning)
                                                         }
                                                     }
                                                 } else {
@@ -131,7 +134,7 @@ struct SlideshowView: View {
                                                             Spacer()
                                                             LockScreenStyleOverlay(asset: assets[currentIndex], isSlideshowMode: true)
                                                                 .opacity(isTransitioning ? 0.0 : 1.0)
-                                                                .animation(.easeInOut(duration: 1.0), value: isTransitioning)
+                                                                .animation(.easeInOut(duration: slideAnimationDuration), value: isTransitioning)
                                                                 .padding(.trailing, 20)
                                                                 .padding(.bottom, 20)
                                                         }
@@ -163,8 +166,8 @@ struct SlideshowView: View {
                                 .offset(isTransitioning ? slideDirection.offset(for: geometry.size) : .zero)
                                 .scaleEffect(isTransitioning ? slideDirection.scale : 1.0)
                                 .opacity(isTransitioning ? slideDirection.opacity * 0.4 : 0.4)
-                                .animation(.easeInOut(duration: 1.0), value: isTransitioning)
-                                .animation(.easeInOut(duration: 1.0), value: slideDirection)
+                                .animation(.easeInOut(duration: slideAnimationDuration), value: isTransitioning)
+                                .animation(.easeInOut(duration: slideAnimationDuration), value: slideDirection)
                         }
                         .frame(maxWidth: .infinity, alignment: .center)
                     }
@@ -228,7 +231,7 @@ struct SlideshowView: View {
             
             // Ensure slide-in animation plays
             if isTransitioning {
-                withAnimation(.easeInOut(duration: 1.0)) {
+                withAnimation(.easeInOut(duration: slideAnimationDuration)) {
                     isTransitioning = false
                 }
             }
@@ -260,7 +263,7 @@ struct SlideshowView: View {
                     
                     // Ensure slide-in animation plays after image loads
                     if isTransitioning {
-                        withAnimation(.easeInOut(duration: 1.0)) {
+                        withAnimation(.easeInOut(duration: slideAnimationDuration)) {
                             isTransitioning = false
                         }
                     }
@@ -278,7 +281,7 @@ struct SlideshowView: View {
                     
                     // Still slide in even if image failed to load
                     if isTransitioning {
-                        withAnimation(.easeInOut(duration: 1.0)) {
+                        withAnimation(.easeInOut(duration: slideAnimationDuration)) {
                             isTransitioning = false
                         }
                     }
@@ -305,12 +308,12 @@ struct SlideshowView: View {
         
         print("SlideshowView: Starting slide out animation")
         // Start slide out animation
-        withAnimation(.easeInOut(duration: 1.0)) {
+        withAnimation(.easeInOut(duration: slideAnimationDuration)) {
             isTransitioning = true
         }
         
         // Wait for slide out to complete, then change image
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + slideAnimationDuration) {
             if self.currentIndex + 1 < self.assets.count {
                 print("SlideshowView: Advancing from index \(self.currentIndex) to \(self.currentIndex + 1)")
                 self.currentIndex += 1
@@ -334,10 +337,10 @@ struct SlideshowView: View {
                 // Loop back to the beginning with slide animation
                 let directions: [SlideDirection] = [.left, .right, .up, .down, .diagonal_up_left, .diagonal_up_right, .diagonal_down_left, .diagonal_down_right, .zoom_out]
                 self.slideDirection = directions.randomElement() ?? .right
-                withAnimation(.easeInOut(duration: 1.0)) {
+                withAnimation(.easeInOut(duration: slideAnimationDuration)) {
                     self.isTransitioning = true
                 }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + slideAnimationDuration) {
                     self.currentIndex = 0
                     self.loadCurrentImage()
                     // Slide in will be triggered in loadCurrentImage after image loads
