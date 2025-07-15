@@ -9,12 +9,26 @@ import SwiftUI
 
 struct SignInView: View {
     @ObservedObject var authService: AuthenticationService
+    let mode: Mode
+    let onUserAdded: (() -> Void)?
+    @Environment(\.dismiss) private var dismiss
     @State private var serverURL = ""
     @State private var email = ""
     @State private var password = ""
     @State private var isLoading = false
     @State private var showError = false
     @State private var errorMessage = ""
+    
+    enum Mode {
+        case signIn
+        case addUser
+    }
+    
+    init(authService: AuthenticationService, mode: Mode = .signIn, onUserAdded: (() -> Void)? = nil) {
+        self.authService = authService
+        self.mode = mode
+        self.onUserAdded = onUserAdded
+    }
     
     var body: some View {
         NavigationView {
@@ -23,7 +37,7 @@ struct SignInView: View {
             VStack(spacing: 30) {
                 // Header
                 VStack(spacing: 16) {
-                    Image(systemName: "photo.on.rectangle.angled")
+                    Image(systemName: mode == .addUser ? "person.badge.plus" : "photo.on.rectangle.angled")
                         .font(.system(size: 60))
                         .foregroundColor(.blue)
                     
@@ -31,7 +45,7 @@ struct SignInView: View {
                         .font(.largeTitle)
                         .fontWeight(.bold)
                     
-                    Text("Sign in to your Immich server")
+                    Text(mode == .addUser ? "Add another account" : "Sign in to your Immich server")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
@@ -51,7 +65,7 @@ struct SignInView: View {
                             .onAppear {
                                 // Pre-fill with common Immich server URLs
                                 if serverURL.isEmpty {
-                                    serverURL = "https://"
+                                    serverURL = authService.baseURL.isEmpty ? "https://" : String(authService.baseURL)
                                 }
                             }
                     }
@@ -86,10 +100,10 @@ struct SignInView: View {
                                 .progressViewStyle(CircularProgressViewStyle(tint: .white))
                                 .scaleEffect(0.8)
                         } else {
-                            Image(systemName: "arrow.right.circle.fill")
+                            Image(systemName: mode == .addUser ? "plus.circle.fill" : "arrow.right.circle.fill")
                         }
                         
-                        Text(isLoading ? "Signing In..." : "Sign In")
+                        Text(isLoading ? (mode == .addUser ? "Adding User..." : "Signing In...") : (mode == .addUser ? "Add User" : "Sign In"))
                             .fontWeight(.semibold)
                     }
                     .frame(maxWidth: .infinity)
@@ -98,15 +112,12 @@ struct SignInView: View {
                     .foregroundColor(.white)
                     .cornerRadius(12)
                 }
+                .buttonStyle(.plain)
                 .disabled(isLoading || serverURL.isEmpty || email.isEmpty || password.isEmpty)
                 .opacity((isLoading || serverURL.isEmpty || email.isEmpty || password.isEmpty) ? 0.6 : 1.0)
                 
-                // Help text
+            
                 VStack(spacing: 8) {
-                    Text("Need help?")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    
                     Text("Make sure your Immich server is running and accessible from this device.")
                         .font(.caption2)
                         .foregroundColor(.secondary)
@@ -116,9 +127,10 @@ struct SignInView: View {
                 
                 Spacer()
             }
+            .frame(width: 1000)
             .padding(.horizontal, 30)
             .padding(.top, 50)
-            .alert("Sign In Error", isPresented: $showError) {
+            .alert(mode == .addUser ? "Add User Error" : "Sign In Error", isPresented: $showError) {
                 Button("OK") { }
             } message: {
                 Text(errorMessage)
@@ -154,22 +166,119 @@ struct SignInView: View {
             return
         }
         
-        authService.signIn(serverURL: cleanURL, email: email, password: password) { success, error in
-            DispatchQueue.main.async {
-                isLoading = false
-                
-                if !success {
-                    showError = true
-                    errorMessage = error ?? "Failed to sign in. Please check your credentials and try again."
+        if mode == .addUser {
+            // Add user mode: directly handle authentication without affecting current user
+            addUser(serverURL: cleanURL)
+        } else {
+            // Regular sign in mode: use the existing auth service
+            authService.signIn(serverURL: cleanURL, email: email, password: password) { success, error in
+                DispatchQueue.main.async {
+                    isLoading = false
+                    
+                    if !success {
+                        showError = true
+                        errorMessage = error ?? "Failed to sign in. Please check your credentials and try again."
+                    }
                 }
             }
         }
+    }
+    
+    private func addUser(serverURL: String) {
+        // Direct authentication without affecting current user
+        let loginURL = URL(string: "\(serverURL)/api/auth/login")!
+        var request = URLRequest(url: loginURL)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let loginData = [
+            "email": email,
+            "password": password
+        ]
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: loginData)
+        } catch {
+            isLoading = false
+            showError = true
+            errorMessage = "Error creating login request"
+            return
+        }
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            DispatchQueue.main.async {
+                isLoading = false
+                
+                if let error = error {
+                    showError = true
+                    errorMessage = "Network error: \(error.localizedDescription)"
+                    return
+                }
+                
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    showError = true
+                    errorMessage = "Invalid response from server"
+                    return
+                }
+                
+                guard let data = data else {
+                    showError = true
+                    errorMessage = "No data received from server"
+                    return
+                }
+                
+                if httpResponse.statusCode != 200 && httpResponse.statusCode != 201 {
+                    if let errorResponse = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                       let message = errorResponse["message"] as? String {
+                        showError = true
+                        errorMessage = message
+                    } else {
+                        showError = true
+                        errorMessage = "Authentication failed (Status: \(httpResponse.statusCode))"
+                    }
+                    return
+                }
+                
+                do {
+                    let authResponse = try JSONDecoder().decode(AuthResponse.self, from: data)
+                    
+                    // Generate unique user ID: "user@server"
+                    let userId = generateUserIdForUser(email: authResponse.userEmail, serverURL: serverURL)
+                    
+                    print("SignInView: Adding new user \(authResponse.userEmail) with ID \(userId)")
+                    
+                    // Save user data
+                    let savedUser = SavedUser(
+                        id: userId,
+                        email: authResponse.userEmail,
+                        name: authResponse.name,
+                        serverURL: serverURL
+                    )
+                    
+                    if let userData = try? JSONEncoder().encode(savedUser) {
+                        UserDefaults.standard.set(userData, forKey: "immich_user_\(userId)")
+                        print("SignInView: Saved user data for \(authResponse.userEmail)")
+                    }
+                    
+                    // Save token directly: "user@server" : token
+                    UserDefaults.standard.set(authResponse.accessToken, forKey: "immich_token_\(userId)")
+                    print("SignInView: Saved token for \(authResponse.userEmail) - starts with: \(String(authResponse.accessToken.prefix(20)))...")
+                    
+                    onUserAdded?()
+                    dismiss()
+                    
+                } catch {
+                    showError = true
+                    errorMessage = "Invalid response format from server"
+                }
+            }
+        }.resume()
     }
 }
 
 #Preview {
     let networkService = NetworkService()
     let authService = AuthenticationService(networkService: networkService)
-    SignInView(authService: authService)
+    SignInView(authService: authService, mode: .signIn)
 }
 

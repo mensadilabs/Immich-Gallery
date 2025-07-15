@@ -92,7 +92,7 @@ struct SettingsView: View {
     @ObservedObject var authService: AuthenticationService
     @State private var showingClearCacheAlert = false
     @State private var showingSignOutAlert = false
-    @State private var showingAddUser = false
+    @State private var showingSignIn = false
     @State private var savedUsers: [SavedUser] = []
     @AppStorage("hideImageOverlay") private var hideImageOverlay = true
     @AppStorage("slideshowInterval") private var slideshowInterval: Double = 6.0
@@ -209,7 +209,7 @@ struct SettingsView: View {
                             // Quick Actions
                             HStack(spacing: 16) {
                                 Button(action: {
-                                    showingAddUser = true
+                                    showingSignIn = true
                                 }) {
                                     VStack(spacing: 8) {
                                         Image(systemName: "person.badge.plus")
@@ -341,8 +341,8 @@ struct SettingsView: View {
                     .padding()
                 }
             }
-            .sheet(isPresented: $showingAddUser) {
-                AddUserView(onUserAdded: loadSavedUsers, authService: authService)
+            .sheet(isPresented: $showingSignIn) {
+                SignInView(authService: authService, mode: .addUser, onUserAdded: loadSavedUsers)
             }
             .alert("Clear Cache", isPresented: $showingClearCacheAlert) {
                 Button("Cancel", role: .cancel) { }
@@ -562,255 +562,6 @@ func generateUserIdForUser(email: String, serverURL: String) -> String {
     return combined.data(using: .utf8)?.base64EncodedString() ?? email
 }
 
-struct AddUserView: View {
-    let onUserAdded: () -> Void
-    let authService: AuthenticationService
-    @Environment(\.dismiss) private var dismiss
-    
-    @State private var serverURL = ""
-    @State private var email = ""
-    @State private var password = ""
-    @State private var isLoading = false
-    @State private var showError = false
-    @State private var errorMessage = ""
-    
-    var body: some View {
-        NavigationView {
-            ZStack {
-                LinearGradient(
-                    gradient: Gradient(colors: [
-                        Color.blue.opacity(0.3),
-                        Color.purple.opacity(0.2),
-                        Color.gray.opacity(0.4)
-                    ]),
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .ignoresSafeArea()
-                
-                VStack(spacing: 30) {
-                    // Header
-                    VStack(spacing: 16) {
-                        Image(systemName: "person.badge.plus")
-                            .font(.system(size: 60))
-                            .foregroundColor(.blue)
-                        
-                        Text("Add New User")
-                            .font(.largeTitle)
-                            .fontWeight(.bold)
-                        
-                        Text("Sign in with another account")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    // Form
-                    VStack(spacing: 20) {
-                        // Server URL
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Server URL")
-                                .font(.headline)
-                                .foregroundColor(.primary)
-                            
-                            TextField("https://your-immich-server.com", text: $serverURL)
-                                .autocapitalization(.none)
-                                .disableAutocorrection(true)
-                                .keyboardType(.URL)
-                                .onAppear {
-                                    if serverURL.isEmpty {
-                                        serverURL = "https://"
-                                    }
-                                }
-                        }
-                        
-                        // Email
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Email")
-                                .font(.headline)
-                                .foregroundColor(.primary)
-                            
-                            TextField("your-email@example.com", text: $email)
-                                .autocapitalization(.none)
-                                .disableAutocorrection(true)
-                                .keyboardType(.emailAddress)
-                        }
-                        
-                        // Password
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Password")
-                                .font(.headline)
-                                .foregroundColor(.primary)
-                            
-                            SecureField("Enter your password", text: $password)
-                        }
-                    }
-                    
-                    // Sign In Button
-                    Button(action: signIn) {
-                        HStack {
-                            if isLoading {
-                                ProgressView()
-                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                    .scaleEffect(0.8)
-                            } else {
-                                Image(systemName: "plus.circle.fill")
-                            }
-                            
-                            Text(isLoading ? "Adding User..." : "Add User")
-                                .fontWeight(.semibold)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.blue)
-                        .foregroundColor(.white)
-                        .cornerRadius(12)
-                    }
-                    .disabled(isLoading || serverURL.isEmpty || email.isEmpty || password.isEmpty)
-                    .opacity((isLoading || serverURL.isEmpty || email.isEmpty || password.isEmpty) ? 0.6 : 1.0)
-                    
-                    Spacer()
-                }
-                .padding(.horizontal, 30)
-                .padding(.top, 50)
-                .alert("Add User Error", isPresented: $showError) {
-                    Button("OK") { }
-                } message: {
-                    Text(errorMessage)
-                }
-            }
-            .navigationTitle("Add User")
-            .navigationBarItems(trailing: Button("Cancel") {
-                dismiss()
-            })
-        }
-    }
-    
-    private func signIn() {
-        guard !serverURL.isEmpty && !email.isEmpty && !password.isEmpty else {
-            return
-        }
-        
-        isLoading = true
-        
-        // Clean up the server URL
-        var cleanURL = serverURL.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !cleanURL.hasPrefix("http://") && !cleanURL.hasPrefix("https://") {
-            cleanURL = "https://" + cleanURL
-        }
-        
-        if cleanURL.hasSuffix("/") {
-            cleanURL = String(cleanURL.dropLast())
-        }
-        
-        guard URL(string: cleanURL) != nil else {
-            isLoading = false
-            showError = true
-            errorMessage = "Please enter a valid server URL"
-            return
-        }
-        
-        // Direct authentication without affecting current user
-        let loginURL = URL(string: "\(cleanURL)/api/auth/login")!
-        var request = URLRequest(url: loginURL)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        
-        let loginData = [
-            "email": email,
-            "password": password
-        ]
-        
-        do {
-            request.httpBody = try JSONSerialization.data(withJSONObject: loginData)
-        } catch {
-            isLoading = false
-            showError = true
-            errorMessage = "Error creating login request"
-            return
-        }
-        
-        URLSession.shared.dataTask(with: request) { data, response, error in
-            DispatchQueue.main.async {
-                isLoading = false
-                
-                if let error = error {
-                    showError = true
-                    errorMessage = "Network error: \(error.localizedDescription)"
-                    return
-                }
-                
-                guard let httpResponse = response as? HTTPURLResponse else {
-                    showError = true
-                    errorMessage = "Invalid response from server"
-                    return
-                }
-                
-                guard let data = data else {
-                    showError = true
-                    errorMessage = "No data received from server"
-                    return
-                }
-                
-                if httpResponse.statusCode != 200 && httpResponse.statusCode != 201 {
-                    if let errorResponse = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                       let message = errorResponse["message"] as? String {
-                        showError = true
-                        errorMessage = message
-                    } else {
-                        showError = true
-                        errorMessage = "Authentication failed (Status: \(httpResponse.statusCode))"
-                    }
-                    return
-                }
-                
-                do {
-                    let authResponse = try JSONDecoder().decode(AuthResponse.self, from: data)
-                    
-                    // Generate unique user ID: "user@server"
-                    let userId = generateUserIdForUser(email: authResponse.userEmail, serverURL: cleanURL)
-                    
-                    print("AddUserView: Adding new user \(authResponse.userEmail) with ID \(userId)")
-                    
-                    // Save user data
-                    let savedUser = SavedUser(
-                        id: userId,
-                        email: authResponse.userEmail,
-                        name: authResponse.name,
-                        serverURL: cleanURL
-                    )
-                    
-                    if let userData = try? JSONEncoder().encode(savedUser) {
-                        UserDefaults.standard.set(userData, forKey: "immich_user_\(userId)")
-                        print("AddUserView: Saved user data for \(authResponse.userEmail)")
-                    }
-                    
-                    // Save token directly: "user@server" : token
-                    UserDefaults.standard.set(authResponse.accessToken, forKey: "immich_token_\(userId)")
-                    print("AddUserView: Saved token for \(authResponse.userEmail) - starts with: \(String(authResponse.accessToken.prefix(20)))...")
-                    
-                    onUserAdded()
-                    dismiss()
-                    
-                } catch {
-                    showError = true
-                    errorMessage = "Invalid response format from server"
-                }
-            }
-        }.resume()
-    }
-    
-    private func getBackgroundColor(_ colorName: String) -> Color {
-        switch colorName {
-        case "auto": return .black // Fallback for preview, actual auto color is handled in slideshow
-        case "black": return .black
-        case "white": return .white
-        case "gray": return .gray
-        case "blue": return .blue
-        case "purple": return .purple
-        default: return .black
-        }
-    }
-}
 
 // MARK: - Slideshow Settings Component
 
@@ -822,6 +573,7 @@ struct SlideshowSettings: View {
     @FocusState.Binding var isMinusFocused: Bool
     @FocusState.Binding var isPlusFocused: Bool
     @FocusState.Binding var focusedColor: String?
+    @State private var showPerformanceAlert = false
     
     
     var body: some View {
@@ -877,7 +629,11 @@ struct SlideshowSettings: View {
                     HStack(spacing: 12) {
                         ForEach(["auto", "black", "white", "gray", "blue", "purple"], id: \.self) { color in
                             Button(action: {
-                                slideshowBackgroundColor = color
+                                if color == "auto" {
+                                    showPerformanceAlert = true
+                                } else {
+                                    slideshowBackgroundColor = color
+                                }
                             }) {
                                 Group {
                                     if color == "auto" {
@@ -936,9 +692,17 @@ struct SlideshowSettings: View {
             SettingsRow(
                 icon: "eye.slash",
                 title: "Hide Image Overlays",
-                subtitle: "Hide clocl, date, location, overlay from slideshow and full screen view",
+                subtitle: "Hide clock, date, location overlay from slideshow and fullscreen view",
                 content: AnyView(Toggle("", isOn: $hideOverlay).labelsHidden())
             )
+        }
+        .alert("Performance Warning", isPresented: $showPerformanceAlert) {
+            Button("Cancel", role: .cancel) { }
+            Button("Enable Auto Color") {
+                slideshowBackgroundColor = "auto"
+            }
+        } message: {
+            Text("Auto background color analyzes each image to extract dominant colors. This may cause performance issues with large images during slideshow transitions.")
         }
     }
     
