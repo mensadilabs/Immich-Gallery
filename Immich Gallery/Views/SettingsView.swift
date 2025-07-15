@@ -573,6 +573,7 @@ struct SlideshowSettings: View {
     @FocusState.Binding var isMinusFocused: Bool
     @FocusState.Binding var isPlusFocused: Bool
     @FocusState.Binding var focusedColor: String?
+    @State private var showPerformanceAlert = false
     
     
     var body: some View {
@@ -628,7 +629,11 @@ struct SlideshowSettings: View {
                     HStack(spacing: 12) {
                         ForEach(["auto", "black", "white", "gray", "blue", "purple"], id: \.self) { color in
                             Button(action: {
-                                slideshowBackgroundColor = color
+                                if color == "auto" {
+                                    showPerformanceAlert = true
+                                } else {
+                                    slideshowBackgroundColor = color
+                                }
                             }) {
                                 Group {
                                     if color == "auto" {
@@ -690,6 +695,14 @@ struct SlideshowSettings: View {
                 subtitle: "Hide clock, date, location overlay from slideshow and fullscreen view",
                 content: AnyView(Toggle("", isOn: $hideOverlay).labelsHidden())
             )
+        }
+        .alert("Performance Warning", isPresented: $showPerformanceAlert) {
+            Button("Cancel", role: .cancel) { }
+            Button("Enable Auto Color") {
+                slideshowBackgroundColor = "auto"
+            }
+        } message: {
+            Text("Auto background color analyzes each image to extract dominant colors. This may cause performance issues with large images during slideshow transitions.")
         }
     }
     

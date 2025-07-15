@@ -89,18 +89,18 @@ struct SlideshowView: View {
                         let imageHeight = geometry.size.height * 0.9
 
                         VStack(spacing: 0) {
-                            // Main image
+                            // Main image with performance optimizations
                             Image(uiImage: image)
                                 .resizable()
                                 .aspectRatio(contentMode: .fit)
                                 .frame(width: imageWidth, height: imageHeight)
                                 .shadow(color: .black.opacity(0.4), radius: 30, x: 0, y: 15)
                                 .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 5)
+                                .drawingGroup() // Enable hardware acceleration for smooth animations
                                 .offset(isTransitioning ? slideDirection.offset(for: geometry.size) : .zero)
                                 .scaleEffect(isTransitioning ? slideDirection.scale : 1.0)
                                 .opacity(isTransitioning ? slideDirection.opacity : 1.0)
                                 .animation(.easeInOut(duration: slideAnimationDuration), value: isTransitioning)
-                                .animation(.easeInOut(duration: slideAnimationDuration), value: slideDirection)
                                 .overlay(
                                     Group {
                                         if !UserDefaults.standard.hideImageOverlay {
@@ -147,7 +147,7 @@ struct SlideshowView: View {
                                     }
                                 )
                                 
-                            // Reflection
+                            // Reflection with performance optimizations
                             Image(uiImage: image)
                                 .resizable()
                                 .aspectRatio(contentMode: .fit)
@@ -163,11 +163,11 @@ struct SlideshowView: View {
                                     )
                                 )
                                 .opacity(0.4)
+                                .drawingGroup() // Enable hardware acceleration for reflection
                                 .offset(isTransitioning ? slideDirection.offset(for: geometry.size) : .zero)
                                 .scaleEffect(isTransitioning ? slideDirection.scale : 1.0)
                                 .opacity(isTransitioning ? slideDirection.opacity * 0.4 : 0.4)
                                 .animation(.easeInOut(duration: slideAnimationDuration), value: isTransitioning)
-                                .animation(.easeInOut(duration: slideAnimationDuration), value: slideDirection)
                         }
                         .frame(maxWidth: .infinity, alignment: .center)
                     }
@@ -253,6 +253,9 @@ struct SlideshowView: View {
             do {
                 let image = try await assetService.loadFullImage(asset: asset)
                 await MainActor.run {
+                    // Clear previous image immediately to free memory before setting new one
+                    self.currentImage = nil
+                    
                     self.currentImage = image
                     self.isLoading = false
                     
@@ -302,20 +305,19 @@ struct SlideshowView: View {
             return 
         }
         
-        // Randomly select slide direction for variety
-        let directions: [SlideDirection] = [.left, .right, .up, .down, .diagonal_up_left, .diagonal_up_right, .diagonal_down_left, .diagonal_down_right, .zoom_out]
-        slideDirection = directions.randomElement() ?? .right
-        
         print("SlideshowView: Starting slide out animation")
         // Start slide out animation
         withAnimation(.easeInOut(duration: slideAnimationDuration)) {
             isTransitioning = true
         }
         
-        // Wait for slide out to complete, then change image
+        // Wait for slide out to complete, then change image and direction
         DispatchQueue.main.asyncAfter(deadline: .now() + slideAnimationDuration) {
             if self.currentIndex + 1 < self.assets.count {
                 print("SlideshowView: Advancing from index \(self.currentIndex) to \(self.currentIndex + 1)")
+                // Set new slide direction for the incoming image
+                let directions: [SlideDirection] = [.left, .right, .up, .down, .diagonal_up_left, .diagonal_up_right, .diagonal_down_left, .diagonal_down_right, .zoom_out]
+                self.slideDirection = directions.randomElement() ?? .right
                 self.currentIndex += 1
                 self.loadCurrentImage()
             } else {
@@ -335,12 +337,13 @@ struct SlideshowView: View {
             } else {
                 print("SlideshowView: Looping back to beginning")
                 // Loop back to the beginning with slide animation
-                let directions: [SlideDirection] = [.left, .right, .up, .down, .diagonal_up_left, .diagonal_up_right, .diagonal_down_left, .diagonal_down_right, .zoom_out]
-                self.slideDirection = directions.randomElement() ?? .right
                 withAnimation(.easeInOut(duration: slideAnimationDuration)) {
                     self.isTransitioning = true
                 }
                 DispatchQueue.main.asyncAfter(deadline: .now() + slideAnimationDuration) {
+                    // Set new slide direction for the incoming image
+                    let directions: [SlideDirection] = [.left, .right, .up, .down, .diagonal_up_left, .diagonal_up_right, .diagonal_down_left, .diagonal_down_right, .zoom_out]
+                    self.slideDirection = directions.randomElement() ?? .right
                     self.currentIndex = 0
                     self.loadCurrentImage()
                     // Slide in will be triggered in loadCurrentImage after image loads
