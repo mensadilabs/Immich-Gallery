@@ -135,6 +135,15 @@ struct AssetGridView: View {
                         .padding(.bottom, 40)
                         .onChange(of: focusedAssetId) { newFocusedId in
                             print("AssetGridView: focusedAssetId changed to \(newFocusedId ?? "nil"), isProgrammatic: \(isProgrammaticFocusChange)")
+                            
+                            // Update currentAssetIndex when focus changes
+                            if let focusedId = newFocusedId,
+                               let focusedAsset = assets.first(where: { $0.id == focusedId }),
+                               let index = assets.firstIndex(of: focusedAsset) {
+                                currentAssetIndex = index
+                                print("AssetGridView: Updated currentAssetIndex to \(index) for focused asset")
+                            }
+                            
                             // Scroll to the focused asset when it changes
                             if let focusedId = newFocusedId {
                                 if isProgrammaticFocusChange {
@@ -186,7 +195,11 @@ struct AssetGridView: View {
         .fullScreenCover(isPresented: $showingSlideshow) {
             let imageAssets = assets.filter { $0.type == .image }
             if !imageAssets.isEmpty {
-                SlideshowView(assets: imageAssets, assetService: assetService)
+                let _ = print("currentAssetIndex test", currentAssetIndex)
+                // Find the index of the current asset in the filtered image assets
+                let startingIndex = currentAssetIndex < assets.count ? 
+                    (imageAssets.firstIndex(of: assets[currentAssetIndex]) ?? 0) : 0
+                SlideshowView(assets: imageAssets, assetService: assetService, startingIndex: startingIndex)
             }
         }
         .onPlayPauseCommand(perform: {

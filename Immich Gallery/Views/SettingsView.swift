@@ -100,6 +100,7 @@ struct SettingsView: View {
     @AppStorage("showTagsTab") private var showTagsTab = false
     @AppStorage("assetSortOrder") private var assetSortOrder = "desc"
     @AppStorage("use24HourClock") private var use24HourClock = true
+    @AppStorage("disableReflectionsInSlideshow") private var disableReflectionsInSlideshow = false
     @FocusState private var isMinusFocused: Bool
     @FocusState private var isPlusFocused: Bool
     @FocusState private var focusedColor: String?
@@ -325,6 +326,7 @@ struct SettingsView: View {
                                     slideshowBackgroundColor: $slideshowBackgroundColor,
                                     use24HourClock: $use24HourClock,
                                     hideOverlay: $hideImageOverlay,
+                                    disableReflections: $disableReflectionsInSlideshow,
                                     isMinusFocused: $isMinusFocused,
                                     isPlusFocused: $isPlusFocused,
                                     focusedColor: $focusedColor
@@ -546,6 +548,11 @@ extension UserDefaults {
         get { bool(forKey: "use24HourClock") }
         set { set(newValue, forKey: "use24HourClock") }
     }
+    
+    var disableReflectionsInSlideshow: Bool {
+        get { bool(forKey: "disableReflectionsInSlideshow") }
+        set { set(newValue, forKey: "disableReflectionsInSlideshow") }
+    }
 }
 
 struct SavedUser: Codable, Identifiable {
@@ -570,6 +577,7 @@ struct SlideshowSettings: View {
     @Binding var slideshowBackgroundColor: String
     @Binding var use24HourClock: Bool
     @Binding var hideOverlay: Bool
+    @Binding var disableReflections: Bool
     @FocusState.Binding var isMinusFocused: Bool
     @FocusState.Binding var isPlusFocused: Bool
     @FocusState.Binding var focusedColor: String?
@@ -595,7 +603,7 @@ struct SlideshowSettings: View {
                                 .font(.title2)
                         }
                         .buttonStyle(CustomFocusButtonStyle())
-                        .disabled(slideshowInterval <= 2)
+                        .disabled(slideshowInterval <= 6)
                         .focused($isMinusFocused)
                         
                         Text("\(Int(slideshowInterval))s")
@@ -694,6 +702,13 @@ struct SlideshowSettings: View {
                 title: "Hide Image Overlays",
                 subtitle: "Hide clock, date, location overlay from slideshow and fullscreen view",
                 content: AnyView(Toggle("", isOn: $hideOverlay).labelsHidden())
+            )
+            
+            SettingsRow(
+                icon: "camera.filters",
+                title: "Disable Reflections",
+                subtitle: "Remove image reflections in slideshow for full-screen display",
+                content: AnyView(Toggle("", isOn: $disableReflections).labelsHidden())
             )
         }
         .alert("Performance Warning", isPresented: $showPerformanceAlert) {

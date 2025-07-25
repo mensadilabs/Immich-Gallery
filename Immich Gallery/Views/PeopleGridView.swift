@@ -267,7 +267,7 @@ struct PersonPhotosView: View {
                 )
             }
             .navigationTitle(person.name.isEmpty ? "Unknown Person" : person.name)
-            .toolbar {
+            .toolbar(content: {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: startSlideshow) {
                         Image(systemName: "play.rectangle")
@@ -282,12 +282,12 @@ struct PersonPhotosView: View {
                     }
                     .foregroundColor(.white)
                 }
-            }
+            })
         }
         .fullScreenCover(isPresented: $showingSlideshow) {
             let imageAssets = personAssets.filter { $0.type == .image }
             if !imageAssets.isEmpty {
-                SlideshowView(assets: imageAssets, assetService: assetService)
+                SlideshowView(assets: imageAssets, assetService: assetService, startingIndex: 0)
             }
         }
     }
