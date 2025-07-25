@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct SlideshowView: View {
     let assets: [ImmichAsset]
@@ -26,7 +27,10 @@ struct SlideshowView: View {
     @State private var slideshowBackgroundColor: String = UserDefaults.standard.slideshowBackgroundColor
     @State private var hideImageOverlay: Bool = UserDefaults.standard.hideImageOverlay
     @State private var disableReflectionsInSlideshow: Bool = UserDefaults.standard.disableReflectionsInSlideshow
+    @State private var enableKenBurnsEffect: Bool = UserDefaults.standard.enableKenBurnsEffect
     @State private var dimensionMultiplier:Double = UserDefaults.standard.disableReflectionsInSlideshow ? 1.0 : 0.9
+    @State private var kenBurnsScale: CGFloat = 1.0
+    @State private var kenBurnsOffset: CGSize = .zero
     @FocusState private var isFocused: Bool
     
     enum SlideDirection {
@@ -101,10 +105,12 @@ struct SlideshowView: View {
                                 .aspectRatio(contentMode: .fit)
                                 .frame(width: imageWidth, height: imageHeight)
                                 .drawingGroup() // Enable hardware acceleration for smooth animations
-                                .offset(isTransitioning ? slideDirection.offset(for: geometry.size) : .zero)
-                                .scaleEffect(isTransitioning ? slideDirection.scale : 1.0)
+                                .offset(isTransitioning ? slideDirection.offset(for: geometry.size) : kenBurnsOffset)
+                                .scaleEffect(isTransitioning ? slideDirection.scale : kenBurnsScale)
                                 .opacity(isTransitioning ? slideDirection.opacity : 1.0)
                                 .animation(.easeInOut(duration: slideAnimationDuration), value: isTransitioning)
+                                .animation(.linear(duration: slideInterval), value: kenBurnsScale)
+                                .animation(.linear(duration: slideInterval), value: kenBurnsOffset)
                                 .overlay(
                                     Group {
                                         if !hideImageOverlay {
@@ -169,10 +175,12 @@ struct SlideshowView: View {
                                     )
                                     .opacity(0.4)
                                     .drawingGroup() // Enable hardware acceleration for reflection
-                                    .offset(isTransitioning ? slideDirection.offset(for: geometry.size) : .zero)
-                                    .scaleEffect(isTransitioning ? slideDirection.scale : 1.0)
+                                    .offset(isTransitioning ? slideDirection.offset(for: geometry.size) : kenBurnsOffset)
+                                    .scaleEffect(isTransitioning ? slideDirection.scale : kenBurnsScale)
                                     .opacity(isTransitioning ? slideDirection.opacity * 0.4 : 0.4)
                                     .animation(.easeInOut(duration: slideAnimationDuration), value: isTransitioning)
+                                    .animation(.linear(duration: slideInterval), value: kenBurnsScale)
+                                    .animation(.linear(duration: slideInterval), value: kenBurnsOffset)
                             }
                         }
                         .frame(maxWidth: .infinity, alignment: .center)
@@ -196,12 +204,31 @@ struct SlideshowView: View {
             preloadedImages.removeAll() // Clear any existing preloaded images
             preloadedDominantColors.removeAll() // Clear any existing preloaded dominant colors
             currentIndex = max(0, min(startingIndex, assets.count - 1)) // Set starting index with bounds check
+            
+            // Prevent display from sleeping during slideshow
+            UIApplication.shared.isIdleTimerDisabled = true
+            print("SlideshowView: Display sleep disabled")
+            
             loadCurrentImage()
         }
         .onDisappear {
             stopAutoAdvance()
             preloadedImages.removeAll() // Clear preloaded images to free memory
             preloadedDominantColors.removeAll() // Clear preloaded dominant colors to free memory
+            
+            // Re-enable display sleep when slideshow ends
+            UIApplication.shared.isIdleTimerDisabled = false
+            print("SlideshowView: Display sleep re-enabled")
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.willResignActiveNotification)) { _ in
+            // Re-enable display sleep when app goes to background
+            UIApplication.shared.isIdleTimerDisabled = false
+            print("SlideshowView: Display sleep re-enabled (app backgrounded)")
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
+            // Re-disable display sleep when app becomes active again (if slideshow is still running)
+            UIApplication.shared.isIdleTimerDisabled = true
+            print("SlideshowView: Display sleep disabled (app foregrounded)")
         }
         .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
             // Update all settings if they changed
@@ -214,6 +241,7 @@ struct SlideshowView: View {
             
             hideImageOverlay = UserDefaults.standard.hideImageOverlay
             disableReflectionsInSlideshow = UserDefaults.standard.disableReflectionsInSlideshow
+            enableKenBurnsEffect = UserDefaults.standard.enableKenBurnsEffect
             
             // Update dominant color if background color setting changed to/from auto
             if newBackgroundColor != previousBackgroundColor {
@@ -230,6 +258,9 @@ struct SlideshowView: View {
             }
         }
         .onTapGesture {
+            // Re-enable display sleep before dismissing
+            UIApplication.shared.isIdleTimerDisabled = false
+            print("SlideshowView: Display sleep re-enabled (tap dismiss)")
             dismiss()
         }
     }
@@ -267,6 +298,9 @@ struct SlideshowView: View {
                     isTransitioning = false
                 }
             }
+            
+            // Start Ken Burns effect for this image
+            startKenBurnsEffect()
             
             // Remove from preload cache to free memory
             preloadedImages.removeValue(forKey: asset.id)
@@ -307,6 +341,9 @@ struct SlideshowView: View {
                             isTransitioning = false
                         }
                     }
+                    
+                    // Start Ken Burns effect for this image
+                    self.startKenBurnsEffect()
                     
                     // Preload next image
                     self.preloadNextImage()
@@ -539,6 +576,43 @@ struct SlideshowView: View {
         }
     }
 }
+    
+    private func startKenBurnsEffect() {
+        guard enableKenBurnsEffect else {
+            // Reset to default values if Ken Burns is disabled
+            kenBurnsScale = 1.0
+            kenBurnsOffset = .zero
+            return
+        }
+        
+        // Generate random Ken Burns parameters
+        let zoomDirections = [true, false] // true = zoom in, false = zoom out
+        let shouldZoomIn = zoomDirections.randomElement() ?? true
+        
+        let startScale: CGFloat = shouldZoomIn ? 1.0 : 1.2
+        let endScale: CGFloat = shouldZoomIn ? 1.2 : 1.0
+        
+        // Random pan direction
+        let maxOffset: CGFloat = 20
+        let startOffset = CGSize(
+            width: CGFloat.random(in: -maxOffset...maxOffset),
+            height: CGFloat.random(in: -maxOffset...maxOffset)
+        )
+        let endOffset = CGSize(
+            width: CGFloat.random(in: -maxOffset...maxOffset),
+            height: CGFloat.random(in: -maxOffset...maxOffset)
+        )
+        
+        // Set initial values
+        kenBurnsScale = startScale
+        kenBurnsOffset = startOffset
+        
+        // Animate to end values over the slide duration
+        withAnimation(.linear(duration: slideInterval)) {
+            kenBurnsScale = endScale
+            kenBurnsOffset = endOffset
+        }
+    }
 }
 
 #Preview {
@@ -547,6 +621,7 @@ struct SlideshowView: View {
     UserDefaults.standard.set("10", forKey: "slideshowInterval")
     UserDefaults.standard.set(true, forKey: "hideImageOverlay")
     UserDefaults.standard.set(true, forKey: "disableReflectionsInSlideshow")
+    UserDefaults.standard.set(true, forKey: "enableKenBurnsEffect")
     let (_, _, assetService, _, _) = MockServiceFactory.createMockServices()
     
     // Create mock assets for preview

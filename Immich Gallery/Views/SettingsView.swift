@@ -101,6 +101,7 @@ struct SettingsView: View {
     @AppStorage("assetSortOrder") private var assetSortOrder = "desc"
     @AppStorage("use24HourClock") private var use24HourClock = true
     @AppStorage("disableReflectionsInSlideshow") private var disableReflectionsInSlideshow = false
+    @AppStorage("enableKenBurnsEffect") private var enableKenBurnsEffect = false
     @FocusState private var isMinusFocused: Bool
     @FocusState private var isPlusFocused: Bool
     @FocusState private var focusedColor: String?
@@ -327,6 +328,7 @@ struct SettingsView: View {
                                     use24HourClock: $use24HourClock,
                                     hideOverlay: $hideImageOverlay,
                                     disableReflections: $disableReflectionsInSlideshow,
+                                    enableKenBurns: $enableKenBurnsEffect,
                                     isMinusFocused: $isMinusFocused,
                                     isPlusFocused: $isPlusFocused,
                                     focusedColor: $focusedColor
@@ -553,6 +555,11 @@ extension UserDefaults {
         get { bool(forKey: "disableReflectionsInSlideshow") }
         set { set(newValue, forKey: "disableReflectionsInSlideshow") }
     }
+    
+    var enableKenBurnsEffect: Bool {
+        get { bool(forKey: "enableKenBurnsEffect") }
+        set { set(newValue, forKey: "enableKenBurnsEffect") }
+    }
 }
 
 struct SavedUser: Codable, Identifiable {
@@ -578,6 +585,7 @@ struct SlideshowSettings: View {
     @Binding var use24HourClock: Bool
     @Binding var hideOverlay: Bool
     @Binding var disableReflections: Bool
+    @Binding var enableKenBurns: Bool
     @FocusState.Binding var isMinusFocused: Bool
     @FocusState.Binding var isPlusFocused: Bool
     @FocusState.Binding var focusedColor: String?
@@ -709,6 +717,13 @@ struct SlideshowSettings: View {
                 title: "Disable Reflections",
                 subtitle: "Remove image reflections in slideshow for full-screen display",
                 content: AnyView(Toggle("", isOn: $disableReflections).labelsHidden())
+            )
+            
+            SettingsRow(
+                icon: "camera.macro.circle",
+                title: "Ken Burns Effect (beta)",
+                subtitle: "Add slow zoom and pan animations to slideshow images. Disable reflections when enabling this",
+                content: AnyView(Toggle("", isOn: $enableKenBurns).labelsHidden())
             )
         }
         .alert("Performance Warning", isPresented: $showPerformanceAlert) {
