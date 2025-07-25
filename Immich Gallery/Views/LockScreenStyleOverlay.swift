@@ -236,5 +236,5 @@ struct LockScreenStyleOverlay: View {
         )
     ]
     
-    SlideshowView(assets: mockAssets, assetService: assetService)
+    SlideshowView(assets: mockAssets, assetService: assetService, startingIndex: 0)
 }

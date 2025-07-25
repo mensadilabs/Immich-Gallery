@@ -281,7 +281,7 @@ struct AlbumDetailView: View {
         .fullScreenCover(isPresented: $showingSlideshow) {
             let imageAssets = albumAssets.filter { $0.type == .image }
             if !imageAssets.isEmpty {
-                SlideshowView(assets: imageAssets, assetService: assetService)
+                SlideshowView(assets: imageAssets, assetService: assetService, startingIndex: 0)
             }
         }
     }

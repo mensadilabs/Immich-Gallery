@@ -6,10 +6,12 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct SlideshowView: View {
     let assets: [ImmichAsset]
     let assetService: AssetService
+    let startingIndex: Int
     @Environment(\.dismiss) private var dismiss
     
     @State private var currentIndex = 0
@@ -22,6 +24,13 @@ struct SlideshowView: View {
     @State private var dominantColor: Color = getBackgroundColor(UserDefaults.standard.slideshowBackgroundColor)
     @State private var preloadedImages: [String: UIImage] = [:] // Cache for preloaded images
     @State private var preloadedDominantColors: [String: Color] = [:] // Cache for dominant colors
+    @State private var slideshowBackgroundColor: String = UserDefaults.standard.slideshowBackgroundColor
+    @State private var hideImageOverlay: Bool = UserDefaults.standard.hideImageOverlay
+    @State private var disableReflectionsInSlideshow: Bool = UserDefaults.standard.disableReflectionsInSlideshow
+    @State private var enableKenBurnsEffect: Bool = UserDefaults.standard.enableKenBurnsEffect
+    @State private var dimensionMultiplier:Double = UserDefaults.standard.disableReflectionsInSlideshow ? 1.0 : 0.9
+    @State private var kenBurnsScale: CGFloat = 1.0
+    @State private var kenBurnsOffset: CGSize = .zero
     @FocusState private var isFocused: Bool
     
     enum SlideDirection {
@@ -59,12 +68,13 @@ struct SlideshowView: View {
     }
     
     // Global slide animation duration for both slide-in and slide-out
-    private let slideAnimationDuration: Double = 1.5
+    private let slideAnimationDuration: Double = 1.5 
+    
     
     var body: some View {
         ZStack {
             // Use dominant color if available, otherwise fall back to user setting, and animate changes
-            (UserDefaults.standard.slideshowBackgroundColor == "auto" ? dominantColor : getBackgroundColor(UserDefaults.standard.slideshowBackgroundColor))
+            (slideshowBackgroundColor == "auto" ? dominantColor : getBackgroundColor(slideshowBackgroundColor))
                 .ignoresSafeArea()
                 .animation(.easeInOut(duration: 0.6), value: dominantColor)
             
@@ -85,8 +95,8 @@ struct SlideshowView: View {
                         .scaleEffect(1.5)
                 } else if let image = currentImage {
                     GeometryReader { geometry in
-                        let imageWidth = geometry.size.width * 0.9
-                        let imageHeight = geometry.size.height * 0.9
+                        let imageWidth = geometry.size.width * dimensionMultiplier
+                        let imageHeight = geometry.size.height * dimensionMultiplier
 
                         VStack(spacing: 0) {
                             // Main image with performance optimizations
@@ -94,16 +104,16 @@ struct SlideshowView: View {
                                 .resizable()
                                 .aspectRatio(contentMode: .fit)
                                 .frame(width: imageWidth, height: imageHeight)
-                                .shadow(color: .black.opacity(0.4), radius: 30, x: 0, y: 15)
-                                .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 5)
                                 .drawingGroup() // Enable hardware acceleration for smooth animations
-                                .offset(isTransitioning ? slideDirection.offset(for: geometry.size) : .zero)
-                                .scaleEffect(isTransitioning ? slideDirection.scale : 1.0)
+                                .offset(isTransitioning ? slideDirection.offset(for: geometry.size) : kenBurnsOffset)
+                                .scaleEffect(isTransitioning ? slideDirection.scale : kenBurnsScale)
                                 .opacity(isTransitioning ? slideDirection.opacity : 1.0)
                                 .animation(.easeInOut(duration: slideAnimationDuration), value: isTransitioning)
+                                .animation(.linear(duration: slideInterval), value: kenBurnsScale)
+                                .animation(.linear(duration: slideInterval), value: kenBurnsOffset)
                                 .overlay(
                                     Group {
-                                        if !UserDefaults.standard.hideImageOverlay {
+                                        if !hideImageOverlay {
                                             // Calculate actual image display size within the frame
                                             GeometryReader { imageGeometry in
                                                 let actualImageSize = calculateActualImageSize(
@@ -148,26 +158,30 @@ struct SlideshowView: View {
                                 )
                                 
                             // Reflection with performance optimizations
-                            Image(uiImage: image)
-                                .resizable()
-                                .aspectRatio(contentMode: .fit)
-                                .scaleEffect(y: -1)
-                                .frame(width: imageWidth, height: imageHeight)
-                                .offset(y: -imageHeight * 0.0)
-                                .clipped()
-                                .mask(
-                                    LinearGradient(
-                                        colors: [.black.opacity(0.9), .clear],
-                                        startPoint: .top,
-                                        endPoint: .center
+                            if !disableReflectionsInSlideshow {
+                                Image(uiImage: image)
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fit)
+                                    .scaleEffect(y: -1)
+                                    .frame(width: imageWidth, height: imageHeight)
+                                    .offset(y: -imageHeight * 0.0)
+                                    .clipped()
+                                    .mask(
+                                        LinearGradient(
+                                            colors: [.black.opacity(0.9), .clear],
+                                            startPoint: .top,
+                                            endPoint: .center
+                                        )
                                     )
-                                )
-                                .opacity(0.4)
-                                .drawingGroup() // Enable hardware acceleration for reflection
-                                .offset(isTransitioning ? slideDirection.offset(for: geometry.size) : .zero)
-                                .scaleEffect(isTransitioning ? slideDirection.scale : 1.0)
-                                .opacity(isTransitioning ? slideDirection.opacity * 0.4 : 0.4)
-                                .animation(.easeInOut(duration: slideAnimationDuration), value: isTransitioning)
+                                    .opacity(0.4)
+                                    .drawingGroup() // Enable hardware acceleration for reflection
+                                    .offset(isTransitioning ? slideDirection.offset(for: geometry.size) : kenBurnsOffset)
+                                    .scaleEffect(isTransitioning ? slideDirection.scale : kenBurnsScale)
+                                    .opacity(isTransitioning ? slideDirection.opacity * 0.4 : 0.4)
+                                    .animation(.easeInOut(duration: slideAnimationDuration), value: isTransitioning)
+                                    .animation(.linear(duration: slideInterval), value: kenBurnsScale)
+                                    .animation(.linear(duration: slideInterval), value: kenBurnsOffset)
+                            }
                         }
                         .frame(maxWidth: .infinity, alignment: .center)
                     }
@@ -189,20 +203,64 @@ struct SlideshowView: View {
             isFocused = true
             preloadedImages.removeAll() // Clear any existing preloaded images
             preloadedDominantColors.removeAll() // Clear any existing preloaded dominant colors
+            currentIndex = max(0, min(startingIndex, assets.count - 1)) // Set starting index with bounds check
+            
+            // Prevent display from sleeping during slideshow
+            UIApplication.shared.isIdleTimerDisabled = true
+            print("SlideshowView: Display sleep disabled")
+            
             loadCurrentImage()
         }
         .onDisappear {
             stopAutoAdvance()
             preloadedImages.removeAll() // Clear preloaded images to free memory
             preloadedDominantColors.removeAll() // Clear preloaded dominant colors to free memory
+            
+            // Re-enable display sleep when slideshow ends
+            UIApplication.shared.isIdleTimerDisabled = false
+            print("SlideshowView: Display sleep re-enabled")
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.willResignActiveNotification)) { _ in
+            // Re-enable display sleep when app goes to background
+            UIApplication.shared.isIdleTimerDisabled = false
+            print("SlideshowView: Display sleep re-enabled (app backgrounded)")
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
+            // Re-disable display sleep when app becomes active again (if slideshow is still running)
+            UIApplication.shared.isIdleTimerDisabled = true
+            print("SlideshowView: Display sleep disabled (app foregrounded)")
         }
         .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
-            // Update slide interval if it changed in settings
+            // Update all settings if they changed
             let newInterval = UserDefaults.standard.slideshowInterval
             slideInterval = newInterval > 0 ? newInterval : 6.0
-            // No need to restart timer here; timer is managed after each image load
+            
+            let newBackgroundColor = UserDefaults.standard.slideshowBackgroundColor
+            let previousBackgroundColor = slideshowBackgroundColor
+            slideshowBackgroundColor = newBackgroundColor
+            
+            hideImageOverlay = UserDefaults.standard.hideImageOverlay
+            disableReflectionsInSlideshow = UserDefaults.standard.disableReflectionsInSlideshow
+            enableKenBurnsEffect = UserDefaults.standard.enableKenBurnsEffect
+            
+            // Update dominant color if background color setting changed to/from auto
+            if newBackgroundColor != previousBackgroundColor {
+                if newBackgroundColor == "auto", let currentImage = currentImage {
+                    Task {
+                        let color = await extractDominantColorAsync(from: currentImage)
+                        await MainActor.run {
+                            self.dominantColor = color
+                        }
+                    }
+                } else if newBackgroundColor != "auto" {
+                    dominantColor = getBackgroundColor(newBackgroundColor)
+                }
+            }
         }
         .onTapGesture {
+            // Re-enable display sleep before dismissing
+            UIApplication.shared.isIdleTimerDisabled = false
+            print("SlideshowView: Display sleep re-enabled (tap dismiss)")
             dismiss()
         }
     }
@@ -221,11 +279,16 @@ struct SlideshowView: View {
             self.isLoading = false
             
             // Use preloaded dominant color if available
-            if UserDefaults.standard.slideshowBackgroundColor == "auto" {
+            if slideshowBackgroundColor == "auto" {
                 if let cachedColor = preloadedDominantColors[asset.id] {
                     self.dominantColor = cachedColor
                 } else {
-                    self.dominantColor = extractDominantColor(from: preloadedImage)
+                    Task {
+                        let color = await extractDominantColorAsync(from: preloadedImage)
+                        await MainActor.run {
+                            self.dominantColor = color
+                        }
+                    }
                 }
             }
             
@@ -235,6 +298,9 @@ struct SlideshowView: View {
                     isTransitioning = false
                 }
             }
+            
+            // Start Ken Burns effect for this image
+            startKenBurnsEffect()
             
             // Remove from preload cache to free memory
             preloadedImages.removeValue(forKey: asset.id)
@@ -259,9 +325,14 @@ struct SlideshowView: View {
                     self.currentImage = image
                     self.isLoading = false
                     
-                    // Extract dominant color from the image
-                    if UserDefaults.standard.slideshowBackgroundColor == "auto" {
-                        self.dominantColor = extractDominantColor(from: image!)
+                    // Extract dominant color from the image asynchronously
+                    if slideshowBackgroundColor == "auto" {
+                        Task {
+                            let color = await extractDominantColorAsync(from: image!)
+                            await MainActor.run {
+                                self.dominantColor = color
+                            }
+                        }
                     }
                     
                     // Ensure slide-in animation plays after image loads
@@ -270,6 +341,9 @@ struct SlideshowView: View {
                             isTransitioning = false
                         }
                     }
+                    
+                    // Start Ken Burns effect for this image
+                    self.startKenBurnsEffect()
                     
                     // Preload next image
                     self.preloadNextImage()
@@ -379,10 +453,14 @@ struct SlideshowView: View {
                     if preloadedImages.count < 2 {
                         self.preloadedImages[nextAsset.id] = image
                         print("SlideshowView: Successfully preloaded image for asset \(nextAsset.id)")
-                        // Extract and cache dominant color during preload
-                        if UserDefaults.standard.slideshowBackgroundColor == "auto" {
-                            let color = extractDominantColor(from: image!)
-                            self.preloadedDominantColors[nextAsset.id] = color
+                        // Extract and cache dominant color during preload asynchronously
+                        if slideshowBackgroundColor == "auto" {
+                            Task {
+                                let color = await extractDominantColorAsync(from: image!)
+                                await MainActor.run {
+                                    self.preloadedDominantColors[nextAsset.id] = color
+                                }
+                            }
                         }
                     } else {
                         print("SlideshowView: Skipped preload for asset \(nextAsset.id) - cache full")
@@ -411,89 +489,139 @@ struct SlideshowView: View {
         }
     }
     
-   private func extractDominantColor(from image: UIImage) -> Color {
-    guard let cgImage = image.cgImage else {
-        return .black
+   private func extractDominantColorAsync(from image: UIImage) async -> Color {
+    return await withCheckedContinuation { continuation in
+        DispatchQueue.global(qos: .userInitiated).async {
+            guard let cgImage = image.cgImage else {
+                continuation.resume(returning: .black)
+                return
+            }
+
+            // Resize image to 50x50 using Core Image
+            let ciImage = CIImage(cgImage: cgImage)
+            let scale = CGAffineTransform(scaleX: 50.0 / ciImage.extent.width, y: 50.0 / ciImage.extent.height)
+            let resizedCIImage = ciImage.transformed(by: scale)
+
+            let context = CIContext()
+            guard let resizedCGImage = context.createCGImage(resizedCIImage, from: resizedCIImage.extent) else {
+                continuation.resume(returning: .black)
+                return
+            }
+
+            let width = resizedCGImage.width
+            let height = resizedCGImage.height
+            let bytesPerPixel = 4
+            let bytesPerRow = bytesPerPixel * width
+            let pixelCount = width * height
+
+            let pixelData = UnsafeMutablePointer<UInt8>.allocate(capacity: pixelCount * bytesPerPixel)
+            defer { pixelData.deallocate() }
+
+            guard let bitmapContext = CGContext(
+                data: pixelData,
+                width: width,
+                height: height,
+                bitsPerComponent: 8,
+                bytesPerRow: bytesPerRow,
+                space: CGColorSpaceCreateDeviceRGB(),
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+            ) else {
+                continuation.resume(returning: .black)
+                return
+            }
+
+            bitmapContext.draw(resizedCGImage, in: CGRect(x: 0, y: 0, width: width, height: height))
+
+            // Count quantized color frequency
+            var colorCounts: [UInt32: Int] = [:]
+
+            for i in 0..<pixelCount {
+                let offset = i * bytesPerPixel
+                let r = pixelData[offset]
+                let g = pixelData[offset + 1]
+                let b = pixelData[offset + 2]
+
+                // Skip very dark or very bright pixels
+                if r < 30 && g < 30 && b < 30 { continue }
+                if r > 230 && g > 230 && b > 230 { continue }
+
+                let reducedR = (r / 32) * 32
+                let reducedG = (g / 32) * 32
+                let reducedB = (b / 32) * 32
+
+                let key = (UInt32(reducedR) << 16) | (UInt32(reducedG) << 8) | UInt32(reducedB)
+                colorCounts[key, default: 0] += 1
+            }
+
+            guard let dominantColorKey = colorCounts.max(by: { $0.value < $1.value })?.key else {
+                continuation.resume(returning: .black)
+                return
+            }
+
+            let r = Double((dominantColorKey >> 16) & 0xFF) / 255.0
+            let g = Double((dominantColorKey >> 8) & 0xFF) / 255.0
+            let b = Double(dominantColorKey & 0xFF) / 255.0
+
+            // Adjust brightness for contrast (optional)
+            let brightness = 0.299 * r + 0.587 * g + 0.114 * b
+            let darkenFactor = brightness > 0.6 ? 0.6 : 1.0 // Darken only if it's too bright
+
+            let color = Color(
+                red: r * darkenFactor,
+                green: g * darkenFactor,
+                blue: b * darkenFactor
+            )
+            
+            continuation.resume(returning: color)
+        }
     }
-
-    // Resize image to 50x50 using Core Image
-    let ciImage = CIImage(cgImage: cgImage)
-    let scale = CGAffineTransform(scaleX: 50.0 / ciImage.extent.width, y: 50.0 / ciImage.extent.height)
-    let resizedCIImage = ciImage.transformed(by: scale)
-
-    let context = CIContext()
-    guard let resizedCGImage = context.createCGImage(resizedCIImage, from: resizedCIImage.extent) else {
-        return .black
-    }
-
-    let width = resizedCGImage.width
-    let height = resizedCGImage.height
-    let bytesPerPixel = 4
-    let bytesPerRow = bytesPerPixel * width
-    let pixelCount = width * height
-
-    let pixelData = UnsafeMutablePointer<UInt8>.allocate(capacity: pixelCount * bytesPerPixel)
-    defer { pixelData.deallocate() }
-
-    guard let bitmapContext = CGContext(
-        data: pixelData,
-        width: width,
-        height: height,
-        bitsPerComponent: 8,
-        bytesPerRow: bytesPerRow,
-        space: CGColorSpaceCreateDeviceRGB(),
-        bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-    ) else {
-        return .black
-    }
-
-    bitmapContext.draw(resizedCGImage, in: CGRect(x: 0, y: 0, width: width, height: height))
-
-    // Count quantized color frequency
-    var colorCounts: [UInt32: Int] = [:]
-
-    for i in 0..<pixelCount {
-        let offset = i * bytesPerPixel
-        let r = pixelData[offset]
-        let g = pixelData[offset + 1]
-        let b = pixelData[offset + 2]
-
-        // Skip very dark or very bright pixels
-        if r < 30 && g < 30 && b < 30 { continue }
-        if r > 230 && g > 230 && b > 230 { continue }
-
-        let reducedR = (r / 32) * 32
-        let reducedG = (g / 32) * 32
-        let reducedB = (b / 32) * 32
-
-        let key = (UInt32(reducedR) << 16) | (UInt32(reducedG) << 8) | UInt32(reducedB)
-        colorCounts[key, default: 0] += 1
-    }
-
-    guard let dominantColorKey = colorCounts.max(by: { $0.value < $1.value })?.key else {
-        return .black
-    }
-
-    let r = Double((dominantColorKey >> 16) & 0xFF) / 255.0
-    let g = Double((dominantColorKey >> 8) & 0xFF) / 255.0
-    let b = Double(dominantColorKey & 0xFF) / 255.0
-
-    // Adjust brightness for contrast (optional)
-    let brightness = 0.299 * r + 0.587 * g + 0.114 * b
-    let darkenFactor = brightness > 0.6 ? 0.6 : 1.0 // Darken only if it's too bright
-
-    return Color(
-        red: r * darkenFactor,
-        green: g * darkenFactor,
-        blue: b * darkenFactor
-    )
 }
+    
+    private func startKenBurnsEffect() {
+        guard enableKenBurnsEffect else {
+            // Reset to default values if Ken Burns is disabled
+            kenBurnsScale = 1.0
+            kenBurnsOffset = .zero
+            return
+        }
+        
+        // Generate random Ken Burns parameters
+        let zoomDirections = [true, false] // true = zoom in, false = zoom out
+        let shouldZoomIn = zoomDirections.randomElement() ?? true
+        
+        let startScale: CGFloat = shouldZoomIn ? 1.0 : 1.2
+        let endScale: CGFloat = shouldZoomIn ? 1.2 : 1.0
+        
+        // Random pan direction
+        let maxOffset: CGFloat = 20
+        let startOffset = CGSize(
+            width: CGFloat.random(in: -maxOffset...maxOffset),
+            height: CGFloat.random(in: -maxOffset...maxOffset)
+        )
+        let endOffset = CGSize(
+            width: CGFloat.random(in: -maxOffset...maxOffset),
+            height: CGFloat.random(in: -maxOffset...maxOffset)
+        )
+        
+        // Set initial values
+        kenBurnsScale = startScale
+        kenBurnsOffset = startOffset
+        
+        // Animate to end values over the slide duration
+        withAnimation(.linear(duration: slideInterval)) {
+            kenBurnsScale = endScale
+            kenBurnsOffset = endOffset
+        }
+    }
 }
 
 #Preview {
     // Set the UserDefaults value before creating the view
-    UserDefaults.standard.set("white", forKey: "slideshowBackgroundColor")
+    UserDefaults.standard.set("auto", forKey: "slideshowBackgroundColor")
     UserDefaults.standard.set("10", forKey: "slideshowInterval")
+    UserDefaults.standard.set(true, forKey: "hideImageOverlay")
+    UserDefaults.standard.set(true, forKey: "disableReflectionsInSlideshow")
+    UserDefaults.standard.set(true, forKey: "enableKenBurnsEffect")
     let (_, _, assetService, _, _) = MockServiceFactory.createMockServices()
     
     // Create mock assets for preview
@@ -529,5 +657,5 @@ struct SlideshowView: View {
         )
     ]
     
-   return  SlideshowView(assets: mockAssets, assetService: assetService)
+   return  SlideshowView(assets: mockAssets, assetService: assetService, startingIndex: 0)
 }
