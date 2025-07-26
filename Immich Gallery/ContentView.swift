@@ -20,8 +20,10 @@ struct ContentView: View {
     @StateObject private var tagService: TagService
     @State private var selectedTab = 0
     @State private var refreshTrigger = UUID()
+    @State private var showWhatsNew = false
     @AppStorage("showTagsTab") private var showTagsTab = false
     @AppStorage("defaultStartupTab") private var defaultStartupTab = "photos"
+    @AppStorage("lastSeenVersion") private var lastSeenVersion = ""
     
     init() {
         let networkService = NetworkService()
@@ -91,6 +93,7 @@ struct ContentView: View {
                     }
             .onAppear {
                         setDefaultTab()
+                        checkForAppUpdate()
                     }
                     .onChange(of: selectedTab) { oldValue, newValue in
                         print("Tab changed from \(oldValue) to \(newValue)")
@@ -105,6 +108,12 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .refreshAllTabs)) { _ in
             // Refresh all tabs by generating a new UUID
             refreshTrigger = UUID()
+        }
+        .sheet(isPresented: $showWhatsNew) {
+            WhatsNewView(onDismiss: {
+                showWhatsNew = false
+                lastSeenVersion = getCurrentAppVersion()
+            })
         }
     }
     
@@ -123,6 +132,24 @@ struct ContentView: View {
         default: // "photos"
             selectedTab = 0
         }
+    }
+    
+    private func checkForAppUpdate() {
+        let currentVersion = getCurrentAppVersion()
+        
+        // Show What's New if this is first launch or version changed
+        if lastSeenVersion.isEmpty || lastSeenVersion != currentVersion {
+            // Delay showing to ensure app is fully loaded
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                showWhatsNew = true
+            }
+        }
+    }
+    
+    private func getCurrentAppVersion() -> String {
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
+        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
+        return "\(version).\(build)"
     }
 }
 

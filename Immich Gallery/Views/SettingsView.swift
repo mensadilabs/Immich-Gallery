@@ -93,6 +93,7 @@ struct SettingsView: View {
     @State private var showingClearCacheAlert = false
     @State private var showingSignOutAlert = false
     @State private var showingSignIn = false
+    @State private var showingWhatsNew = false
     @State private var savedUsers: [SavedUser] = []
     @AppStorage("hideImageOverlay") private var hideImageOverlay = true
     @AppStorage("slideshowInterval") private var slideshowInterval: Double = 6.0
@@ -401,6 +402,28 @@ struct SettingsView: View {
                                         .cornerRadius(8)
                                     )
                                 )
+                                
+                                Button(action: {
+                                    showingWhatsNew = true
+                                }) {
+                                    SettingsRow(
+                                        icon: "doc.text",
+                                        title: "What's New",
+                                        subtitle: "View changelog and latest features",
+                                        content: AnyView(
+                                            HStack(spacing: 8) {
+                                                Image(systemName: "chevron.right")
+                                                    .foregroundColor(.blue)
+                                                    .font(.caption)
+                                            }
+                                            .padding(.horizontal, 12)
+                                            .padding(.vertical, 6)
+                                            .background(Color.blue.opacity(0.1))
+                                            .cornerRadius(8)
+                                        )
+                                    )
+                                }
+                                .buttonStyle(.plain)
                             })
                         }
                         
@@ -415,6 +438,11 @@ struct SettingsView: View {
             }
             .sheet(isPresented: $showingSignIn) {
                 SignInView(authService: authService, mode: .addUser, onUserAdded: loadSavedUsers)
+            }
+            .sheet(isPresented: $showingWhatsNew) {
+                WhatsNewView(onDismiss: {
+                    showingWhatsNew = false
+                })
             }
             .alert("Clear Cache", isPresented: $showingClearCacheAlert) {
                 Button("Cancel", role: .cancel) { }
