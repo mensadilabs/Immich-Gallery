@@ -1,36 +1,37 @@
 //
-//  InfoRow.swift
+//  TechnicalInfoItem.swift
 //  Immich Gallery
 //
-//  Created by mensadi-labs on 2025-06-29.
+//  Created by mensadi-labs on 2025-07-25.
 //
 
 import SwiftUI
 
-struct InfoRow: View {
+struct TechnicalInfoItem: View {
+    let icon: String
     let label: String
     let value: String
     
     var body: some View {
-        HStack(alignment: .top) {
-            
-            
-            
-            Text(label)
-                .font(.caption)
-                .foregroundColor(.white).frame(width: 200, alignment: .leading)
+        HStack(alignment: .firstTextBaseline, spacing: 20) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.caption)
+                    .foregroundColor(.white.opacity(0.7))
+                
+                
+                Text(label)
+                    .font(.caption2)
+                    .foregroundColor(.white.opacity(0.6))
+            }.frame(width: 180, alignment: .leading)
             
             Text(value)
                 .font(.caption)
+                .fontWeight(.medium)
                 .foregroundColor(.white)
-                .multilineTextAlignment(.leading)
-            
-            Spacer()
         }
     }
-} 
-
-
+}
 
 // MARK: - Preview
 #Preview {

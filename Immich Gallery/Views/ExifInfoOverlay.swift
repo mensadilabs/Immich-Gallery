@@ -9,114 +9,95 @@ import SwiftUI
 
 struct ExifInfoOverlay: View {
     let asset: ImmichAsset
+    let onDismiss: () -> Void
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 16) {
             // Header
             HStack {
+                Image(systemName: "info.circle.fill")
+                    .foregroundColor(.white)
+                    .font(.title3)
                 Text("Photo Information")
-                    .font(.headline)
+                    .font(.title2)
+                    .fontWeight(.semibold)
                     .foregroundColor(.white)
                 Spacer()
             }
-            .padding(.bottom, 4)
+            .padding(.bottom, 8)
             
-            // Date and time
-            if let dateTimeOriginal = asset.exifInfo?.dateTimeOriginal {
-                InfoRow(label: "Date", value: formatDateTime(dateTimeOriginal))
-            } else {
-                InfoRow(label: "Date", value: formatDate(asset.fileCreatedAt))
+            HStack{
+                // Date and time
+                if let dateTimeOriginal = asset.exifInfo?.dateTimeOriginal {
+                    TechnicalInfoItem(icon: "calendar", label: "Date", value: DateFormatter.formatSpecificISO8601(dateTimeOriginal, includeTime: true))
+                } else {
+                    TechnicalInfoItem(icon: "calendar.badge.exclamationmark", label: "Date (file created)", value: DateFormatter.formatSpecificISO8601(asset.fileCreatedAt, includeTime: true))
+                }}
+            .padding(.bottom, 8)
+            
+            HStack{
+                // Location
+                if let city = asset.exifInfo?.city, let state = asset.exifInfo?.state, let country = asset.exifInfo?.country {
+                    TechnicalInfoItem(icon: "map", label: "Location", value: "\(city), \(state), \(country)")
+                } else if let city = asset.exifInfo?.city, let country = asset.exifInfo?.country {
+                    TechnicalInfoItem(icon: "map", label: "Location", value: "\(city), \(country)")
+                } else if let country = asset.exifInfo?.country {
+                    TechnicalInfoItem(icon: "map", label: "Location", value: country)
+                }
+            } .padding(.bottom, 8)
+            
+
+                if let make = asset.exifInfo?.make, let model = asset.exifInfo?.model {
+                    TechnicalInfoItem(icon: "camera", label: "Camera", value: "\(make) \(model)").padding(.bottom, 8)
+                }
+                
+                // Lens info
+                if let lensModel = asset.exifInfo?.lensModel {
+                    TechnicalInfoItem(icon: "camera.viewfinder", label: "Lens", value: lensModel).padding(.bottom, 8)
+                }
+            
+            if let width = asset.exifInfo?.exifImageWidth, let height = asset.exifInfo?.exifImageHeight {
+                TechnicalInfoItem(icon: "lines.measurement.horizontal", label: "Image Size", value: "\(round(Double(width * height) / 1_000_000 * 10) / 10)MP • \(width)px ×  \(height)px").padding(.bottom, 8)
             }
-            
-            // Camera info
-            if let make = asset.exifInfo?.make, let model = asset.exifInfo?.model {
-                InfoRow(label: "Camera", value: "\(make) \(model)")
-            }
-            
-            // Lens info
-            if let lensModel = asset.exifInfo?.lensModel {
-                InfoRow(label: "Lens", value: lensModel)
-            }
-            
-            // Technical details
-            HStack(spacing: 20) {
+
+            HStack{
+                // File info
+                if let fileSize = asset.exifInfo?.fileSizeInByte {
+                    TechnicalInfoItem(icon: "scalemass",  label: "File Size", value: formatFileSize(fileSize))
+                }
+                
                 if let fNumber = asset.exifInfo?.fNumber {
-                    InfoRow(label: "f/", value: String(format: "%.1f", fNumber))
+                    TechnicalInfoItem(icon: "camera.aperture", label: "Aperture", value: "f/\(String(format: "%.1f", fNumber))")
                 }
                 
                 if let focalLength = asset.exifInfo?.focalLength {
-                    InfoRow(label: "Focal Length", value: "\(Int(focalLength))mm")
+                    TechnicalInfoItem(icon: "camera.macro.circle", label: "Focal Length", value: "\(Int(focalLength))mm")
                 }
                 
                 if let iso = asset.exifInfo?.iso {
-                    InfoRow(label: "ISO", value: "\(iso)")
+                    TechnicalInfoItem(icon: "dial.high", label: "ISO", value: "\(iso)")
                 }
                 
                 if let exposureTime = asset.exifInfo?.exposureTime {
-                    InfoRow(label: "Exposure", value: exposureTime)
+                    TechnicalInfoItem(icon: "timer", label: "Shutter", value: exposureTime)
                 }
             }
-            
-            // Resolution
-            if let width = asset.exifInfo?.exifImageWidth, let height = asset.exifInfo?.exifImageHeight {
-                InfoRow(label: "Resolution", value: "\(width) × \(height)")
-            }
-            
-            // Location
-            if let city = asset.exifInfo?.city, let state = asset.exifInfo?.state, let country = asset.exifInfo?.country {
-                InfoRow(label: "Location", value: "\(city), \(state), \(country)")
-            } else if let city = asset.exifInfo?.city, let country = asset.exifInfo?.country {
-                InfoRow(label: "Location", value: "\(city), \(country)")
-            } else if let country = asset.exifInfo?.country {
-                InfoRow(label: "Location", value: country)
-            }
-            
-            // File info
-            if let fileSize = asset.exifInfo?.fileSizeInByte {
-                InfoRow(label: "File Size", value: formatFileSize(fileSize))
-            }
         }
-        .padding(20)
+        .padding(.horizontal, 24)
+        .padding(.bottom, 32)
         .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color.black.opacity(0.8))
+        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(.ultraThinMaterial)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
                 )
         )
         .padding(.horizontal, 20)
-        .padding(.bottom, 40)
+        .padding(.bottom, 20)
     }
     
-    private func formatDateTime(_ dateString: String) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy:MM:dd HH:mm:ss"
-        
-        if let date = formatter.date(from: dateString) {
-            let displayFormatter = DateFormatter()
-            displayFormatter.dateStyle = .long
-            displayFormatter.timeStyle = .short
-            return displayFormatter.string(from: date)
-        }
-        
-        return dateString
-    }
-    
-    private func formatDate(_ dateString: String) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
-        formatter.timeZone = TimeZone(abbreviation: "UTC")
-        
-        if let date = formatter.date(from: dateString) {
-            let displayFormatter = DateFormatter()
-            displayFormatter.dateStyle = .long
-            displayFormatter.timeStyle = .short
-            return displayFormatter.string(from: date)
-        }
-        
-        return dateString
-    }
+
     
     private func formatFileSize(_ bytes: Int64) -> String {
         let formatter = ByteCountFormatter()
@@ -124,4 +105,79 @@ struct ExifInfoOverlay: View {
         formatter.countStyle = .file
         return formatter.string(fromByteCount: bytes)
     }
-} 
+    
+    private var hasExposureData: Bool {
+        asset.exifInfo?.fNumber != nil || 
+        asset.exifInfo?.focalLength != nil || 
+        asset.exifInfo?.iso != nil || 
+        asset.exifInfo?.exposureTime != nil
+    }
+}
+
+// MARK: - Preview
+#Preview {
+    let sampleAsset = ImmichAsset(
+        id: "sample-1",
+        deviceAssetId: "device-1",
+        deviceId: "device-1",
+        ownerId: "owner-1",
+        libraryId: "library-1",
+        type: .image,
+        originalPath: "/sample/path",
+        originalFileName: "sample.jpg",
+        originalMimeType: "image/jpeg",
+        resized: false,
+        thumbhash: nil,
+        fileModifiedAt: "2024-01-01T00:00:00Z",
+        fileCreatedAt: "2024-01-01T00:00:00Z",
+        localDateTime: "2024-01-01T00:00:00Z",
+        updatedAt: "2024-01-01T00:00:00Z",
+        isFavorite: false,
+        isArchived: false,
+        isOffline: false,
+        isTrashed: false,
+        checksum: "sample-checksum",
+        duration: nil,
+        hasMetadata: true,
+        livePhotoVideoId: nil,
+        people: [],
+        visibility: "VISIBLE",
+        duplicateId: nil,
+        exifInfo: ExifInfo(
+            make: "Apple",
+            model: "iPhone 15 Pro",
+            imageName: "Golden Gate Bridge",
+            exifImageWidth: 4032,
+            exifImageHeight: 3024,
+            dateTimeOriginal: "2024:07:15 14:30:25",
+            modifyDate: "2024:07:15 14:30:25",
+            lensModel: "iPhone 15 Pro back triple camera 6.765mm f/1.78",
+            fNumber: 1.78,
+            focalLength: 6.765,
+            iso: 64,
+            exposureTime: "1/2000",
+            latitude: 37.8199,
+            longitude: -122.4783,
+            city: "San Francisco",
+            state: "California",
+            country: "United States",
+            timeZone: "America/Los_Angeles",
+            description: "Beautiful sunset view of the Golden Gate Bridge",
+            fileSizeInByte: 3456000,
+            orientation: "1",
+            projectionType: nil,
+            rating: 5
+        )
+    )
+    
+    ZStack {
+        Color.white.ignoresSafeArea()
+        
+        VStack {
+            Spacer()
+            ExifInfoOverlay(asset: sampleAsset) {
+                print("Dismiss overlay")
+            }
+        }
+    }
+}

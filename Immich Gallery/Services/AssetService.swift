@@ -52,9 +52,11 @@ class AssetService: ObservableObject {
     }
 
     func loadFullImage(asset: ImmichAsset) async throws -> UIImage? {
-        let endpoint = "/api/assets/\(asset.id)/original"
-        let data = try await networkService.makeDataRequest(endpoint: endpoint)
-        return UIImage(data: data)
+        let originalEndpoint = "/api/assets/\(asset.id)/original"
+        
+        let originalData = try await networkService.makeDataRequest(endpoint: originalEndpoint)
+        
+        return UIImage(data: originalData)
     }
 
     func loadVideoURL(asset: ImmichAsset) async throws -> URL {
