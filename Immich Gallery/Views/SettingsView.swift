@@ -98,6 +98,7 @@ struct SettingsView: View {
     @AppStorage("slideshowInterval") private var slideshowInterval: Double = 6.0
     @AppStorage("slideshowBackgroundColor") private var slideshowBackgroundColor = "white"
     @AppStorage("showTagsTab") private var showTagsTab = false
+    @AppStorage("defaultStartupTab") private var defaultStartupTab = "photos"
     @AppStorage("assetSortOrder") private var assetSortOrder = "desc"
     @AppStorage("use24HourClock") private var use24HourClock = true
     @AppStorage("disableReflectionsInSlideshow") private var disableReflectionsInSlideshow = false
@@ -309,6 +310,24 @@ struct SettingsView: View {
                                 )
                                 
                                 SettingsRow(
+                                    icon: "house",
+                                    title: "Default Startup Tab",
+                                    subtitle: "Choose which tab opens when the app starts",
+                                    content: AnyView(
+                                        Picker("Default Tab", selection: $defaultStartupTab) {
+                                            Text("All Photos").tag("photos")
+                                            Text("Albums").tag("albums")
+                                            Text("People").tag("people")
+                                            if showTagsTab {
+                                                Text("Tags").tag("tags")
+                                            }
+                                        }
+                                        .pickerStyle(.menu)
+                                        .frame(width: 300, alignment: .trailing)
+                                    )
+                                )
+                                
+                                SettingsRow(
                                     icon: "arrow.up.arrow.down",
                                     title: "Sort Order for everything",
                                     subtitle: "Order assets by creation date",
@@ -317,8 +336,8 @@ struct SettingsView: View {
                                             Text("Newest First").tag("desc")
                                             Text("Oldest First").tag("asc")
                                         }
-                                            .pickerStyle(.segmented)
-                                            .frame(width: 500)
+                                            .pickerStyle(.menu)
+                                            .frame(width: 300, alignment: .trailing)
                                     )
                                 )
                                 
@@ -332,6 +351,55 @@ struct SettingsView: View {
                                     isMinusFocused: $isMinusFocused,
                                     isPlusFocused: $isPlusFocused,
                                     focusedColor: $focusedColor
+                                )
+                            })
+                        }
+                        
+                        // Help Section
+                        SettingsSection(title: "Help & Tips") {
+                            AnyView(VStack(spacing: 12) {
+                                SettingsRow(
+                                    icon: "play.circle",
+                                    title: "Start Slideshow",
+                                    subtitle: "Press play anywhere in the photo grid to start slideshow from the highlighted image",
+                                    content: AnyView(
+                                        HStack(spacing: 8) {
+                                            Image(systemName: "play.fill")
+                                                .font(.title3)
+                                            Text("Play/Pause")
+                                                .font(.caption)
+                                        }
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 6)
+                                        .background(Color.blue.opacity(0.1))
+                                        .cornerRadius(8)
+                                    )
+                                )
+                                
+                                SettingsRow(
+                                    icon: "arrow.up.and.down.and.arrow.left.and.right",
+                                    title: "Navigate Photos",
+                                    subtitle: "Swipe left or right to navigate. Swipe up and down to show hide image details in the fullscreen view",
+                                    content: AnyView(
+                                        HStack(spacing: 4) {
+                                            Image(systemName: "arrow.left")
+                                                .foregroundColor(.gray)
+                                                .font(.caption)
+                                            Image(systemName: "arrow.right")
+                                                .foregroundColor(.gray)
+                                                .font(.caption)
+                                            Image(systemName: "arrow.up")
+                                                .foregroundColor(.gray)
+                                                .font(.caption)
+                                            Image(systemName: "arrow.down")
+                                                .foregroundColor(.gray)
+                                                .font(.caption)
+                                        }
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 6)
+                                        .background(Color.gray.opacity(0.1))
+                                        .cornerRadius(8)
+                                    )
                                 )
                             })
                         }
@@ -700,8 +768,8 @@ struct SlideshowSettings: View {
                         Text("12 Hour").tag(false)
                         Text("24 Hour").tag(true)
                     }
-                        .pickerStyle(.segmented)
-                        .frame(width: 300)
+                        .pickerStyle(.menu)
+                        .frame(width: 300, alignment: .trailing)
                 )
             )
             

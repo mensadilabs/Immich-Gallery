@@ -23,6 +23,7 @@ struct FullScreenImageView: View {
     @FocusState private var isFocused: Bool
     @State private var refreshToggle = false
     @State private var showingVideoPlayer = false
+    @State private var showingExifInfo = false
     
     init(asset: ImmichAsset, assets: [ImmichAsset], currentIndex: Int, assetService: AssetService, authenticationService: AuthenticationService, currentAssetIndex: Binding<Int>) {
         print("FullScreenImageView: Initializing with currentIndex: \(currentIndex)")
@@ -95,6 +96,19 @@ struct FullScreenImageView: View {
                 }
             }
             
+            // EXIF info overlay
+            if showingExifInfo {
+                VStack {
+                    Spacer()
+                    ExifInfoOverlay(asset: currentAsset) {
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            showingExifInfo = false
+                        }
+                    }
+                }
+                .transition(.opacity)
+            }
+            
             // Swipe hint overlay
             if showingSwipeHint && assets.count > 1 {
                 VStack {
@@ -102,16 +116,30 @@ struct FullScreenImageView: View {
                     HStack {
                         Spacer()
                         VStack(spacing: 8) {
-                            HStack(spacing: 20) {
-                                Image(systemName: "arrow.left")
-                                    .font(.title2)
-                                    .foregroundColor(.white.opacity(0.7))
-                                Text("Swipe to navigate")
-                                    .font(.caption)
-                                    .foregroundColor(.white.opacity(0.7))
-                                Image(systemName: "arrow.right")
-                                    .font(.title2)
-                                    .foregroundColor(.white.opacity(0.7))
+                            HStack(spacing: 50) {
+                                HStack(spacing: 5){
+                                    Image(systemName: "arrow.left")
+                                        .font(.title2)
+                                        .foregroundColor(.white.opacity(0.7))
+                                    Image(systemName: "arrow.right")
+                                        .font(.title2)
+                                        .foregroundColor(.white.opacity(0.7))
+                                    Text("Swipe to navigate")
+                                        .font(.caption)
+                                        .foregroundColor(.white.opacity(0.7))
+                                }
+                                HStack(spacing: 5){
+                                    Image(systemName: "arrow.up")
+                                        .font(.title2)
+                                        .foregroundColor(.white.opacity(0.7))
+                                    Image(systemName: "arrow.down")
+                                        .font(.title2)
+                                        .foregroundColor(.white.opacity(0.7))
+                                    Text("Swipe up or down to show/hide details")
+                                        .font(.caption)
+                                        .foregroundColor(.white.opacity(0.7))
+                                   
+                                }
                             }
                             .padding(.horizontal, 16)
                             .padding(.vertical, 8)
@@ -141,6 +169,7 @@ struct FullScreenImageView: View {
             assets: assets,
             isFocused: $isFocused,
             showingSwipeHint: $showingSwipeHint,
+            showingExifInfo: $showingExifInfo,
             onNavigate: navigateToImage,
             onDismiss: { dismiss() },
             onLoadImage: loadFullImage,
@@ -163,7 +192,8 @@ struct FullScreenImageView: View {
         currentAsset = assets[index]
         refreshToggle.toggle() // Force UI update
         
-        // Reset video player state when navigating
+        // Reset overlay states when navigating
+        showingExifInfo = false
         if currentAsset.type == .video {
             showingVideoPlayer = false
         } else {
@@ -200,6 +230,7 @@ struct ContentAwareModifier: ViewModifier {
     let assets: [ImmichAsset]
     @FocusState.Binding var isFocused: Bool
     @Binding var showingSwipeHint: Bool
+    @Binding var showingExifInfo: Bool
     let onNavigate: (Int) -> Void
     let onDismiss: () -> Void
     let onLoadImage: () -> Void
@@ -258,9 +289,18 @@ struct ContentAwareModifier: ViewModifier {
                         } else {
                             print("FullScreenImageView: Already at last photo, cannot navigate further")
                         }
-                    case .up, .down:
-                        print("Up/Down")
-                        break
+                    case .up:
+                        print("FullScreenImageView: Up navigation triggered - toggling EXIF info")
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            showingExifInfo.toggle()
+                        }
+                    case .down:
+                        print("FullScreenImageView: Down navigation triggered")
+                        if showingExifInfo {
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                showingExifInfo = false
+                            }
+                        }
                     @unknown default:
                         print("FullScreenImageView: Unknown direction")
                     }

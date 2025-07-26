@@ -72,7 +72,7 @@ struct AssetThumbnailView: View {
             }
             // Text overlay at bottom right
             VStack(alignment: .trailing, spacing: 2) {
-                Text(formatSpecificISO8601(asset.exifInfo?.dateTimeOriginal ?? asset.fileCreatedAt))
+                Text(DateFormatter.formatSpecificISO8601(asset.exifInfo?.dateTimeOriginal ?? asset.fileCreatedAt, includeTime: false))
                     .font(.caption2)
                     .foregroundColor(.white.opacity(0.8))
             }
@@ -111,38 +111,6 @@ struct AssetThumbnailView: View {
     }
     
     
-    private func formatSpecificISO8601(_ utcTimestamp: String) -> String {
-        // Clean the input string
-        let cleanedTimestamp = utcTimestamp
-            .replacingOccurrences(of: "Optional(\"", with: "")
-            .replacingOccurrences(of: "\")", with: "")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        
-        let isoFormatter = ISO8601DateFormatter()
-        isoFormatter.timeZone = TimeZone(abbreviation: "UTC")
-        
-        // Try different format options to handle both with and without fractional seconds
-        let formatOptions: [ISO8601DateFormatter.Options] = [
-            [.withInternetDateTime, .withFractionalSeconds],  // For formats with .000Z
-            [.withInternetDateTime],                          // For formats without fractional seconds
-            [.withFullDate, .withTime, .withTimeZone],       // Alternative for +00:00 format
-            [.withFullDate, .withTime, .withTimeZone, .withFractionalSeconds] // Alternative with fractional seconds
-        ]
-        
-        for options in formatOptions {
-            isoFormatter.formatOptions = options
-            if let date = isoFormatter.date(from: cleanedTimestamp) {
-                let outputFormatter = DateFormatter()
-                outputFormatter.dateFormat = "yyyy-MMM-dd"
-                outputFormatter.timeZone = TimeZone(abbreviation: "UTC")
-                outputFormatter.locale = Locale(identifier: "en_US_POSIX")
-                
-                return outputFormatter.string(from: date).uppercased()
-            }
-        }
-        
-        return utcTimestamp
-    }
 }
 
 #Preview {

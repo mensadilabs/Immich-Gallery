@@ -21,6 +21,7 @@ struct ContentView: View {
     @State private var selectedTab = 0
     @State private var refreshTrigger = UUID()
     @AppStorage("showTagsTab") private var showTagsTab = false
+    @AppStorage("defaultStartupTab") private var defaultStartupTab = "photos"
     
     init() {
         let networkService = NetworkService()
@@ -88,6 +89,9 @@ struct ContentView: View {
                             }
                             .tag(showTagsTab ? 4 : 3)
                     }
+            .onAppear {
+                        setDefaultTab()
+                    }
                     .onChange(of: selectedTab) { oldValue, newValue in
                         print("Tab changed from \(oldValue) to \(newValue)")
                     }                    .id(refreshTrigger) // Force refresh when user switches
@@ -101,6 +105,23 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .refreshAllTabs)) { _ in
             // Refresh all tabs by generating a new UUID
             refreshTrigger = UUID()
+        }
+    }
+    
+    private func setDefaultTab() {
+        switch defaultStartupTab {
+        case "albums":
+            selectedTab = 1
+        case "people":
+            selectedTab = 2
+        case "tags":
+            if showTagsTab {
+                selectedTab = 3
+            } else {
+                selectedTab = 0 // Default to photos if tags tab is disabled
+            }
+        default: // "photos"
+            selectedTab = 0
         }
     }
 }
