@@ -124,6 +124,47 @@ struct SettingsView: View {
                 
                 ScrollView {
                     LazyVStack(spacing: 30) {
+
+                        // Current User Section
+                        if let user = authService.currentUser {
+                            VStack(alignment: .leading, spacing: 16) {
+                                HStack {
+                                    Image(systemName: "person.circle.fill")
+                                        .foregroundColor(.blue)
+                                        .font(.title)
+                                    
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(user.name)
+                                            .font(.title2)
+                                            .fontWeight(.bold)
+                                        Text(user.email)
+                                            .font(.subheadline)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    
+                                    Spacer()
+                                    
+                                    Text("Active")
+                                        .font(.caption)
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(.white)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 6)
+                                        .background(Color.green)
+                                        .cornerRadius(12)
+                                }
+                                .padding(20)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 16)
+                                        .fill(Color.blue.opacity(0.1))
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 16)
+                                                .stroke(Color.blue.opacity(0.3), lineWidth: 1)
+                                        )
+                                )
+                            }
+                        }
+                        
                         // Server Info Section
                         Button(action: {
                             refreshServerConnection()
@@ -167,55 +208,12 @@ struct SettingsView: View {
                             .cornerRadius(12)
                         }
                         .buttonStyle(.plain)
-                        
-                        // Current User Section
-                        if let user = authService.currentUser {
-                            VStack(alignment: .leading, spacing: 16) {
-                                HStack {
-                                    Image(systemName: "person.circle.fill")
-                                        .foregroundColor(.blue)
-                                        .font(.title)
-                                    
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text(user.name)
-                                            .font(.title2)
-                                            .fontWeight(.bold)
-                                        Text(user.email)
-                                            .font(.subheadline)
-                                            .foregroundColor(.secondary)
-                                    }
-                                    
-                                    Spacer()
-                                    
-                                    Text("Active")
-                                        .font(.caption)
-                                        .fontWeight(.semibold)
-                                        .foregroundColor(.white)
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 6)
-                                        .background(Color.green)
-                                        .cornerRadius(12)
-                                }
-                                .padding(20)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 16)
-                                        .fill(Color.blue.opacity(0.1))
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 16)
-                                                .stroke(Color.blue.opacity(0.3), lineWidth: 1)
-                                        )
-                                )
-                            }
-                        }
-                        
                         // User Actions Section
                         VStack(spacing: 16) {
-                            // Quick Actions
-                            HStack(spacing: 16) {
                                 Button(action: {
                                     showingSignIn = true
                                 }) {
-                                    VStack(spacing: 8) {
+                                    HStack(spacing: 8) {
                                         Image(systemName: "person.badge.plus")
                                             .font(.title2)
                                             .foregroundColor(.blue)
@@ -233,7 +231,7 @@ struct SettingsView: View {
                                 Button(action: {
                                     showingSignOutAlert = true
                                 }) {
-                                    VStack(spacing: 8) {
+                                    HStack(spacing: 8) {
                                         Image(systemName: "rectangle.portrait.and.arrow.right")
                                             .font(.title2)
                                             .foregroundColor(.red)
@@ -247,7 +245,6 @@ struct SettingsView: View {
                                     .cornerRadius(12)
                                 }
                                 .buttonStyle(.plain)
-                            }
                             
                             // User Switcher
                             if savedUsers.count > 1 {
@@ -738,49 +735,38 @@ struct SlideshowSettings: View {
                 title: "Slideshow Background",
                 subtitle: "Background color for slideshow mode",
                 content: AnyView(
-                    HStack(spacing: 12) {
-                        ForEach(["auto", "black", "white", "gray", "blue", "purple"], id: \.self) { color in
-                            Button(action: {
-                                if color == "auto" {
-                                    showPerformanceAlert = true
-                                } else {
-                                    slideshowBackgroundColor = color
+                    HStack {
+                        // Color preview circle
+                        Group {
+                            if slideshowBackgroundColor == "auto" {
+                                ZStack {
+                                    Circle()
+                                        .fill(LinearGradient(
+                                            colors: [.red, .orange, .yellow, .green, .blue, .purple],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        ))
+                                    Image(systemName: "paintpalette.fill")
+                                        .foregroundColor(.white)
+                                        .font(.caption)
                                 }
-                            }) {
-                                Group {
-                                    if color == "auto" {
-                                        ZStack {
-                                            Circle()
-                                                .fill(LinearGradient(
-                                                    colors: [.red, .orange, .yellow, .green, .blue, .purple],
-                                                    startPoint: .topLeading,
-                                                    endPoint: .bottomTrailing
-                                                ))
-                                            Image(systemName: "paintpalette.fill")
-                                                .foregroundColor(.white)
-                                                .font(.caption)
-                                        }
-                                    } else {
-                                        Circle()
-                                            .fill(getBackgroundColor(color))
-                                    }
-                                }
-                                .frame(width: 32, height: 32)
-                                    .overlay(
-                                        Circle()
-                                            .stroke(slideshowBackgroundColor == color ? Color.accentColor : Color.clear, lineWidth: 3)
-                                    )
-                                    .scaleEffect(slideshowBackgroundColor == color ? 1.18 : 1.0)
-                                    .scaleEffect(focusedColor == color ? 1.3 : 1.0)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 20)
-                                            .stroke(focusedColor == color ? Color.white : Color.clear, lineWidth: 2)
-                                            .scaleEffect(1.4)
-                                    )
-                                    .shadow(color: focusedColor == color ? .white.opacity(0.5) : .clear, radius: 8, x: 0, y: 4)
+                            } else {
+                                Circle()
+                                    .fill(getBackgroundColor(slideshowBackgroundColor))
                             }
-                            .buttonStyle(ColorSelectionButtonStyle())
-                            .focused($focusedColor, equals: color)
+                        }
+                        .frame(width: 32, height: 32)
+                        
+                        Picker("Background Color", selection: $slideshowBackgroundColor) {
+                            ForEach(["auto", "black", "white", "gray", "blue", "purple"], id: \.self) { color in
+                                Text(color.capitalized).tag(color)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .onChange(of: slideshowBackgroundColor) { _, newValue in
+                            if newValue == "auto" {
+                                showPerformanceAlert = true
+                            }
                         }
                     }
                 )
