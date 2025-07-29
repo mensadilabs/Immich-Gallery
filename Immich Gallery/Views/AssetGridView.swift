@@ -81,7 +81,7 @@ struct AssetGridView: View {
                         ScrollView {
                             LazyVGrid(columns: columns, spacing: 50) {
                             ForEach(assets) { asset in
-                                UIKitFocusable(action: {
+                                Button(action: {
                                     print("AssetGridView: Asset selected: \(asset.id)")
                                     selectedAsset = asset
                                     if let index = assets.firstIndex(of: asset) {
@@ -99,7 +99,7 @@ struct AssetGridView: View {
                                 .frame(width: 300, height: 360)
                                 .id(asset.id) // Add id for ScrollViewReader
                                 .focused($focusedAssetId, equals: asset.id)
-                                .scaleEffect(focusedAssetId == asset.id ? 1.1 : 1.0)
+//                                .scaleEffect(focusedAssetId == asset.id ? 1.1 : 1.0)
                                 .animation(.easeInOut(duration: 0.2), value: focusedAssetId)
                                 .onAppear {
                                     // More efficient index check using enumerated
@@ -115,6 +115,7 @@ struct AssetGridView: View {
                                         }
                                     }
                                 }
+                                .buttonStyle(CardButtonStyle())
                             }
                             
                             // Loading indicator at the bottom
