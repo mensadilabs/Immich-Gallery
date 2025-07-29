@@ -38,10 +38,6 @@ struct ContentView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                // Background
-                Color.black
-                    .ignoresSafeArea()
-                
                 if !authService.isAuthenticated {
                     // Show sign-in view
                     SignInView(authService: authService, mode: .signIn)
