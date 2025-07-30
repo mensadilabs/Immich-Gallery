@@ -19,11 +19,10 @@ struct PeopleGridView: View {
     @FocusState private var focusedPersonId: String?
     
     private let columns = [
-        GridItem(.fixed(300), spacing: 50),
-        GridItem(.fixed(300), spacing: 50),
-        GridItem(.fixed(300), spacing: 50),
-        GridItem(.fixed(300), spacing: 50),
-        GridItem(.fixed(300), spacing: 50),
+        GridItem(.fixed(300), spacing: 100),
+        GridItem(.fixed(300), spacing: 100),
+        GridItem(.fixed(300), spacing: 100),
+        GridItem(.fixed(300), spacing: 100),
     ]
     
     var body: some View {
@@ -67,7 +66,7 @@ struct PeopleGridView: View {
                 ScrollView {
                     LazyVGrid(columns: columns, spacing: 50) {
                         ForEach(people) { person in
-                            UIKitFocusable(action: {
+                            Button(action: {
                                 print("Person selected: \(person.id)")
                                 selectedPerson = person
                                 showingPersonPhotos = true
@@ -76,17 +75,17 @@ struct PeopleGridView: View {
                                     person: person,
                                     peopleService: peopleService,
                                     isFocused: focusedPersonId == person.id
-                                )
+                                ).padding(20)
                             }
                             .frame(width: 300, height: 360)
                             .focused($focusedPersonId, equals: person.id)
-                            .scaleEffect(focusedPersonId == person.id ? 1.1 : 1.0)
                             .animation(.easeInOut(duration: 0.2), value: focusedPersonId)
+                            .buttonStyle(CardButtonStyle())
                         }
+                        .padding(50)
+                        
                     }
-                    .padding(.horizontal)
-                    .padding(.top, 20)
-                    .padding(.bottom, 40)
+                    
                 }
             }
         }
@@ -168,33 +167,27 @@ struct PersonThumbnailView: View {
                         .foregroundColor(.gray)
                 }
             }
-            .shadow(color: .black.opacity(isFocused ? 0.5 : 0), radius: 15, y: 10)
             
             // Person info
             VStack(alignment: .leading, spacing: 4) {
-                Text(person.name.isEmpty ? "Unknown Person" : person.name)
-                    .font(.headline)
-                    .foregroundColor(isFocused ? .white : .gray)
-                    .lineLimit(1)
+                HStack{
+                    Text(person.name.isEmpty ? "Unknown Person" : person.name)
+                        .font(.headline)
+                        .foregroundColor(isFocused ? .white : .gray)
+                        .lineLimit(1)
+                    Spacer()
+                    if let isFavorite = person.isFavorite, isFavorite {
+                        HStack {
+                            Image(systemName: "heart.fill")
+                                .foregroundColor(.red)
+                        }
+                    }
+                }
                 
                 if let birthDate = person.birthDate {
                     Text("Born: \(formatDate(birthDate))")
                         .font(.caption)
                         .foregroundColor(.gray)
-                }
-                
-                Text("Tap to view photos")
-                    .font(.caption)
-                    .foregroundColor(.gray)
-                
-                if let isFavorite = person.isFavorite, isFavorite {
-                    HStack {
-                        Image(systemName: "heart.fill")
-                            .foregroundColor(.red)
-                        Text("Favorite")
-                            .font(.caption)
-                            .foregroundColor(.red)
-                    }
                 }
             }
             .frame(maxWidth: 300, alignment: .leading)
@@ -256,9 +249,9 @@ struct PersonPhotosView: View {
                     .ignoresSafeArea()
                 
                 AssetGridView(
-                    assetService: assetService, 
-                    authService: authService, 
-                    albumId: nil, 
+                    assetService: assetService,
+                    authService: authService,
+                    albumId: nil,
                     personId: person.id,
                     tagId: nil,
                     onAssetsLoaded: { loadedAssets in
@@ -306,4 +299,4 @@ struct PersonPhotosView: View {
     let authService = AuthenticationService(networkService: networkService)
     let assetService = AssetService(networkService: networkService)
     PeopleGridView(peopleService: peopleService, authService: authService, assetService: assetService)
-} 
+}

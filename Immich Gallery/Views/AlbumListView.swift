@@ -63,9 +63,9 @@ struct AlbumListView: View {
                 }
             } else {
                 ScrollView {
-                    LazyVGrid(columns: columns, spacing: 30) {
+                    LazyVGrid(columns: columns, spacing: 100) {
                         ForEach(albums) { album in
-                            UIKitFocusable(action: {
+                            Button(action: {
                                 selectedAlbum = album
                                 showingAlbumDetail = true
                             }) {
@@ -77,9 +77,9 @@ struct AlbumListView: View {
                             }
                             .frame(width: 490, height: 400)
                             .focused($focusedAlbumId, equals: album.id)
-                            .scaleEffect(focusedAlbumId == album.id ? 1.1 : 1.0)
                             .animation(.easeInOut(duration: 0.2), value: focusedAlbumId)
-                            .padding(10) // ✅ adds spacing around every item
+                            .padding(10)
+                            .buttonStyle(CardButtonStyle())
                         }
                     }
                 }
