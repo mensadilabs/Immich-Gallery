@@ -83,18 +83,11 @@ struct ExifInfoOverlay: View {
                 }
             }
         }
-        .padding(.horizontal, 24)
-        .padding(.bottom, 32)
-        .background(
-        RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(.ultraThinMaterial)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
-                )
-        )
-        .padding(.horizontal, 20)
-        .padding(.bottom, 20)
+        .padding(.horizontal, 150)
+        .padding(.top, 30)
+        .padding(.bottom, 30)
+        .applyGlassEffectIfAvailable()
+
     }
     
 
@@ -171,7 +164,7 @@ struct ExifInfoOverlay: View {
     )
     
     ZStack {
-        Color.white.ignoresSafeArea()
+        SharedGradientBackground()
         
         VStack {
             Spacer()
