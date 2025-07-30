@@ -46,7 +46,9 @@ struct LockScreenStyleOverlay: View {
                         .foregroundColor(.black.opacity(0.95))
                         .shadow(color: .white.opacity(0.6), radius: 6, x: 0, y: 3)
                 }
-                .padding(50)
+                .padding(.horizontal, 48)
+                .padding(.top, 12)
+                .padding(.bottom, 24)
                 .applyGlassEffectIfAvailable()
             }
             
@@ -90,7 +92,7 @@ struct LockScreenStyleOverlay: View {
             .padding(.vertical, 12)
             .applyGlassEffectIfAvailable()
         }
-        .padding(40) // Overall padding for the entire overlay to push it in from edges
+//        .padding(40) // Overall padding for the entire overlay to push it in from edges
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing) // Align content to top right
         .onAppear {
             if isSlideshowMode {
@@ -186,7 +188,10 @@ extension View {
         if #available(tvOS 26.0, *) {
             self.glassEffect(.clear)
         } else {
-            self
+            self.background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color.black.opacity(0.6))
+            )
         }
     }
 }
