@@ -1,133 +1,41 @@
 ![Build Status](https://github.com/mensadilabs/Immich-Gallery/actions/workflows/objective-c-xcode.yml/badge.svg?branch=main) ![Platform](https://img.shields.io/badge/platform-TvOS-blue) ![Language](https://img.shields.io/github/languages/top/mensadilabs/Immich-Gallery)
 
-## Note 1: As you can probabaly tell, AI was used in writing this. However, it is not "vibe coded". I have checked every line and edited things manually to get this working. As it is my side project and pretty much an experiment, I didn't want to spend time typing every line. 
-## Note 2: Some of the readme maybe outdated. I change code and I forget to update README. 
-
 # Immich Gallery for Apple TV
 
-A native Apple TV app for browsing your Immich photo library with a beautiful, TV-optimized interface.
+A native Apple TV app for browsing your self-hosted Immich photo library with a beautiful, TV-optimized interface.
 
 ## Features
 
-- 👥 **Multi User Support**: Alows more than one user to be logged in at the same time, with easy user switching. 
-- 📱 **TV-Optimized Interface**: Designed specifically for Apple TV with large, easy-to-navigate elements
-- 🖼️ **Photo Grid View**: Browse all your photos in a responsive grid layout
-- 👥 **People Tab**: View and browse photos by people detected in your library
+- 🖼️ **Photo Grid View**: Browse all your photos in a responsive grid layout with infinite scrolling
+- 👥 **People Recognition**: View and browse photos by people detected in your library
 - 📁 **Album Support**: View and navigate through your Immich albums
-- **Slideshow** : Works like a screensaver, if you like. You can either disable or enable a clock overlay. 
+- 🏷️ **Tag Support**: Browse photos by tags (optional, configurable)
+- 🎬 **Slideshow Mode**: Full-screen slideshow with optional clock overlay
+- 👤 **Multi-User Support**: Multiple user accounts with easy switching
+- 📊 **EXIF Data**: View detailed photo metadata including camera settings and location
+- 🔒 **Privacy First**: Self-hosted solution with secure credential storage, no data sent to third parties
 
-![Login page](https://github.com/user-attachments/assets/64f526eb-d89e-4959-8be0-b7411f8fdc90)
 
+
+<img width="1515" height="849" alt="image" src="https://github.com/user-attachments/assets/be1bcc49-2086-4a6f-9070-d3c62cb1be8a" />
 
 https://github.com/user-attachments/assets/78987a7a-ef62-497c-828f-f7b99851ffb3
 
+<img width="1527" height="857" alt="image" src="https://github.com/user-attachments/assets/f109e3b9-a617-49bd-815a-de452cb30f70" />
 
-![Gallery view](https://github.com/user-attachments/assets/6afe210d-6f6e-45a3-89d2-19ed48fce643)
-![Full screen view](https://github.com/user-attachments/assets/6ab63005-bbcf-468a-9b83-b93f265fa348)
+
+<img width="1530" height="863" alt="image" src="https://github.com/user-attachments/assets/3fdcb427-33f7-4538-bced-62ceaab0e609" />
+
+
 ![Full screen view with people](https://github.com/user-attachments/assets/16b56fc4-ee74-4506-984a-46884bc65228)
+
 ![Album tab](https://github.com/user-attachments/assets/1dafee22-a04d-43c3-b0fc-a6ff01036b60)
+
 <img width="1917" alt="image" src="https://github.com/user-attachments/assets/7a8eb077-0811-4101-8e7c-69b34b03a536" />
 
-<img width="1926" alt="image" src="https://github.com/user-attachments/assets/b2384524-77b6-44c5-a51f-d894e5a27eeb" />
+<img width="3840" height="2160" alt="Simulator Screenshot - Apple TV 4K (3rd generation) - 2025-07-29 at 16 59 04" src="https://github.com/user-attachments/assets/f156ade2-1e59-4c00-ac15-6f05205ddb7a" />
 
-
-## Setup Instructions
-
-### 1. First Launch
-
-When you first launch the app, you'll be prompted to sign in to your Immich server:
-
-1. **Enter your server URL** (e.g., `https://your-immich-server.com` or `http://192.168.1.100:3001`)
-2. **Enter your email** and **password**
-3. **Tap Sign In**
-
-The app will securely store your credentials and automatically sign you in on future launches.
-
-### 2. Server Requirements
-
-Your Immich server should be:
-- Running and accessible from your Apple TV
-- Configured with face recognition enabled (for People tab)
-- Using HTTPS for remote access
-
-
-### 3. Build and Run
-
-1. Open the project in Xcode
-2. Select your Apple TV as the target device
-3. Build and run the app
-
-## App Structure
-
-```
-Immich Gallery/
-├── Models/
-│   └── ImmichModels.swift          # Data models for Immich API
-├── Services/
-│   ├── ImmichService.swift         # API service and authentication
-│   └── ThumbnailCache.swift        # Efficient thumbnail caching
-├── Views/
-│   ├── AssetGridView.swift         # Main photo grid view
-│   ├── AlbumListView.swift         # Album browsing view
-│   ├── PeopleGridView.swift        # People browsing view
-│   ├── FullScreenImageView.swift   # Full-screen photo viewing
-│   ├── SignInView.swift            # Authentication interface
-│   └── CacheManagementView.swift   # Cache management settings
-├── ContentView.swift               # Main app interface
-└── Immich_GalleryApp.swift         # App entry point
-```
-
-## Usage
-
-### Photos Tab
-- Browse all your photos in a grid layout
-- Tap any photo to view it full-screen with navigation
-- View EXIF information including camera settings and location
-- Use the remote to navigate between photos
-- Infinite scrolling with automatic loading
-
-### People Tab
-- Browse all people detected in your photo library
-- Tap a person to view all photos featuring them
-- See person names, birth dates, and favorite status
-- Navigate through person photos in grid view
-
-### Albums Tab
-- View all your Immich albums
-- Tap an album to see its contents
-- Navigate through album photos in grid view
-
-### Settings Tab
-- Switch or add users.
-- Manage thumbnail cache
-- Clear cached data
-- View cache statistics
-
-## Troubleshooting
-
-### Authentication Issues
-- Verify your email and password are correct
-- Ensure your Immich server is running and accessible
-- Check that your server URL is correct (including protocol and port)
-
-### Network Issues
-- Make sure your Apple TV and Immich server are on the same network
-- Check firewall settings on your server
-- Verify the Immich server port is open
-
-### Performance Issues
-- The app uses smart thumbnail caching for better performance
-- Full-resolution images are loaded only when viewing full-screen
-- Infinite scrolling loads photos in batches for smooth performance
-- Cache management allows you to clear stored thumbnails if needed
-
-## Security Notes
-
-✅ **Security Features Implemented**:
-- Secure credential storage using UserDefaults with encryption
-- Automatic token validation and refresh
-- HTTPS support for secure connections
-- No hardcoded credentials in the source code
+<img width="3840" height="2160" alt="Simulator Screenshot - Apple TV 4K (3rd generation) - 2025-07-29 at 17 00 05" src="https://github.com/user-attachments/assets/3f646593-e310-4d39-827c-c4d02179d45f" />
 
 
 ## Requirements
@@ -136,15 +44,101 @@ Immich Gallery/
 - tvOS 15.0+
 - Immich server running and accessible
 - Network connectivity between Apple TV and Immich server
-- Face recognition enabled on Immich server (for People tab)
+
+## Quick Start
+
+1. **Launch the app** - You'll be prompted to sign in to your Immich server
+2. **Enter server details** - Server URL (e.g., `https://your-immich-server.com`), email, and password
+3. **Browse your photos** - Navigate using the Apple TV remote or Siri Remote
+
+## Technical Details
+
+### Architecture
+
+```
+Immich Gallery/
+├── Models/
+│   └── ImmichModels.swift          # Data models for Immich API responses
+├── Services/
+│   ├── AuthenticationService.swift # User authentication and session management
+│   ├── NetworkService.swift        # Core HTTP networking layer
+│   ├── AssetService.swift          # Photo/video asset management
+│   ├── AlbumService.swift          # Album data handling
+│   ├── PeopleService.swift         # People recognition integration
+│   ├── TagService.swift            # Tag-based photo organization
+│   └── ThumbnailCache.swift        # Efficient image caching system
+├── Views/
+│   ├── AssetGridView.swift         # Main photo grid interface
+│   ├── FullScreenImageView.swift   # Full-screen photo viewer
+│   ├── SlideshowView.swift         # Slideshow functionality
+│   └── Settings/                   # Configuration interfaces
+├── Extensions/
+│   └── DateFormatter+Extensions.swift
+└── ContentView.swift               # Main app coordinator
+```
+
+### Technology Stack
+
+- **SwiftUI**: Modern declarative UI framework
+- **Async/Await**: Modern Swift concurrency for network operations
+- **URLSession**: HTTP networking with custom authentication
+- **UserDefaults**: Secure credential storage with encryption
+- **Core Image**: Image processing and thumbnail generation
+- **AVKit**: Video playback support
+
+### Network & API Integration
+
+- **Immich REST API**: Full integration with Immich server endpoints
+- **Authentication**: Bearer token-based authentication with automatic refresh
+- **Caching Strategy**: Multi-layer caching for thumbnails and metadata
+- **Error Handling**: Comprehensive error boundaries and retry mechanisms
+
+### Performance Optimizations
+
+- **Lazy Loading**: Photos loaded on-demand as user scrolls
+- **Thumbnail Caching**: Persistent cache with configurable size limits
+- **Memory Management**: Efficient image loading with automatic cleanup
+- **Background Processing**: Non-blocking API calls for smooth UI
+
+### Security Features
+
+- **Credential Encryption**: Secure storage of server credentials
+- **HTTPS Support**: Encrypted communication with Immich server
+- **Token Validation**: Automatic token refresh and validation
+- **No Telemetry**: No data collection or external service communication
+
+### Configuration Options
+
+- **Default Tab**: Customizable startup tab (Photos, Albums, People, Tags)
+- **Slideshow Settings**: Configurable timing and overlay options
+- **Cache Management**: User-controlled cache size and cleanup
+- **Multi-User**: Support for multiple Immich accounts
 
 ## Development
 
-This app is built with:
-- SwiftUI for the user interface
-- Async/await for modern concurrency
-- URLSession for network requests
-- UserDefaults for secure credential storage
-- Core Image for image processing and caching
+### Building from Source
+
+1. Clone the repository
+2. Open `Immich Gallery.xcodeproj` in Xcode
+3. Select Apple TV target device
+4. Build and run
+
+### Dependencies
+
+This project uses only system frameworks and has no external dependencies.
+
+## Troubleshooting
+
+### Authentication Issues
+
+- Verify server URL includes protocol (`http://` or `https://`)
+- Ensure Immich server is accessible from Apple TV network
+- Check firewall settings and port configuration
+
+### Performance Issues
+
+- Monitor cache usage in Settings > Cache Management
+- Clear cached data if storage is full
+- Ensure stable network connection for optimal loading
 
 ![Alt](https://repobeats.axiom.co/api/embed/3fea253de89fc88824c16adb77a456f7e7d657b7.svg "Repobeats analytics image")

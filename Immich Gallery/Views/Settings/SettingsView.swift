@@ -41,50 +41,6 @@ struct SettingsRow: View {
     }
 }
 
-struct SettingsSection: View {
-    let title: String
-    let content: () -> AnyView
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text(title)
-                .font(.title2)
-                .fontWeight(.bold)
-                .foregroundColor(.primary)
-            
-            VStack(spacing: 12) {
-                content()
-            }
-        }
-    }
-}
-
-struct ActionButton: View {
-    let icon: String
-    let title: String
-    let color: Color
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: 8) {
-                Image(systemName: icon)
-                    .font(.title2)
-                    .foregroundColor(color)
-                Text(title)
-                    .font(.caption)
-                    .foregroundColor(.primary)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(16)
-            .background(color.opacity(0.1))
-            .cornerRadius(12)
-        }
-        .buttonStyle(.plain)
-    }
-}
-
-
 // MARK: - Main Settings View
 
 struct SettingsView: View {
@@ -124,6 +80,47 @@ struct SettingsView: View {
                 
                 ScrollView {
                     LazyVStack(spacing: 30) {
+
+                        // Current User Section
+                        if let user = authService.currentUser {
+                            VStack(alignment: .leading, spacing: 16) {
+                                HStack {
+                                    Image(systemName: "person.circle.fill")
+                                        .foregroundColor(.blue)
+                                        .font(.title)
+                                    
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(user.name)
+                                            .font(.title2)
+                                            .fontWeight(.bold)
+                                        Text(user.email)
+                                            .font(.subheadline)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    
+                                    Spacer()
+                                    
+                                    Text("Active")
+                                        .font(.caption)
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(.white)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 6)
+                                        .background(Color.green)
+                                        .cornerRadius(12)
+                                }
+                                .padding(20)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 16)
+                                        .fill(Color.blue.opacity(0.1))
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 16)
+                                                .stroke(Color.blue.opacity(0.3), lineWidth: 1)
+                                        )
+                                )
+                            }
+                        }
+                        
                         // Server Info Section
                         Button(action: {
                             refreshServerConnection()
@@ -167,61 +164,17 @@ struct SettingsView: View {
                             .cornerRadius(12)
                         }
                         .buttonStyle(.plain)
-                        
-                        // Current User Section
-                        if let user = authService.currentUser {
-                            VStack(alignment: .leading, spacing: 16) {
-                                HStack {
-                                    Image(systemName: "person.circle.fill")
-                                        .foregroundColor(.blue)
-                                        .font(.title)
-                                    
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text(user.name)
-                                            .font(.title2)
-                                            .fontWeight(.bold)
-                                        Text(user.email)
-                                            .font(.subheadline)
-                                            .foregroundColor(.secondary)
-                                    }
-                                    
-                                    Spacer()
-                                    
-                                    Text("Active")
-                                        .font(.caption)
-                                        .fontWeight(.semibold)
-                                        .foregroundColor(.white)
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 6)
-                                        .background(Color.green)
-                                        .cornerRadius(12)
-                                }
-                                .padding(20)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 16)
-                                        .fill(Color.blue.opacity(0.1))
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 16)
-                                                .stroke(Color.blue.opacity(0.3), lineWidth: 1)
-                                        )
-                                )
-                            }
-                        }
-                        
                         // User Actions Section
                         VStack(spacing: 16) {
-                            // Quick Actions
-                            HStack(spacing: 16) {
                                 Button(action: {
                                     showingSignIn = true
                                 }) {
-                                    VStack(spacing: 8) {
+                                    HStack(spacing: 8) {
                                         Image(systemName: "person.badge.plus")
                                             .font(.title2)
                                             .foregroundColor(.blue)
                                         Text("Add User")
                                             .font(.caption)
-                                            .foregroundColor(.primary)
                                     }
                                     .frame(maxWidth: .infinity)
                                     .padding(16)
@@ -233,7 +186,7 @@ struct SettingsView: View {
                                 Button(action: {
                                     showingSignOutAlert = true
                                 }) {
-                                    VStack(spacing: 8) {
+                                    HStack(spacing: 8) {
                                         Image(systemName: "rectangle.portrait.and.arrow.right")
                                             .font(.title2)
                                             .foregroundColor(.red)
@@ -247,7 +200,6 @@ struct SettingsView: View {
                                     .cornerRadius(12)
                                 }
                                 .buttonStyle(.plain)
-                            }
                             
                             // User Switcher
                             if savedUsers.count > 1 {
@@ -620,44 +572,6 @@ struct SettingsView: View {
     }
 }
 
-// Extension to make overlay setting easily accessible throughout the app
-extension UserDefaults {
-    var hideImageOverlay: Bool {
-        get { bool(forKey: "hideImageOverlay") }
-        set { set(newValue, forKey: "hideImageOverlay") }
-    }
-    
-    var slideshowInterval: TimeInterval {
-        get { double(forKey: "slideshowInterval") }
-        set { set(newValue, forKey: "slideshowInterval") }
-    }
-    
-    var slideshowBackgroundColor: String {
-        get { string(forKey: "slideshowBackgroundColor") ?? "black" }
-        set { set(newValue, forKey: "slideshowBackgroundColor") }
-    }
-    
-    var showTagsTab: Bool {
-        get { bool(forKey: "showTagsTab") }
-        set { set(newValue, forKey: "showTagsTab") }
-    }
-    
-    var use24HourClock: Bool {
-        get { bool(forKey: "use24HourClock") }
-        set { set(newValue, forKey: "use24HourClock") }
-    }
-    
-    var disableReflectionsInSlideshow: Bool {
-        get { bool(forKey: "disableReflectionsInSlideshow") }
-        set { set(newValue, forKey: "disableReflectionsInSlideshow") }
-    }
-    
-    var enableKenBurnsEffect: Bool {
-        get { bool(forKey: "enableKenBurnsEffect") }
-        set { set(newValue, forKey: "enableKenBurnsEffect") }
-    }
-}
-
 struct SavedUser: Codable, Identifiable {
     let id: String
     let email: String
@@ -673,303 +587,6 @@ func generateUserIdForUser(email: String, serverURL: String) -> String {
 }
 
 
-// MARK: - Slideshow Settings Component
-
-struct SlideshowSettings: View {
-    @Binding var slideshowInterval: Double
-    @Binding var slideshowBackgroundColor: String
-    @Binding var use24HourClock: Bool
-    @Binding var hideOverlay: Bool
-    @Binding var disableReflections: Bool
-    @Binding var enableKenBurns: Bool
-    @FocusState.Binding var isMinusFocused: Bool
-    @FocusState.Binding var isPlusFocused: Bool
-    @FocusState.Binding var focusedColor: String?
-    @State private var showPerformanceAlert = false
-    
-    
-    var body: some View {
-        VStack(spacing: 12) {
-            // Slideshow Interval Setting
-            SettingsRow(
-                icon: "timer",
-                title: "Slideshow Interval",
-                subtitle: "Time between slides in slideshow mode",
-                content: AnyView(
-                    HStack(spacing: 40) {
-                        Button(action: {
-                            if slideshowInterval > 2 {
-                                slideshowInterval -= 1
-                            }
-                        }) {
-                            Image(systemName: "minus.circle.fill")
-                                .foregroundColor(isMinusFocused ? .white : .blue)
-                                .font(.title2)
-                        }
-                        .buttonStyle(CustomFocusButtonStyle())
-                        .disabled(slideshowInterval <= 6)
-                        .focused($isMinusFocused)
-                        
-                        Text("\(Int(slideshowInterval))s")
-                            .font(.title3)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.primary)
-                            .frame(minWidth: 50)
-                        
-                        Button(action: {
-                            if slideshowInterval < 15 {
-                                slideshowInterval += 1
-                            }
-                        }) {
-                            Image(systemName: "plus.circle.fill")
-                                .foregroundColor(isPlusFocused ? .white : .blue)
-                                .font(.title2)
-                        }
-                        .buttonStyle(CustomFocusButtonStyle())
-                        .disabled(slideshowInterval >= 15)
-                        .focused($isPlusFocused)
-                    }
-                )
-            )
-            
-            // Slideshow Background Color Setting
-            SettingsRow(
-                icon: "paintbrush",
-                title: "Slideshow Background",
-                subtitle: "Background color for slideshow mode",
-                content: AnyView(
-                    HStack(spacing: 12) {
-                        ForEach(["auto", "black", "white", "gray", "blue", "purple"], id: \.self) { color in
-                            Button(action: {
-                                if color == "auto" {
-                                    showPerformanceAlert = true
-                                } else {
-                                    slideshowBackgroundColor = color
-                                }
-                            }) {
-                                Group {
-                                    if color == "auto" {
-                                        ZStack {
-                                            Circle()
-                                                .fill(LinearGradient(
-                                                    colors: [.red, .orange, .yellow, .green, .blue, .purple],
-                                                    startPoint: .topLeading,
-                                                    endPoint: .bottomTrailing
-                                                ))
-                                            Image(systemName: "paintpalette.fill")
-                                                .foregroundColor(.white)
-                                                .font(.caption)
-                                        }
-                                    } else {
-                                        Circle()
-                                            .fill(getBackgroundColor(color))
-                                    }
-                                }
-                                .frame(width: 32, height: 32)
-                                    .overlay(
-                                        Circle()
-                                            .stroke(slideshowBackgroundColor == color ? Color.accentColor : Color.clear, lineWidth: 3)
-                                    )
-                                    .scaleEffect(slideshowBackgroundColor == color ? 1.18 : 1.0)
-                                    .scaleEffect(focusedColor == color ? 1.3 : 1.0)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 20)
-                                            .stroke(focusedColor == color ? Color.white : Color.clear, lineWidth: 2)
-                                            .scaleEffect(1.4)
-                                    )
-                                    .shadow(color: focusedColor == color ? .white.opacity(0.5) : .clear, radius: 8, x: 0, y: 4)
-                            }
-                            .buttonStyle(ColorSelectionButtonStyle())
-                            .focused($focusedColor, equals: color)
-                        }
-                    }
-                )
-            )
-            
-            // Clock Format Setting
-            SettingsRow(
-                icon: "clock",
-                title: "Clock Format",
-                subtitle: "Time format for slideshow overlay",
-                content: AnyView(
-                    Picker("Clock Format", selection: $use24HourClock) {
-                        Text("12 Hour").tag(false)
-                        Text("24 Hour").tag(true)
-                    }
-                        .pickerStyle(.menu)
-                        .frame(width: 300, alignment: .trailing)
-                )
-            )
-            
-            SettingsRow(
-                icon: "eye.slash",
-                title: "Hide Image Overlays",
-                subtitle: "Hide clock, date, location overlay from slideshow and fullscreen view",
-                content: AnyView(Toggle("", isOn: $hideOverlay).labelsHidden())
-            )
-            
-            SettingsRow(
-                icon: "camera.filters",
-                title: "Disable Reflections",
-                subtitle: "Remove image reflections in slideshow for full-screen display",
-                content: AnyView(Toggle("", isOn: $disableReflections).labelsHidden())
-            )
-            
-            SettingsRow(
-                icon: "camera.macro.circle",
-                title: "Ken Burns Effect (beta)",
-                subtitle: "Add slow zoom and pan animations to slideshow images. Disable reflections when enabling this",
-                content: AnyView(Toggle("", isOn: $enableKenBurns).labelsHidden())
-            )
-        }
-        .alert("Performance Warning", isPresented: $showPerformanceAlert) {
-            Button("Cancel", role: .cancel) { }
-            Button("Enable Auto Color") {
-                slideshowBackgroundColor = "auto"
-            }
-        } message: {
-            Text("Auto background color analyzes each image to extract dominant colors. This may cause performance issues with large images during slideshow transitions.")
-        }
-    }
-    
-    private func getBackgroundColor(_ colorName: String) -> Color {
-        switch colorName {
-        case "auto": return .black // Fallback for preview, actual auto color is handled in slideshow
-        case "black": return .black
-        case "white": return .white
-        case "gray": return .gray
-        case "blue": return .blue
-        case "purple": return .purple
-        default: return .black
-        }
-    }
-}
-
-// MARK: - Cache Section Component
-
-struct CacheSection: View {
-    @ObservedObject var thumbnailCache: ThumbnailCache
-    @Binding var showingClearCacheAlert: Bool
-    
-    var body: some View {
-        SettingsSection(title: "Cache") {
-            AnyView(VStack(spacing: 16) {
-                // Cache Actions
-                HStack(spacing: 16) {
-                    ActionButton(
-                        icon: "clock.arrow.circlepath",
-                        title: "Clear Expired",
-                        color: .orange
-                    ) {
-                        thumbnailCache.clearExpiredCache()
-                    }
-                    
-                    ActionButton(
-                        icon: "trash",
-                        title: "Clear All",
-                        color: .red
-                    ) {
-                        showingClearCacheAlert = true
-                    }
-                }
-                
-                // Cache Information
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Current Usage")
-                        .font(.headline)
-                        .foregroundColor(.secondary)
-                    
-                    HStack {
-                        Text("Memory Cache")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        Spacer()
-                        VStack(alignment: .trailing, spacing: 2) {
-                            Text(formatBytes(thumbnailCache.memoryCacheSize))
-                                .font(.caption)
-                                .foregroundColor(.primary)
-                            Text("\(thumbnailCache.memoryCacheCount) images")
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                    
-                    HStack {
-                        Text("Disk Cache")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        Spacer()
-                        Text(formatBytes(thumbnailCache.diskCacheSize))
-                            .font(.caption)
-                            .foregroundColor(.primary)
-                    }
-                    
-                    HStack {
-                        Text("Total Cache")
-                            .font(.caption)
-                            .fontWeight(.medium)
-                            .foregroundColor(.primary)
-                        Spacer()
-                        Text(formatBytes(thumbnailCache.memoryCacheSize + thumbnailCache.diskCacheSize))
-                            .font(.caption)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.blue)
-                    }
-                }
-                .padding(16)
-                .background(Color.gray.opacity(0.03))
-                .cornerRadius(12)
-                
-                // Cache Limits
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Cache Limits")
-                        .font(.headline)
-                        .foregroundColor(.secondary)
-                    
-                    HStack {
-                        Text("Memory Limit")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        Spacer()
-                        Text(formatBytes(100 * 1024 * 1024))
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    HStack {
-                        Text("Disk Limit")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        Spacer()
-                        Text(formatBytes(500 * 1024 * 1024))
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    HStack {
-                        Text("Expiration")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        Spacer()
-                        Text("7 days")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                }
-                .padding(16)
-                .background(Color.gray.opacity(0.03))
-                .cornerRadius(12)
-            })
-        }
-    }
-    
-    private func formatBytes(_ bytes: Int) -> String {
-        let formatter = ByteCountFormatter()
-        formatter.allowedUnits = [.useMB, .useKB]
-        formatter.countStyle = .file
-        return formatter.string(fromByteCount: Int64(bytes))
-    }
-}
 
 #Preview {
     let networkService = NetworkService()
