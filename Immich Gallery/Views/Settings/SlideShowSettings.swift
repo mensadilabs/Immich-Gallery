@@ -15,7 +15,7 @@ struct SlideshowSettings: View {
     @Binding var slideshowBackgroundColor: String
     @Binding var use24HourClock: Bool
     @Binding var hideOverlay: Bool
-    @Binding var disableReflections: Bool
+    @Binding var enableReflections: Bool
     @Binding var enableKenBurns: Bool
     @FocusState.Binding var isMinusFocused: Bool
     @FocusState.Binding var isPlusFocused: Bool
@@ -114,7 +114,7 @@ struct SlideshowSettings: View {
             SettingsRow(
                 icon: "clock",
                 title: "Clock Format",
-                subtitle: "Time format for slideshow overlay",
+                subtitle: "Time format for slideshow overlay.",
                 content: AnyView(
                     Picker("Clock Format", selection: $use24HourClock) {
                         Text("12 Hour").tag(false)
@@ -128,22 +128,46 @@ struct SlideshowSettings: View {
             SettingsRow(
                 icon: "eye.slash",
                 title: "Hide Image Overlays",
-                subtitle: "Hide clock, date, location overlay from slideshow and fullscreen view",
+                subtitle: "Hide clock, date, location overlay from slideshow and fullscreen view.",
                 content: AnyView(Toggle("", isOn: $hideOverlay).labelsHidden())
             )
             
             SettingsRow(
-                icon: "camera.filters",
-                title: "Disable Reflections",
-                subtitle: "Remove image reflections in slideshow for full-screen display",
-                content: AnyView(Toggle("", isOn: $disableReflections).labelsHidden())
-            )
-            
-            SettingsRow(
                 icon: "camera.macro.circle",
-                title: "Ken Burns Effect (beta)",
-                subtitle: "Add slow zoom and pan animations to slideshow images. Disable reflections when enabling this",
-                content: AnyView(Toggle("", isOn: $enableKenBurns).labelsHidden())
+                title: "Image Effects",
+                subtitle: "Choose visual effects for slideshow images",
+                content: AnyView(
+                    Picker("Image Effects", selection: Binding(
+                        get: {
+                            if enableKenBurns {
+                                return "kenBurns"
+                            } else if enableReflections {
+                                return "reflections"
+                            } else {
+                                return "none"
+                            }
+                        },
+                        set: { newValue in
+                            switch newValue {
+                            case "kenBurns":
+                                enableKenBurns = true
+                                enableReflections = false
+                            case "reflections":
+                                enableKenBurns = false
+                                enableReflections = true
+                            default: // "none"
+                                enableKenBurns = false
+                                enableReflections = false
+                            }
+                        }
+                    )) {
+                        Text("None").tag("none")
+                        Text("Reflections").tag("reflections")
+                        Text("Ken Burns (beta)").tag("kenBurns")
+                    }
+                    .pickerStyle(.menu)
+                    .frame(width: 300, alignment: .trailing)
+                )
             )
         }
         .alert("Performance Warning", isPresented: $showPerformanceAlert) {

@@ -58,7 +58,7 @@ struct SettingsView: View {
     @AppStorage("defaultStartupTab") private var defaultStartupTab = "photos"
     @AppStorage("assetSortOrder") private var assetSortOrder = "desc"
     @AppStorage("use24HourClock") private var use24HourClock = true
-    @AppStorage("disableReflectionsInSlideshow") private var disableReflectionsInSlideshow = false
+    @AppStorage("enableReflectionsInSlideshow") private var enableReflectionsInSlideshow = true
     @AppStorage("enableKenBurnsEffect") private var enableKenBurnsEffect = false
     @FocusState private var isMinusFocused: Bool
     @FocusState private var isPlusFocused: Bool
@@ -299,7 +299,7 @@ struct SettingsView: View {
                                     slideshowBackgroundColor: $slideshowBackgroundColor,
                                     use24HourClock: $use24HourClock,
                                     hideOverlay: $hideImageOverlay,
-                                    disableReflections: $disableReflectionsInSlideshow,
+                                    enableReflections: $enableReflectionsInSlideshow,
                                     enableKenBurns: $enableKenBurnsEffect,
                                     isMinusFocused: $isMinusFocused,
                                     isPlusFocused: $isPlusFocused,
