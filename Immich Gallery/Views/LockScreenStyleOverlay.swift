@@ -49,7 +49,9 @@ struct LockScreenStyleOverlay: View {
                 .padding(.horizontal, 48)
                 .padding(.top, 12)
                 .padding(.bottom, 24)
-                .applyGlassEffectIfAvailable()
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.black.opacity(0.6)))
             }
             
             Spacer() // Pushes content to the top (or bottom if this is the only spacer)
@@ -90,9 +92,11 @@ struct LockScreenStyleOverlay: View {
             }
             .padding(.horizontal, 24)
             .padding(.vertical, 12)
-            .applyGlassEffectIfAvailable()
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color.black.opacity(0.6)))
         }
-//        .padding(40) // Overall padding for the entire overlay to push it in from edges
+        //        .padding(40) // Overall padding for the entire overlay to push it in from edges
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing) // Align content to top right
         .onAppear {
             if isSlideshowMode {
@@ -179,20 +183,6 @@ struct LockScreenStyleOverlay: View {
     private func stopTimeUpdate() {
         timeUpdateTimer?.invalidate()
         timeUpdateTimer = nil
-    }
-}
-
-extension View {
-    @ViewBuilder
-    func applyGlassEffectIfAvailable() -> some View {
-        if #available(tvOS 26.0, *) {
-            self.glassEffect(.clear)
-        } else {
-            self.background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.black.opacity(0.6))
-            )
-        }
     }
 }
 

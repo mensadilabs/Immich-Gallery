@@ -46,20 +46,20 @@ struct ExifInfoOverlay: View {
                 }
             } .padding(.bottom, 8)
             
-
-                if let make = asset.exifInfo?.make, let model = asset.exifInfo?.model {
-                    TechnicalInfoItem(icon: "camera", label: "Camera", value: "\(make) \(model)").padding(.bottom, 8)
-                }
-                
-                // Lens info
-                if let lensModel = asset.exifInfo?.lensModel {
-                    TechnicalInfoItem(icon: "camera.viewfinder", label: "Lens", value: lensModel).padding(.bottom, 8)
-                }
+            
+            if let make = asset.exifInfo?.make, let model = asset.exifInfo?.model {
+                TechnicalInfoItem(icon: "camera", label: "Camera", value: "\(make) \(model)").padding(.bottom, 8)
+            }
+            
+            // Lens info
+            if let lensModel = asset.exifInfo?.lensModel {
+                TechnicalInfoItem(icon: "camera.viewfinder", label: "Lens", value: lensModel).padding(.bottom, 8)
+            }
             
             if let width = asset.exifInfo?.exifImageWidth, let height = asset.exifInfo?.exifImageHeight {
                 TechnicalInfoItem(icon: "lines.measurement.horizontal", label: "Image Size", value: "\(round(Double(width * height) / 1_000_000 * 10) / 10)MP • \(width)px ×  \(height)px").padding(.bottom, 8)
             }
-
+            
             HStack{
                 // File info
                 if let fileSize = asset.exifInfo?.fileSizeInByte {
@@ -86,11 +86,13 @@ struct ExifInfoOverlay: View {
         .padding(.horizontal, 150)
         .padding(.top, 30)
         .padding(.bottom, 30)
-        .applyGlassEffectIfAvailable()
-
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.black.opacity(0.6)))
+        
     }
     
-
+    
     
     private func formatFileSize(_ bytes: Int64) -> String {
         let formatter = ByteCountFormatter()
