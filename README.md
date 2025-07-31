@@ -15,7 +15,7 @@ A native Apple TV app for browsing your self-hosted Immich photo library with a 
 - 📊 **EXIF Data**: View detailed photo metadata including camera settings and location
 - 🔒 **Privacy First**: Self-hosted solution with secure credential storage, no data sent to third parties
 
-
+<a href="https://www.buymeacoffee.com/zzpr69dnqtr" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-blue.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
 
 <img width="1515" height="849" alt="image" src="https://github.com/user-attachments/assets/be1bcc49-2086-4a6f-9070-d3c62cb1be8a" />
 
