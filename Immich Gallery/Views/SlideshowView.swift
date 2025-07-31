@@ -26,9 +26,9 @@ struct SlideshowView: View {
     @State private var preloadedDominantColors: [String: Color] = [:] // Cache for dominant colors
     @State private var slideshowBackgroundColor: String = UserDefaults.standard.slideshowBackgroundColor
     @State private var hideImageOverlay: Bool = UserDefaults.standard.hideImageOverlay
-    @State private var disableReflectionsInSlideshow: Bool = UserDefaults.standard.disableReflectionsInSlideshow
+    @State private var enableReflectionsInSlideshow: Bool = UserDefaults.standard.enableReflectionsInSlideshow
     @State private var enableKenBurnsEffect: Bool = UserDefaults.standard.enableKenBurnsEffect
-    @State private var dimensionMultiplier:Double = UserDefaults.standard.disableReflectionsInSlideshow ? 1.0 : 0.9
+    @State private var dimensionMultiplier:Double = UserDefaults.standard.enableReflectionsInSlideshow ?  0.9 : 1.0
     @State private var kenBurnsScale: CGFloat = 1.0
     @State private var kenBurnsOffset: CGSize = .zero
     @FocusState private var isFocused: Bool
@@ -158,7 +158,7 @@ struct SlideshowView: View {
                                 )
                                 
                             // Reflection with performance optimizations
-                            if !disableReflectionsInSlideshow {
+                            if enableReflectionsInSlideshow {
                                 Image(uiImage: image)
                                     .resizable()
                                     .aspectRatio(contentMode: .fit)
@@ -167,11 +167,31 @@ struct SlideshowView: View {
                                     .offset(y: -imageHeight * 0.0)
                                     .clipped()
                                     .mask(
-                                        LinearGradient(
-                                            colors: [.black.opacity(0.9), .clear],
-                                            startPoint: .top,
-                                            endPoint: .center
-                                        )
+                                        ZStack {
+                                            // Base gradient mask for reflection fade
+                                            LinearGradient(
+                                                colors: [.black.opacity(0.9), .clear],
+                                                startPoint: .top,
+                                                endPoint: .center
+                                            )
+                                            
+                                            // When Ken Burns is active, add mask to prevent overlap with main image
+                                            if enableKenBurnsEffect {
+                                                Rectangle()
+                                                    .fill(.clear)
+                                                    .background(
+                                                        Rectangle()
+                                                            .fill(.black)
+                                                            .scaleEffect(isTransitioning ? slideDirection.scale : kenBurnsScale)
+                                                            .offset(
+                                                                x: -(isTransitioning ? slideDirection.offset(for: geometry.size).width : kenBurnsOffset.width),
+                                                                y: -(isTransitioning ? slideDirection.offset(for: geometry.size).height : kenBurnsOffset.height) - imageHeight
+                                                            )
+                                                            .blendMode(.destinationOut)
+                                                    )
+                                            }
+                                        }
+                                        .compositingGroup()
                                     )
                                     .opacity(0.4)
                                     .drawingGroup() // Enable hardware acceleration for reflection
@@ -240,7 +260,7 @@ struct SlideshowView: View {
             slideshowBackgroundColor = newBackgroundColor
             
             hideImageOverlay = UserDefaults.standard.hideImageOverlay
-            disableReflectionsInSlideshow = UserDefaults.standard.disableReflectionsInSlideshow
+            enableReflectionsInSlideshow = UserDefaults.standard.enableReflectionsInSlideshow
             enableKenBurnsEffect = UserDefaults.standard.enableKenBurnsEffect
             
             // Update dominant color if background color setting changed to/from auto
@@ -620,7 +640,7 @@ struct SlideshowView: View {
     UserDefaults.standard.set("auto", forKey: "slideshowBackgroundColor")
     UserDefaults.standard.set("10", forKey: "slideshowInterval")
     UserDefaults.standard.set(true, forKey: "hideImageOverlay")
-    UserDefaults.standard.set(true, forKey: "disableReflectionsInSlideshow")
+    UserDefaults.standard.set(true, forKey: "enableReflectionsInSlideshow")
     UserDefaults.standard.set(true, forKey: "enableKenBurnsEffect")
     let (_, _, assetService, _, _) = MockServiceFactory.createMockServices()
     

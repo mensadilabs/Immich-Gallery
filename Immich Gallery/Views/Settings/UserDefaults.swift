@@ -33,9 +33,9 @@ extension UserDefaults {
         set { set(newValue, forKey: "use24HourClock") }
     }
     
-    var disableReflectionsInSlideshow: Bool {
-        get { bool(forKey: "disableReflectionsInSlideshow") }
-        set { set(newValue, forKey: "disableReflectionsInSlideshow") }
+    var enableReflectionsInSlideshow: Bool {
+        get { bool(forKey: "enableReflectionsInSlideshow") }
+        set { set(newValue, forKey: "enableReflectionsInSlideshow") }
     }
     
     var enableKenBurnsEffect: Bool {

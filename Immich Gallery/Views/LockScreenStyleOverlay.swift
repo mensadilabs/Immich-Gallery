@@ -18,49 +18,43 @@ struct LockScreenStyleOverlay: View {
     @State private var timeUpdateTimer: Timer?
     
     private var use24HourClock: Bool {
-    UserDefaults.standard.bool(forKey: "use24HourClock")
-}
-
+        UserDefaults.standard.bool(forKey: "use24HourClock")
+    }
+    
     init(asset: ImmichAsset, isSlideshowMode: Bool = false) {
         self.asset = asset
         self.isSlideshowMode = isSlideshowMode
     }
     
     var body: some View {
-
-    
+        
+        
         VStack(alignment: .trailing, spacing: 24) { // Increased spacing for tvOS
             // MARK: - Clock and Date Display
-                if isSlideshowMode {
-            VStack(alignment: .trailing, spacing: 12) { // Increased spacing
-                // Current time in large text
-                Text(formatCurrentTime())
-                    .font(.system(size: isSlideshowMode ? 100 : 48, weight: .light, design: .default)) // Larger sizes
-                    .foregroundColor(.black)
-                    .shadow(color: .white.opacity(0.6), radius: 6, x: 0, y: 3) // Slightly stronger shadow
+            if isSlideshowMode {
                 
-                // Current date
-                Text(formatCurrentDate())
-                    .font(.system(size: isSlideshowMode ? 32 : 22, weight: .regular, design: .default)) // Larger sizes
-                    .foregroundColor(.black.opacity(0.95))
-                    .shadow(color: .white.opacity(0.6), radius: 6, x: 0, y: 3)
-            }
-            .padding(.horizontal, 32) // Increased padding
-            .padding(.vertical, 24)    // Increased padding
-            .background(
-                            RoundedRectangle(cornerRadius: 16)
-                                .fill(Material.ultraThin)
-                                .opacity(0.5) // <--- Add this line to control transparency (0.8 for 80% opaque)
-                                .overlay( // Make sure to re-add the overlay if it was removed
-                                    RoundedRectangle(cornerRadius: 16)
-                                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                                )
-                        )
-            .shadow(color: .black.opacity(0.5), radius: 16, x: 0, y: 8) // Larger, softer shadow
+                VStack(alignment: .trailing, spacing: 12) { // Increased spacing
+                    // Current time in large text
+                    Text(formatCurrentTime())
+                        .font(.system(size: isSlideshowMode ? 100 : 48, weight: .light, design: .default)) // Larger sizes
+                        .foregroundColor(.black)
+                        .shadow(color: .white.opacity(0.6), radius: 6, x: 0, y: 3) // Slightly stronger shadow
+                    
+                    // Current date
+                    Text(formatCurrentDate())
+                        .font(.system(size: isSlideshowMode ? 32 : 22, weight: .regular, design: .default)) // Larger sizes
+                        .foregroundColor(.black.opacity(0.95))
+                        .shadow(color: .white.opacity(0.6), radius: 6, x: 0, y: 3)
                 }
+                .padding(.horizontal, 48)
+                .padding(.top, 12)
+                .padding(.bottom, 24)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.black.opacity(0.6)))
+            }
             
             Spacer() // Pushes content to the top (or bottom if this is the only spacer)
-            
             VStack(alignment: .trailing, spacing: 0) { // This VStack will get the single background and shadow
                 // MARK: - Group for internal padding (all text/HStacks inside this will share the padding)
                 Group {
@@ -72,7 +66,7 @@ struct LockScreenStyleOverlay: View {
                             .font(.system(size: 24, weight: .medium, design: .rounded))
                             .foregroundColor(.white)
                     }
-
+                    
                     // MARK: - Location with elegant styling
                     if let location = getLocationString() {
                         HStack(spacing: 0) {
@@ -84,7 +78,7 @@ struct LockScreenStyleOverlay: View {
                                 .foregroundColor(.white)
                         }
                     }
-
+                    
                     // MARK: - Date with elegant styling
                     HStack(spacing: 0) {
                         Image(systemName: "calendar")
@@ -95,20 +89,14 @@ struct LockScreenStyleOverlay: View {
                             .foregroundColor(.white)
                     }
                 }
-                .padding(.horizontal, 24) 
-                .padding(.vertical, 12)  
             }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 12)
             .background(
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(Material.ultraThin) // Frosted glass for the entire group
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(Color.white.opacity(0.15), lineWidth: 0.8)
-                    )
-            )
-            .shadow(color: .black.opacity(0.4), radius: 10, x: 0, y: 5)
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color.black.opacity(0.6)))
         }
-        .padding(40) // Overall padding for the entire overlay to push it in from edges
+        //        .padding(40) // Overall padding for the entire overlay to push it in from edges
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing) // Align content to top right
         .onAppear {
             if isSlideshowMode {
@@ -182,7 +170,7 @@ struct LockScreenStyleOverlay: View {
     
     private func startTimeUpdate() {
         // Invalidate any existing timer first to prevent duplicates
-        stopTimeUpdate() 
+        stopTimeUpdate()
         // Update time immediately
         currentTime = Date()
         
@@ -197,7 +185,6 @@ struct LockScreenStyleOverlay: View {
         timeUpdateTimer = nil
     }
 }
-
 
 
 #Preview {

@@ -1,0 +1,22 @@
+<svg width="1280" height="768" viewBox="0 0 1280 768" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4a00e0"/>
+      <stop offset="100%" stop-color="#8e2de2"/>
+    </linearGradient>
+    <clipPath id="clip">
+      <rect x="384" y="128" width="512" height="512" rx="48" ry="48"/>
+    </clipPath>
+  </defs>
+<!--Background gradient only-->
+  <rect width="1280" height="768" fill="url(#bgGradient)" rx="1" ry="1"/>
+<!--Placeholder images (rounded corners)-->
+  <g clip-path="url(#clip)">
+    <rect x="440" y="194" width="120" height="120" rx="16" ry="16" fill="#ffcc33"/>
+    <rect x="480" y="338" width="96" height="96" rx="12" ry="12" fill="#33ccff"/>
+    <rect x="584" y="218" width="120" height="120" rx="16" ry="16" fill="#66ff99"/>
+  </g>
+<!--Immich-style sun and mountain-->
+  <circle cx="668" cy="172" r="20" fill="#fff"/>
+  <path d="M468 388 L528 340 L564 404 L596 372 L644 436 H468 Z" fill="#fff"/>
+</svg>

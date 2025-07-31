@@ -21,7 +21,7 @@ struct TagsGridView: View {
         GridItem(.fixed(500), spacing: 20),
         GridItem(.fixed(500), spacing: 20),
     ]
-
+    
     var body: some View {
         ZStack {
             // Background
@@ -65,7 +65,8 @@ struct TagsGridView: View {
                 ScrollView {
                     LazyVGrid(columns: columns, spacing: 30) {
                         ForEach(tags) { tag in
-                            UIKitFocusable(action: {
+                            
+                            Button(action: {
                                 selectedTag = tag
                                 showingTagDetail = true
                             }) {
@@ -76,9 +77,10 @@ struct TagsGridView: View {
                             }
                             .frame(width: 490, height: 400)
                             .focused($focusedTagId, equals: tag.id)
-                            .scaleEffect(focusedTagId == tag.id ? 1.1 : 1.0)
                             .animation(.easeInOut(duration: 0.2), value: focusedTagId)
                             .padding(10)
+                            .buttonStyle(CardButtonStyle())
+                            
                         }
                     }
                 }
