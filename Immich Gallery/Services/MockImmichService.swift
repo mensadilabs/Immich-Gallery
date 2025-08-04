@@ -180,6 +180,57 @@ class MockAlbumService: AlbumService {
     }
 }
 
+// MARK: - Mock tag service
+class MockTagService: TagService {
+    override init(networkService: NetworkService) {
+        super.init(networkService: networkService)
+    }
+    
+    override func fetchTags() async throws -> [Tag] {
+        // Return mock tags
+        let mockTags = [
+            Tag(
+                id: "1",
+                name: "Nature",
+                value: "nature",
+                color: "green",
+                createdAt: "2023-01-01",
+                updatedAt: "2023-01-01",
+                parentId: nil
+            ),
+            Tag(
+                id: "2",
+                name: "Travel",
+                value: "travel",
+                color: "blue",
+                createdAt: "2023-01-02",
+                updatedAt: "2023-01-02",
+                parentId: nil
+            ),
+            Tag(
+                id: "3",
+                name: "Family",
+                value: "family",
+                color: "red",
+                createdAt: "2023-01-03",
+                updatedAt: "2023-01-03",
+                parentId: nil
+            ),
+            Tag(
+                id: "4",
+                name: "Work",
+                value: "work",
+                color: "orange",
+                createdAt: "2023-01-04",
+                updatedAt: "2023-01-04",
+                parentId: nil
+            )
+        ]
+        
+        return mockTags
+    }
+}
+
 // MARK: - Mock People Service
 class MockPeopleService: PeopleService {
     override init(networkService: NetworkService) {
@@ -224,13 +275,14 @@ class MockPeopleService: PeopleService {
 
 // MARK: - Convenience Factory
 class MockServiceFactory {
-    static func createMockServices() -> (NetworkService, AuthenticationService, AssetService, AlbumService, PeopleService) {
+    static func createMockServices() -> (NetworkService, AuthenticationService, AssetService, AlbumService, PeopleService, TagService) {
         let networkService = MockNetworkService()
         let authService = MockAuthenticationService(networkService: networkService)
         let assetService = MockAssetService(networkService: networkService)
         let albumService = MockAlbumService(networkService: networkService)
         let peopleService = MockPeopleService(networkService: networkService)
+        let tagService = MockTagService(networkService: networkService)
         
-        return (networkService, authService, assetService, albumService, peopleService)
+        return (networkService, authService, assetService, albumService, peopleService, tagService)
     }
 } 

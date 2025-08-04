@@ -249,9 +249,7 @@ struct TagDetailView: View {
 }
 
 #Preview {
-    let networkService = NetworkService()
-    let authService = AuthenticationService(networkService: networkService)
-    let assetService = AssetService(networkService: networkService)
-    let tagService = TagService(networkService: networkService)
+    let (_, authService, assetService, _, peopleService, tagService) =
+         MockServiceFactory.createMockServices()
     TagsGridView(tagService: tagService, authService: authService, assetService: assetService)
 }
