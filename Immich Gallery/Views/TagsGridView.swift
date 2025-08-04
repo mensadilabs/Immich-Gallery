@@ -157,25 +157,6 @@ struct TagRowView: View {
                                 .opacity(index == currentThumbnailIndex ? 1.0 : 0.0)
                                 .animation(.easeInOut(duration: 1.5), value: currentThumbnailIndex)
                         }
-                        
-                        // Overlay with tag name
-                        VStack {
-                            Spacer()
-                            HStack {
-                                Spacer()
-                                Text(tag.name)
-                                    .font(.title2)
-                                    .fontWeight(.bold)
-                                    .foregroundColor(.white)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 6)
-                                    .background(Color.black.opacity(0.6))
-                                    .cornerRadius(8)
-                                    .lineLimit(1)
-                                Spacer()
-                            }
-                            .padding(.bottom, 16)
-                        }
                     }
                 } else {
                     // Fallback to static icon when no thumbnails
