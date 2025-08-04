@@ -42,4 +42,15 @@ extension UserDefaults {
         get { bool(forKey: "enableKenBurnsEffect") }
         set { set(newValue, forKey: "enableKenBurnsEffect") }
     }
+    
+    var enableThumbnailAnimation: Bool {
+        get { 
+            // Default to true if the key doesn't exist yet
+            if object(forKey: "enableThumbnailAnimation") == nil {
+                return true
+            }
+            return bool(forKey: "enableThumbnailAnimation")
+        }
+        set { set(newValue, forKey: "enableThumbnailAnimation") }
+    }
 }

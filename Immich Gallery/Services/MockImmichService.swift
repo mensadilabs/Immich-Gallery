@@ -41,30 +41,31 @@ class MockAssetService: AssetService {
         super.init(networkService: networkService)
     }
     
-     func fetchAssets(page: Int = 1, limit: Int = 50, albumId: String? = nil, personId: String? = nil) async throws -> SearchResult {
-        // Return mock assets
-        let mockAssets = [
+    override func fetchAssets(page: Int = 1, limit: Int = 50, albumId: String? = nil, personId: String? = nil, tagId: String? = nil) async throws -> SearchResult {
+        // Generate different mock assets based on tagId for animation preview
+        let baseId = tagId ?? "default"
+        let mockAssets = (1...limit).map { index in
             ImmichAsset(
-                id: "mock-asset-1",
-                deviceAssetId: "mock-device-1",
+                id: "mock-asset-\(baseId)-\(index)",
+                deviceAssetId: "mock-device-\(index)",
                 deviceId: "mock-device",
                 ownerId: "mock-owner",
                 libraryId: nil,
                 type: .image,
-                originalPath: "/mock/path1",
-                originalFileName: "mock1.jpg",
+                originalPath: "/mock/path\(index)",
+                originalFileName: "mock\(index).jpg",
                 originalMimeType: "image/jpeg",
                 resized: false,
                 thumbhash: nil,
-                fileModifiedAt: "2023-01-01",
-                fileCreatedAt: "2023-01-01",
-                localDateTime: "2023-01-01",
-                updatedAt: "2023-01-01",
-                isFavorite: false,
+                fileModifiedAt: "2023-01-\(String(format: "%02d", index))",
+                fileCreatedAt: "2023-01-\(String(format: "%02d", index))",
+                localDateTime: "2023-01-\(String(format: "%02d", index))",
+                updatedAt: "2023-01-\(String(format: "%02d", index))",
+                isFavorite: index % 3 == 0,
                 isArchived: false,
                 isOffline: false,
                 isTrashed: false,
-                checksum: "mock-checksum-1",
+                checksum: "mock-checksum-\(baseId)-\(index)",
                 duration: nil,
                 hasMetadata: false,
                 livePhotoVideoId: nil,
@@ -72,37 +73,8 @@ class MockAssetService: AssetService {
                 visibility: "public",
                 duplicateId: nil,
                 exifInfo: nil
-            ),
-            ImmichAsset(
-                id: "mock-asset-2",
-                deviceAssetId: "mock-device-2",
-                deviceId: "mock-device",
-                ownerId: "mock-owner",
-                libraryId: nil,
-                type: .video,
-                originalPath: "/mock/path2",
-                originalFileName: "mock2.mp4",
-                originalMimeType: "video/mp4",
-                resized: false,
-                thumbhash: nil,
-                fileModifiedAt: "2023-01-02",
-                fileCreatedAt: "2023-01-02",
-                localDateTime: "2023-01-02",
-                updatedAt: "2023-01-02",
-                isFavorite: true,
-                isArchived: false,
-                isOffline: false,
-                isTrashed: false,
-                checksum: "mock-checksum-2",
-                duration: "PT1M30S",
-                hasMetadata: false,
-                livePhotoVideoId: nil,
-                people: [],
-                visibility: "public",
-                duplicateId: nil,
-                exifInfo: nil
             )
-        ]
+        }
         
         return SearchResult(
             assets: mockAssets,
@@ -112,8 +84,10 @@ class MockAssetService: AssetService {
     }
     
     override func loadImage(asset: ImmichAsset, size: String = "thumbnail") async throws -> UIImage? {
-        // Fetch a random image from picsum.photos
-        let url = URL(string: "https://picsum.photos/300/300")!
+        // Generate different colored images based on asset ID for visual variety
+        let hash = abs(asset.id.hashValue)
+        let seed = hash % 1000
+        let url = URL(string: "https://picsum.photos/seed/\(seed)/300/300")!
         let (data, _) = try await URLSession.shared.data(from: url)
         return UIImage(data: data)
     }
