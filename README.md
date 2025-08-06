@@ -9,7 +9,7 @@ A native Apple TV app for browsing your self-hosted Immich photo library with a 
 - 🖼️ **Photo Grid View**: Browse all your photos in a responsive grid layout with infinite scrolling
 - 👥 **People Recognition**: View and browse photos by people detected in your library
 - 📁 **Album Support**: View and navigate through your Immich albums
-- 🏷️ **Tag Support**: Browse photos by tags (optional, configurable)
+- 🏷️ **Tag Support with animated thubnails**: Browse photos by tags (optional, configurable)
 - 🎬 **Slideshow Mode**: Full-screen slideshow with optional clock overlay
 - 👤 **Multi-User Support**: Multiple user accounts with easy switching
 - 📊 **EXIF Data**: View detailed photo metadata including camera settings and location
@@ -142,3 +142,4 @@ This project uses only system frameworks and has no external dependencies.
 - Ensure stable network connection for optimal loading
 
 ![Alt](https://repobeats.axiom.co/api/embed/3fea253de89fc88824c16adb77a456f7e7d657b7.svg "Repobeats analytics image")
+<iframe style="width:100%;height:auto;min-width:600px;min-height:400px;" src="https://www.star-history.com/embed?secret=Z2l0aHViX3BhdF8xMUJVRlkzNFEwZU4xMFVxcGd2dDhiX1BuTmRJZ2xhczZQSkszVFFMTjdOdGdXMzlWRHpPQXdYeTdwbEpobE84eVZXTEpET1kzM2pLQ0psZ0VU#mensadilabs/Immich-Gallery&Timeline" frameBorder="0"></iframe>
