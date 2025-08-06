@@ -141,5 +141,8 @@ This project uses only system frameworks and has no external dependencies.
 - Clear cached data if storage is full
 - Ensure stable network connection for optimal loading
 
+## Stats
+
 ![Alt](https://repobeats.axiom.co/api/embed/3fea253de89fc88824c16adb77a456f7e7d657b7.svg "Repobeats analytics image")
-<iframe style="width:100%;height:auto;min-width:600px;min-height:400px;" src="https://www.star-history.com/embed?secret=Z2l0aHViX3BhdF8xMUJVRlkzNFEwZU4xMFVxcGd2dDhiX1BuTmRJZ2xhczZQSkszVFFMTjdOdGdXMzlWRHpPQXdYeTdwbEpobE84eVZXTEpET1kzM2pLQ0psZ0VU#mensadilabs/Immich-Gallery&Timeline" frameBorder="0"></iframe>
+
+[![Star History Chart](https://api.star-history.com/svg?repos=mensadilabs/Immich-Gallery&type=Timeline)](https://www.star-history.com/#mensadilabs/Immich-Gallery&Timeline)
