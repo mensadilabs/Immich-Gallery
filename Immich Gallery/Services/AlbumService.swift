@@ -20,8 +20,13 @@ class AlbumService: ObservableObject {
             endpoint: "/api/albums",
             responseType: [ImmichAlbum].self
         )
+
+        let sharedAlbums = try await networkService.makeRequest(
+            endpoint: "/api/albums?shared=true",
+            responseType: [ImmichAlbum].self
+        )
         print("AlbumService: Received \(albums.count) albums")
-        return albums
+        return [albums, sharedAlbums].flatMap { $0 }
     }
 
     func getAlbumInfo(albumId: String, withoutAssets: Bool = false) async throws -> ImmichAlbum {

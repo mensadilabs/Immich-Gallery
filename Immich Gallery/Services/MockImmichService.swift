@@ -140,6 +140,33 @@ class MockAlbumService: AlbumService {
                 order: "desc",
                 startDate: "2023-01-01",
                 endDate: "2023-01-31"
+            ),
+            ImmichAlbum(
+                id: "mock-album-2",
+                albumName: "Mock Album 1",
+                description: "This is a mock album for testing",
+                albumThumbnailAssetId: "mock-asset-1",
+                createdAt: "2023-01-01",
+                updatedAt: "2023-01-01",
+                albumUsers: [],
+                assets: [],
+                assetCount: 5,
+                ownerId: "mock-owner",
+                owner: Owner(
+                    id: "mock-owner",
+                    email: "mock@example.com",
+                    name: "Mock Owner",
+                    profileImagePath: "",
+                    profileChangedAt: "2023-01-01",
+                    avatarColor: "primary"
+                ),
+                shared: false,
+                hasSharedLink: false,
+                isActivityEnabled: true,
+                lastModifiedAssetTimestamp: "2023-01-01",
+                order: "desc",
+                startDate: "2023-01-01",
+                endDate: "2023-01-31"
             )
         ]
         

@@ -19,11 +19,11 @@ struct AlbumListView: View {
     @FocusState private var focusedAlbumId: String?
     
     private let columns = [
-        GridItem(.fixed(500), spacing: 20),
-        GridItem(.fixed(500), spacing: 20),
-        GridItem(.fixed(500), spacing: 20),
+        GridItem(.fixed(500), spacing: 100),
+        GridItem(.fixed(500), spacing: 100),
+        GridItem(.fixed(500), spacing: 100),
     ]
-
+    
     var body: some View {
         ZStack {
             // Background
@@ -76,7 +76,7 @@ struct AlbumListView: View {
                                     isFocused: focusedAlbumId == album.id
                                 )
                             }
-                            .frame(width: 490, height: 400)
+                            .frame(width: 530, height: 400)
                             .focused($focusedAlbumId, equals: album.id)
                             .animation(.easeInOut(duration: 0.2), value: focusedAlbumId)
                             .padding(10)
@@ -139,29 +139,75 @@ struct AlbumRowView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            // Album thumbnail at top
+            Spacer()
             ZStack {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.gray.opacity(0.3))
-                    .frame(width: 470, height: 280)
-                
                 if isLoadingThumbnails {
                     ProgressView()
                         .scaleEffect(1.2)
                         .foregroundColor(.white)
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.gray.opacity(0.3))
+                        .frame(width: 500)
                 } else if !thumbnails.isEmpty {
                     // Animated thumbnails
-                    ZStack {
-                        ForEach(Array(thumbnails.enumerated()), id: \.offset) { index, thumbnail in
+                    ForEach(Array(thumbnails.enumerated()), id: \.offset) { index, thumbnail in
+                        
+                        VStack{
                             Image(uiImage: thumbnail)
                                 .resizable()
                                 .aspectRatio(contentMode: .fill)
-                                .frame(width: 470, height: 280)
+                                .frame(width: 430, height: 280)
                                 .clipped()
                                 .cornerRadius(12)
                                 .opacity(index == currentThumbnailIndex ? 1.0 : 0.0)
                                 .animation(.easeInOut(duration: 1.5), value: currentThumbnailIndex)
-                        }
+                            // Album info at bottom
+                            VStack(alignment: .leading, spacing: 6) {
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        HStack {
+                                            Text(album.albumName)
+                                                .font(.title3)
+                                                .fontWeight(.semibold)
+                                                .lineLimit(1)
+                                            
+                                            Spacer()
+                                            
+                                            if album.shared {
+                                                HStack(spacing: 1) {
+                                                    Image(systemName: "person.2.fill")
+                                                        .font(.caption)
+                                                        .foregroundColor(.blue)
+                                                    Text(album.owner.name)
+                                                        .font(.caption)
+                                                        .foregroundColor(.blue)
+                                                }
+                                            }
+                                        }
+                                        
+                                        Text(album.description ?? "Album")
+                                            .font(.caption)
+                                            .lineLimit(2)
+                                        
+                                        HStack(spacing: 12) {
+                                            Text("\(album.assetCount) photos")
+                                                .font(.caption)
+                                                .foregroundColor(.blue)
+                                            
+                                            if let createdAt = formatDate(album.createdAt) {
+                                                Text("Created \(createdAt)")
+                                                    .font(.caption2)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            .frame(width: 430)
+                            .foregroundColor(isFocused ? .white : .gray)
+                            .padding()
+                        }.frame(width: 500)
+                        
+                        
                     }
                 } else if let thumbnailImage = thumbnailImage {
                     // Fallback to single thumbnail
@@ -178,44 +224,9 @@ struct AlbumRowView: View {
                         .foregroundColor(.gray)
                 }
             }
-            
-            // Album info at bottom
-            VStack(alignment: .leading, spacing: 6) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(album.albumName)
-                            .font(.title3)
-                            .fontWeight(.semibold)
-                            .foregroundColor(isFocused ? .white : .gray)
-                            .lineLimit(1)
-                        
-                        
-                            Text(album.description ?? "Album")
-                                .font(.caption)
-                                .foregroundColor(.gray)
-                                .lineLimit(2)
-                        
-                        
-                        HStack(spacing: 12) {
-                            Text("\(album.assetCount) photos")
-                                .font(.caption)
-                                .foregroundColor(.blue)
-                            
-                            if let createdAt = formatDate(album.createdAt) {
-                                Text("Created \(createdAt)")
-                                    .font(.caption2)
-                                    .foregroundColor(.gray)
-                            }
-                        }
-                    }
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
         }
         .background(isFocused ? Color.white.opacity(0.1) : Color.gray.opacity(0.1))
         .cornerRadius(12)
-        .shadow(color: .black.opacity(isFocused ? 0.4 : 0), radius: 15, y: 5)
         .onAppear {
             loadThumbnail()
             loadAlbumThumbnails()
@@ -223,7 +234,7 @@ struct AlbumRowView: View {
         .onDisappear {
             stopAnimation()
         }
-        .onChange(of: isFocused) { focused in
+        .onChange(of: isFocused) { _, focused in
             if focused {
                 stopAnimation()
             } else if !thumbnails.isEmpty && thumbnails.count > 1 && enableThumbnailAnimation {
@@ -355,9 +366,9 @@ struct AlbumDetailView: View {
                     .ignoresSafeArea()
                 
                 AssetGridView(
-                    assetService: assetService, 
-                    authService: authService, 
-                    albumId: album.id, 
+                    assetService: assetService,
+                    authService: authService,
+                    albumId: album.id,
                     personId: nil,
                     tagId: nil,
                     isAllPhotos: false,
@@ -401,11 +412,7 @@ struct AlbumDetailView: View {
 }
 
 #Preview {
-    let networkService = NetworkService()
-    let albumService = AlbumService(networkService: networkService)
-    let authService = AuthenticationService(networkService: networkService)
-    let assetService = AssetService(networkService: networkService)
+    let (_, authService, assetService, albumService, peopleService, _) =
+         MockServiceFactory.createMockServices()
     AlbumListView(albumService: albumService, authService: authService, assetService: assetService)
-} 
-
-
+}
