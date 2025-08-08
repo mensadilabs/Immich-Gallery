@@ -12,28 +12,45 @@ struct WhatsNewView: View {
     @State private var opacity: Double = 0
     
     private let changelogContent = """
-VERSION|1.0.7 Build 1
 
-NEW_FEATURE|Animated Thumbnails
-- Albums, People, and Tags now show dynamic slideshow previews of their content
-- Smooth 1.5-second fade transitions between thumbnails every 4 seconds
-- Smart animation that pauses when focused and resumes when unfocused
-- Performance optimized with thumbnail caching and loads maximum 10 images per animation
+VERSION|1.0.8 Build 1
 
-NEW_FEATURE|User Control Settings
-- New "Enable Thumbnail Animation" toggle in Settings under Slideshow & Display
-- Animation enabled by default for immediate visual enhancement
-- Real-time setting changes with no restart required
-- Graceful fallbacks when no images are available for animation
+NEW_FEATURE|Custom sort order
+- Customize sort order for all photos and collections separately
+- Shuffle mode for Slideshow (beta)
 
+IMPROVEMENT|Settings view changes
+- ⭐⭐⭐⭐⭐ An option to leave a review in App Store. 
+- Better organization of Settings.
+- Album and Tag view styling cleanup.
+- Album view now includes an icon to indicate shared albums and displays owner name.
 
-VERSION|1.0.5 Build 1
-
-IMPROVEMENT|Better Settings Navigation
-- Fixed focus issues
-- More intuitive menu-style pickers replace the old segmented controls for color picker. 
-- Made changes to code in Image Grid/Photos Tab to make it nicer. Please report if you notice issues. 
+BUGFIX| Slideshow timer bug on fresh install.
 """
+    /**
+     
+     VERSION|1.0.7 Build 1
+
+     NEW_FEATURE|Animated Thumbnails
+     - Albums, People, and Tags now show dynamic slideshow previews of their content
+     - Smooth 1.5-second fade transitions between thumbnails every 4 seconds
+     - Smart animation that pauses when focused and resumes when unfocused
+     - Performance optimized with thumbnail caching and loads maximum 10 images per animation
+
+     NEW_FEATURE|User Control Settings
+     - New "Enable Thumbnail Animation" toggle in Settings under Slideshow & Display
+     - Animation enabled by default for immediate visual enhancement
+     - Real-time setting changes with no restart required
+     - Graceful fallbacks when no images are available for animation
+
+
+     VERSION|1.0.5 Build 1
+
+     IMPROVEMENT|Better Settings Navigation
+     - Fixed focus issues
+     - More intuitive menu-style pickers replace the old segmented controls for color picker.
+     - Made changes to code in Image Grid/Photos Tab to make it nicer. Please report if you notice issues.
+     */
 
     
     var body: some View {
