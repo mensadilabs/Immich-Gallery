@@ -360,6 +360,7 @@ struct AlbumDetailView: View {
                     albumId: album.id, 
                     personId: nil,
                     tagId: nil,
+                    isAllPhotos: false,
                     onAssetsLoaded: { loadedAssets in
                         self.albumAssets = loadedAssets
                     }

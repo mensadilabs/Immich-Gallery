@@ -17,7 +17,6 @@ struct SlideshowSettings: View {
     @Binding var hideOverlay: Bool
     @Binding var enableReflections: Bool
     @Binding var enableKenBurns: Bool
-    @Binding var enableThumbnailAnimation: Bool
     @Binding var enableShuffle: Bool
     @FocusState.Binding var isMinusFocused: Bool
     @FocusState.Binding var isPlusFocused: Bool
@@ -139,13 +138,6 @@ struct SlideshowSettings: View {
                 title: "Hide Image Overlays",
                 subtitle: "Hide clock, date, location overlay from slideshow and fullscreen view.",
                 content: AnyView(Toggle("", isOn: $hideOverlay).labelsHidden())
-            )
-            
-            SettingsRow(
-                icon: "play.rectangle.on.rectangle",
-                title: "Enable Thumbnail Animation",
-                subtitle: "Animate thumbnails in Albums, People, and Tags views",
-                content: AnyView(Toggle("", isOn: $enableThumbnailAnimation).labelsHidden())
             )
             
             SettingsRow(

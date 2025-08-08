@@ -61,4 +61,9 @@ extension UserDefaults {
         get { bool(forKey: "enableSlideshowShuffle") }
         set { set(newValue, forKey: "enableSlideshowShuffle") }
     }
+    
+    var allPhotosSortOrder: String {
+        get { string(forKey: "allPhotosSortOrder") ?? "desc" }
+        set { set(newValue, forKey: "allPhotosSortOrder") }
+    }
 }

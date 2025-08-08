@@ -62,6 +62,7 @@ struct SettingsView: View {
     @AppStorage("enableKenBurnsEffect") private var enableKenBurnsEffect = false
     @AppStorage("enableThumbnailAnimation") private var enableThumbnailAnimation = true
     @AppStorage("enableSlideshowShuffle") private var enableSlideshowShuffle = false
+    @AppStorage("allPhotosSortOrder") private var allPhotosSortOrder = "desc"
     @FocusState private var isMinusFocused: Bool
     @FocusState private var isPlusFocused: Bool
     @FocusState private var focusedColor: String?
@@ -252,11 +253,9 @@ struct SettingsView: View {
                             }
                         }
                         
-                        // Display Settings Section
-                        SettingsSection(title: "Customization") {
+                        // Interface Settings Section
+                        SettingsSection(title: "Interface") {
                             AnyView(VStack(spacing: 12) {
-                                
-                                
                                 SettingsRow(
                                     icon: "tag",
                                     title: "Show Tags Tab",
@@ -283,19 +282,50 @@ struct SettingsView: View {
                                 )
                                 
                                 SettingsRow(
-                                    icon: "arrow.up.arrow.down",
-                                    title: "Sort Order for everything",
-                                    subtitle: "Order assets by creation date",
+                                    icon: "play.rectangle.on.rectangle",
+                                    title: "Enable Thumbnail Animation",
+                                    subtitle: "Animate thumbnails in Albums, People, and Tags views",
+                                    content: AnyView(Toggle("", isOn: $enableThumbnailAnimation).labelsHidden())
+                                )
+                            })
+                        }
+                        
+                        // Sorting Settings Section
+                        SettingsSection(title: "Sorting") {
+                            AnyView(VStack(spacing: 12) {
+                                SettingsRow(
+                                    icon: "photo.on.rectangle",
+                                    title: "All Photos Sort Order",
+                                    subtitle: "Order photos in the All Photos tab",
                                     content: AnyView(
-                                        Picker("Sort Order", selection: $assetSortOrder) {
+                                        Picker("All Photos Sort Order", selection: $allPhotosSortOrder) {
                                             Text("Newest First").tag("desc")
                                             Text("Oldest First").tag("asc")
                                         }
-                                            .pickerStyle(.menu)
-                                            .frame(width: 300, alignment: .trailing)
+                                        .pickerStyle(.menu)
+                                        .frame(width: 300, alignment: .trailing)
                                     )
                                 )
                                 
+                                SettingsRow(
+                                    icon: "arrow.up.arrow.down",
+                                    title: "Albums & Collections Sort Order",
+                                    subtitle: "Order photos in Albums, People, and Tags",
+                                    content: AnyView(
+                                        Picker("Collections Sort Order", selection: $assetSortOrder) {
+                                            Text("Newest First").tag("desc")
+                                            Text("Oldest First").tag("asc")
+                                        }
+                                        .pickerStyle(.menu)
+                                        .frame(width: 300, alignment: .trailing)
+                                    )
+                                )
+                            })
+                        }
+                        
+                        // Slideshow Settings Section
+                        SettingsSection(title: "Slideshow") {
+                            AnyView(VStack(spacing: 12) {
                                 SlideshowSettings(
                                     slideshowInterval: $slideshowInterval,
                                     slideshowBackgroundColor: $slideshowBackgroundColor,
@@ -303,7 +333,6 @@ struct SettingsView: View {
                                     hideOverlay: $hideImageOverlay,
                                     enableReflections: $enableReflectionsInSlideshow,
                                     enableKenBurns: $enableKenBurnsEffect,
-                                    enableThumbnailAnimation: $enableThumbnailAnimation,
                                     enableShuffle: $enableSlideshowShuffle,
                                     isMinusFocused: $isMinusFocused,
                                     isPlusFocused: $isPlusFocused,

@@ -359,6 +359,7 @@ struct PersonPhotosView: View {
                     albumId: nil,
                     personId: person.id,
                     tagId: nil,
+                    isAllPhotos: false,
                     onAssetsLoaded: { loadedAssets in
                         self.personAssets = loadedAssets
                     }

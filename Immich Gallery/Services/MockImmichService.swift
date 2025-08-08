@@ -41,7 +41,7 @@ class MockAssetService: AssetService {
         super.init(networkService: networkService)
     }
     
-    override func fetchAssets(page: Int = 1, limit: Int = 50, albumId: String? = nil, personId: String? = nil, tagId: String? = nil) async throws -> SearchResult {
+    override func fetchAssets(page: Int = 1, limit: Int = 50, albumId: String? = nil, personId: String? = nil, tagId: String? = nil, isAllPhotos: Bool = false) async throws -> SearchResult {
         // Generate different mock assets based on tagId for animation preview
         let baseId = tagId ?? "default"
         let mockAssets = (1...limit).map { index in
