@@ -19,9 +19,9 @@ struct AlbumListView: View {
     @FocusState private var focusedAlbumId: String?
     
     private let columns = [
-        GridItem(.fixed(500), spacing: 100),
-        GridItem(.fixed(500), spacing: 100),
-        GridItem(.fixed(500), spacing: 100),
+        GridItem(.fixed(500), spacing: 20),
+        GridItem(.fixed(500), spacing: 20),
+        GridItem(.fixed(500), spacing: 20),
     ]
     
     var body: some View {
@@ -76,7 +76,7 @@ struct AlbumListView: View {
                                     isFocused: focusedAlbumId == album.id
                                 )
                             }
-                            .frame(width: 530, height: 400)
+                            .frame(width: 490, height: 400)
                             .focused($focusedAlbumId, equals: album.id)
                             .animation(.easeInOut(duration: 0.2), value: focusedAlbumId)
                             .padding(10)
@@ -139,74 +139,31 @@ struct AlbumRowView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            Spacer()
             ZStack {
+
+                 RoundedRectangle(cornerRadius: 12)
+                    .fill(Color.gray.opacity(0.3))
+                    .frame(width: 470, height: 280)
+
                 if isLoadingThumbnails {
                     ProgressView()
                         .scaleEffect(1.2)
                         .foregroundColor(.white)
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.gray.opacity(0.3))
-                        .frame(width: 500)
                 } else if !thumbnails.isEmpty {
                     // Animated thumbnails
+                     ZStack {
                     ForEach(Array(thumbnails.enumerated()), id: \.offset) { index, thumbnail in
                         
                         VStack{
                             Image(uiImage: thumbnail)
                                 .resizable()
                                 .aspectRatio(contentMode: .fill)
-                                .frame(width: 430, height: 280)
+                                .frame(width: 470, height: 280)
                                 .clipped()
-                                .cornerRadius(12)
                                 .opacity(index == currentThumbnailIndex ? 1.0 : 0.0)
                                 .animation(.easeInOut(duration: 1.5), value: currentThumbnailIndex)
-                            // Album info at bottom
-                            VStack(alignment: .leading, spacing: 6) {
-                                HStack {
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        HStack {
-                                            Text(album.albumName)
-                                                .font(.title3)
-                                                .fontWeight(.semibold)
-                                                .lineLimit(1)
-                                            
-                                            Spacer()
-                                            
-                                            if album.shared {
-                                                HStack(spacing: 1) {
-                                                    Image(systemName: "person.2.fill")
-                                                        .font(.caption)
-                                                        .foregroundColor(.blue)
-                                                    Text(album.owner.name)
-                                                        .font(.caption)
-                                                        .foregroundColor(.blue)
-                                                }
-                                            }
-                                        }
-                                        
-                                        Text(album.description ?? "Album")
-                                            .font(.caption)
-                                            .lineLimit(2)
-                                        
-                                        HStack(spacing: 12) {
-                                            Text("\(album.assetCount) photos")
-                                                .font(.caption)
-                                                .foregroundColor(.blue)
-                                            
-                                            if let createdAt = formatDate(album.createdAt) {
-                                                Text("Created \(createdAt)")
-                                                    .font(.caption2)
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            .frame(width: 430)
-                            .foregroundColor(isFocused ? .white : .gray)
-                            .padding()
-                        }.frame(width: 500)
-                        
+                        }
+                    }
                         
                     }
                 } else if let thumbnailImage = thumbnailImage {
@@ -224,9 +181,57 @@ struct AlbumRowView: View {
                         .foregroundColor(.gray)
                 }
             }
+            
+             VStack(alignment: .leading) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                         HStack {
+                                            Text(album.albumName)
+                                                .font(.title3)
+                            .fontWeight(.semibold)
+                            .foregroundColor(isFocused ? .white : .gray)
+                            .lineLimit(1)
+                                            
+                                            Spacer()
+                                            
+                                            if album.shared {
+                                                HStack(spacing: 1) {
+                                                    Image(systemName: "person.2.fill")
+                                                        .font(.caption)
+                                                        .foregroundColor(.blue)
+                                                    Text(album.owner.name)
+                                                        .font(.caption)
+                                                        .foregroundColor(.blue)
+                                                }
+                                            }
+                                        }
+
+                                    Text(album.description ?? "Album")
+                                            .font(.caption)
+                                            .lineLimit(2)
+                                            .foregroundColor(.gray)
+
+                                    HStack(spacing: 12) {
+                                            Text("\(album.assetCount) photos")
+                                                .font(.caption)
+                                                .foregroundColor(.blue)
+                                            
+                                            if let createdAt = formatDate(album.createdAt) {
+                                                Text("Created \(createdAt)")
+                                                    .font(.caption2)
+                                                    .foregroundColor(.gray)
+                                            }
+                                        }
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 50)
+            }
+            .frame(width: 470, height: 160)
+            .background(Color.black.opacity(0.6))
+
         }
         .background(isFocused ? Color.white.opacity(0.1) : Color.gray.opacity(0.1))
-        .cornerRadius(12)
         .onAppear {
             loadThumbnail()
             loadAlbumThumbnails()

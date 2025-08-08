@@ -153,7 +153,6 @@ struct TagRowView: View {
                                 .aspectRatio(contentMode: .fill)
                                 .frame(width: 470, height: 280)
                                 .clipped()
-                                .cornerRadius(12)
                                 .opacity(index == currentThumbnailIndex ? 1.0 : 0.0)
                                 .animation(.easeInOut(duration: 1.5), value: currentThumbnailIndex)
                         }
@@ -217,7 +216,6 @@ struct TagRowView: View {
             }
             .frame(width: 470, height: 120)
             .background(Color.black.opacity(0.6))
-            .cornerRadius(12)
         }
         .background(
             RoundedRectangle(cornerRadius: 12)
