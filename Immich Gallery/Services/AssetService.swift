@@ -14,8 +14,11 @@ class AssetService: ObservableObject {
         self.networkService = networkService
     }
 
-    func fetchAssets(page: Int = 1, limit: Int = 50, albumId: String? = nil, personId: String? = nil, tagId: String? = nil) async throws -> SearchResult {
-        let sortOrder = UserDefaults.standard.string(forKey: "assetSortOrder") ?? "desc"
+    func fetchAssets(page: Int = 1, limit: Int = 50, albumId: String? = nil, personId: String? = nil, tagId: String? = nil, isAllPhotos: Bool = false) async throws -> SearchResult {
+        // Use separate sort order for All Photos tab vs everything else
+        let sortOrder = isAllPhotos 
+            ? UserDefaults.standard.allPhotosSortOrder
+            : (UserDefaults.standard.string(forKey: "assetSortOrder") ?? "desc")
         var searchRequest: [String: Any] = [
             "page": page,
             "size": limit,

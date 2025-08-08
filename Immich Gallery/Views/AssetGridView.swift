@@ -14,6 +14,7 @@ struct AssetGridView: View {
     let albumId: String? // Optional album ID to filter assets
     let personId: String? // Optional person ID to filter assets
     let tagId: String? // Optional tag ID to filter assets
+    let isAllPhotos: Bool // Whether this is the All Photos tab
     let onAssetsLoaded: (([ImmichAsset]) -> Void)? // Callback for when assets are loaded
     @State private var assets: [ImmichAsset] = []
     @State private var isLoading = false
@@ -255,7 +256,7 @@ struct AssetGridView: View {
         
         Task {
             do {
-                let searchResult = try await assetService.fetchAssets(page: 1, limit: 100, albumId: albumId, personId: personId, tagId: tagId)
+                let searchResult = try await assetService.fetchAssets(page: 1, limit: 100, albumId: albumId, personId: personId, tagId: tagId, isAllPhotos: isAllPhotos)
                 await MainActor.run {
                     self.assets = searchResult.assets
                     self.nextPage = searchResult.nextPage
@@ -304,7 +305,7 @@ struct AssetGridView: View {
             do {
                 // Extract page number from nextPage string
                 let pageNumber = extractPageFromNextPage(nextPage!)
-                let searchResult = try await assetService.fetchAssets(page: pageNumber, limit: 100, albumId: albumId, personId: personId, tagId: tagId)
+                let searchResult = try await assetService.fetchAssets(page: pageNumber, limit: 100, albumId: albumId, personId: personId, tagId: tagId, isAllPhotos: isAllPhotos)
                 
                 await MainActor.run {
                     if !searchResult.assets.isEmpty {

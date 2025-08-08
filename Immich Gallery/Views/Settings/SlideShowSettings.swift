@@ -17,6 +17,7 @@ struct SlideshowSettings: View {
     @Binding var hideOverlay: Bool
     @Binding var enableReflections: Bool
     @Binding var enableKenBurns: Bool
+    @Binding var enableShuffle: Bool
     @FocusState.Binding var isMinusFocused: Bool
     @FocusState.Binding var isPlusFocused: Bool
     @FocusState.Binding var focusedColor: String?
@@ -126,6 +127,13 @@ struct SlideshowSettings: View {
             )
             
             SettingsRow(
+                icon: "shuffle",
+                title: "Shuffle Images (beta)",
+                subtitle: "Randomly shuffle image order during slideshow",
+                content: AnyView(Toggle("", isOn: $enableShuffle).labelsHidden())
+            )
+            
+            SettingsRow(
                 icon: "eye.slash",
                 title: "Hide Image Overlays",
                 subtitle: "Hide clock, date, location overlay from slideshow and fullscreen view.",
@@ -163,7 +171,7 @@ struct SlideshowSettings: View {
                     )) {
                         Text("None").tag("none")
                         Text("Reflections").tag("reflections")
-                        Text("Ken Burns (beta)").tag("kenBurns")
+                        Text("Ken Burns").tag("kenBurns")
                     }
                     .pickerStyle(.menu)
                     .frame(width: 300, alignment: .trailing)

@@ -23,7 +23,7 @@ struct AlbumListView: View {
         GridItem(.fixed(500), spacing: 20),
         GridItem(.fixed(500), spacing: 20),
     ]
-
+    
     var body: some View {
         ZStack {
             // Background
@@ -72,6 +72,7 @@ struct AlbumListView: View {
                                 AlbumRowView(
                                     album: album,
                                     albumService: albumService,
+                                    assetService: assetService,
                                     isFocused: focusedAlbumId == album.id
                                 )
                             }
@@ -126,19 +127,47 @@ struct AlbumListView: View {
 struct AlbumRowView: View {
     let album: ImmichAlbum
     @ObservedObject var albumService: AlbumService
+    @ObservedObject var assetService: AssetService
     @ObservedObject private var thumbnailCache = ThumbnailCache.shared
     @State private var thumbnailImage: UIImage?
+    @State private var thumbnails: [UIImage] = []
+    @State private var currentThumbnailIndex = 0
+    @State private var animationTimer: Timer?
+    @State private var isLoadingThumbnails = false
+    @State private var enableThumbnailAnimation: Bool = UserDefaults.standard.enableThumbnailAnimation
     let isFocused: Bool
     
     var body: some View {
         VStack(spacing: 0) {
-            // Album thumbnail at top
             ZStack {
-                RoundedRectangle(cornerRadius: 12)
+
+                 RoundedRectangle(cornerRadius: 12)
                     .fill(Color.gray.opacity(0.3))
                     .frame(width: 470, height: 280)
-                
-                if let thumbnailImage = thumbnailImage {
+
+                if isLoadingThumbnails {
+                    ProgressView()
+                        .scaleEffect(1.2)
+                        .foregroundColor(.white)
+                } else if !thumbnails.isEmpty {
+                    // Animated thumbnails
+                     ZStack {
+                    ForEach(Array(thumbnails.enumerated()), id: \.offset) { index, thumbnail in
+                        
+                        VStack{
+                            Image(uiImage: thumbnail)
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: 470, height: 280)
+                                .clipped()
+                                .opacity(index == currentThumbnailIndex ? 1.0 : 0.0)
+                                .animation(.easeInOut(duration: 1.5), value: currentThumbnailIndex)
+                        }
+                    }
+                        
+                    }
+                } else if let thumbnailImage = thumbnailImage {
+                    // Fallback to single thumbnail
                     Image(uiImage: thumbnailImage)
                         .resizable()
                         .aspectRatio(contentMode: .fill)
@@ -146,51 +175,87 @@ struct AlbumRowView: View {
                         .clipped()
                         .cornerRadius(12)
                 } else {
+                    // Fallback to icon
                     Image(systemName: "folder")
                         .font(.system(size: 50))
                         .foregroundColor(.gray)
                 }
             }
             
-            // Album info at bottom
-            VStack(alignment: .leading, spacing: 6) {
+             VStack(alignment: .leading) {
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(album.albumName)
-                            .font(.title3)
+                         HStack {
+                                            Text(album.albumName)
+                                                .font(.title3)
                             .fontWeight(.semibold)
                             .foregroundColor(isFocused ? .white : .gray)
                             .lineLimit(1)
-                        
-                        
-                            Text(album.description ?? "Album")
-                                .font(.caption)
-                                .foregroundColor(.gray)
-                                .lineLimit(2)
-                        
-                        
-                        HStack(spacing: 12) {
-                            Text("\(album.assetCount) photos")
-                                .font(.caption)
-                                .foregroundColor(.blue)
-                            
-                            if let createdAt = formatDate(album.createdAt) {
-                                Text("Created \(createdAt)")
-                                    .font(.caption2)
-                                    .foregroundColor(.gray)
-                            }
-                        }
+                                            
+                                            Spacer()
+                                            
+                                            if album.shared {
+                                                HStack(spacing: 1) {
+                                                    Image(systemName: "person.2.fill")
+                                                        .font(.caption)
+                                                        .foregroundColor(.blue)
+                                                    Text(album.owner.name)
+                                                        .font(.caption)
+                                                        .foregroundColor(.blue)
+                                                }
+                                            }
+                                        }
+
+                                    Text(album.description ?? "Album")
+                                            .font(.caption)
+                                            .lineLimit(2)
+                                            .foregroundColor(.gray)
+
+                                    HStack(spacing: 12) {
+                                            Text("\(album.assetCount) photos")
+                                                .font(.caption)
+                                                .foregroundColor(.blue)
+                                            
+                                            if let createdAt = formatDate(album.createdAt) {
+                                                Text("Created \(createdAt)")
+                                                    .font(.caption2)
+                                                    .foregroundColor(.gray)
+                                            }
+                                        }
                     }
                 }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 50)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
+            .frame(width: 470, height: 160)
+            .background(Color.black.opacity(0.6))
+
         }
         .background(isFocused ? Color.white.opacity(0.1) : Color.gray.opacity(0.1))
-        .cornerRadius(12)
-        .shadow(color: .black.opacity(isFocused ? 0.4 : 0), radius: 15, y: 5)
         .onAppear {
             loadThumbnail()
+            loadAlbumThumbnails()
+        }
+        .onDisappear {
+            stopAnimation()
+        }
+        .onChange(of: isFocused) { _, focused in
+            if focused {
+                stopAnimation()
+            } else if !thumbnails.isEmpty && thumbnails.count > 1 && enableThumbnailAnimation {
+                startAnimation()
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
+            let newSetting = UserDefaults.standard.enableThumbnailAnimation
+            if newSetting != enableThumbnailAnimation {
+                enableThumbnailAnimation = newSetting
+                if enableThumbnailAnimation && !thumbnails.isEmpty && thumbnails.count > 1 && !isFocused {
+                    startAnimation()
+                } else {
+                    stopAnimation()
+                }
+            }
         }
     }
     
@@ -232,6 +297,62 @@ struct AlbumRowView: View {
         
         return nil
     }
+    
+    private func loadAlbumThumbnails() {
+        guard !isLoadingThumbnails else { return }
+        isLoadingThumbnails = true
+        
+        Task {
+            do {
+                let searchResult = try await assetService.fetchAssets(page: 1, limit: 10, albumId: album.id)
+                let imageAssets = searchResult.assets.filter { $0.type == .image }
+                
+                var loadedThumbnails: [UIImage] = []
+                
+                for asset in imageAssets.prefix(10) {
+                    do {
+                        let thumbnail = try await thumbnailCache.getThumbnail(for: asset.id, size: "thumbnail") {
+                            try await assetService.loadImage(asset: asset, size: "thumbnail")
+                        }
+                        if let thumbnail = thumbnail {
+                            loadedThumbnails.append(thumbnail)
+                        }
+                    } catch {
+                        print("Failed to load thumbnail for asset \(asset.id): \(error)")
+                    }
+                }
+                
+                await MainActor.run {
+                    self.thumbnails = loadedThumbnails
+                    self.isLoadingThumbnails = false
+                    if !loadedThumbnails.isEmpty && enableThumbnailAnimation {
+                        self.startAnimation()
+                    }
+                }
+            } catch {
+                print("Failed to fetch assets for album \(album.id): \(error)")
+                await MainActor.run {
+                    self.isLoadingThumbnails = false
+                }
+            }
+        }
+    }
+    
+    private func startAnimation() {
+        guard thumbnails.count > 1 && enableThumbnailAnimation else { return }
+        stopAnimation()
+        
+        animationTimer = Timer.scheduledTimer(withTimeInterval: 4.0, repeats: true) { _ in
+            withAnimation(.easeInOut(duration: 1.5)) {
+                currentThumbnailIndex = (currentThumbnailIndex + 1) % thumbnails.count
+            }
+        }
+    }
+    
+    private func stopAnimation() {
+        animationTimer?.invalidate()
+        animationTimer = nil
+    }
 }
 
 struct AlbumDetailView: View {
@@ -250,11 +371,12 @@ struct AlbumDetailView: View {
                     .ignoresSafeArea()
                 
                 AssetGridView(
-                    assetService: assetService, 
-                    authService: authService, 
-                    albumId: album.id, 
+                    assetService: assetService,
+                    authService: authService,
+                    albumId: album.id,
                     personId: nil,
                     tagId: nil,
+                    isAllPhotos: false,
                     onAssetsLoaded: { loadedAssets in
                         self.albumAssets = loadedAssets
                     }
@@ -295,11 +417,7 @@ struct AlbumDetailView: View {
 }
 
 #Preview {
-    let networkService = NetworkService()
-    let albumService = AlbumService(networkService: networkService)
-    let authService = AuthenticationService(networkService: networkService)
-    let assetService = AssetService(networkService: networkService)
+    let (_, authService, assetService, albumService, peopleService, _) =
+         MockServiceFactory.createMockServices()
     AlbumListView(albumService: albumService, authService: authService, assetService: assetService)
-} 
-
-
+}

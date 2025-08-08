@@ -72,7 +72,8 @@ struct TagsGridView: View {
                             }) {
                                 TagRowView(
                                     tag: tag,
-                                    isFocused: focusedTagId == tag.id
+                                    isFocused: focusedTagId == tag.id,
+                                    assetService: assetService
                                 )
                             }
                             .frame(width: 490, height: 400)
@@ -122,31 +123,59 @@ struct TagsGridView: View {
 struct TagRowView: View {
     let tag: Tag
     let isFocused: Bool
+    @ObservedObject var assetService: AssetService
+    @ObservedObject private var thumbnailCache = ThumbnailCache.shared
+    
+    @State private var thumbnails: [UIImage] = []
+    @State private var currentThumbnailIndex = 0
+    @State private var animationTimer: Timer?
+    @State private var isLoadingThumbnails = false
+    @State private var enableThumbnailAnimation: Bool = UserDefaults.standard.enableThumbnailAnimation
     
     var body: some View {
         VStack(spacing: 0) {
-            // Tag icon/visual at top
+            // Tag thumbnail/visual at top
             ZStack {
                 RoundedRectangle(cornerRadius: 12)
                     .fill(Color.gray.opacity(0.3))
                     .frame(width: 470, height: 280)
                 
-                VStack(spacing: 20) {
-                    Circle()
-                        .fill(tagColor)
-                        .frame(width: 80, height: 80)
-                        .overlay(
-                            Image(systemName: "tag.fill")
-                                .font(.system(size: 40))
-                                .foregroundColor(.white)
-                        )
-                    
-                    Text(tag.name)
-                        .font(.title2)
-                        .fontWeight(.bold)
+                if isLoadingThumbnails {
+                    ProgressView()
+                        .scaleEffect(1.2)
                         .foregroundColor(.white)
-                        .lineLimit(2)
-                        .multilineTextAlignment(.center)
+                } else if !thumbnails.isEmpty {
+                    // Animated thumbnails
+                    ZStack {
+                        ForEach(Array(thumbnails.enumerated()), id: \.offset) { index, thumbnail in
+                            Image(uiImage: thumbnail)
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: 470, height: 280)
+                                .clipped()
+                                .opacity(index == currentThumbnailIndex ? 1.0 : 0.0)
+                                .animation(.easeInOut(duration: 1.5), value: currentThumbnailIndex)
+                        }
+                    }
+                } else {
+                    // Fallback to static icon when no thumbnails
+                    VStack(spacing: 20) {
+                        Circle()
+                            .fill(tagColor)
+                            .frame(width: 80, height: 80)
+                            .overlay(
+                                Image(systemName: "tag.fill")
+                                    .font(.system(size: 40))
+                                    .foregroundColor(.white)
+                            )
+                        
+                        Text(tag.name)
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundColor(.white)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.center)
+                    }
                 }
             }
             
@@ -187,13 +216,36 @@ struct TagRowView: View {
             }
             .frame(width: 470, height: 120)
             .background(Color.black.opacity(0.6))
-            .cornerRadius(12)
         }
         .background(
             RoundedRectangle(cornerRadius: 12)
                 .fill(Color.black.opacity(0.3))
                 .shadow(color: isFocused ? .white.opacity(0.3) : .clear, radius: 8)
         )
+        .onAppear {
+            loadTagThumbnails()
+        }
+        .onDisappear {
+            stopAnimation()
+        }
+        .onChange(of: isFocused) { focused in
+            if focused {
+                stopAnimation()
+            } else if !thumbnails.isEmpty && thumbnails.count > 1 && enableThumbnailAnimation {
+                startAnimation()
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
+            let newSetting = UserDefaults.standard.enableThumbnailAnimation
+            if newSetting != enableThumbnailAnimation {
+                enableThumbnailAnimation = newSetting
+                if enableThumbnailAnimation && !thumbnails.isEmpty && thumbnails.count > 1 && !isFocused {
+                    startAnimation()
+                } else {
+                    stopAnimation()
+                }
+            }
+        }
     }
     
     private var tagColor: Color {
@@ -220,6 +272,62 @@ struct TagRowView: View {
         }
         return .blue
     }
+    
+    private func loadTagThumbnails() {
+        guard !isLoadingThumbnails else { return }
+        isLoadingThumbnails = true
+        
+        Task {
+            do {
+                let searchResult = try await assetService.fetchAssets(page: 1, limit: 10, tagId: tag.id)
+                let imageAssets = searchResult.assets.filter { $0.type == .image }
+                
+                var loadedThumbnails: [UIImage] = []
+                
+                for asset in imageAssets.prefix(10) {
+                    do {
+                        let thumbnail = try await thumbnailCache.getThumbnail(for: asset.id, size: "thumbnail") {
+                            try await assetService.loadImage(asset: asset, size: "thumbnail")
+                        }
+                        if let thumbnail = thumbnail {
+                            loadedThumbnails.append(thumbnail)
+                        }
+                    } catch {
+                        print("Failed to load thumbnail for asset \(asset.id): \(error)")
+                    }
+                }
+                
+                await MainActor.run {
+                    self.thumbnails = loadedThumbnails
+                    self.isLoadingThumbnails = false
+                    if !loadedThumbnails.isEmpty && enableThumbnailAnimation {
+                        self.startAnimation()
+                    }
+                }
+            } catch {
+                print("Failed to fetch assets for tag \(tag.id): \(error)")
+                await MainActor.run {
+                    self.isLoadingThumbnails = false
+                }
+            }
+        }
+    }
+    
+    private func startAnimation() {
+        guard thumbnails.count > 1 && enableThumbnailAnimation else { return }
+        stopAnimation()
+        
+        animationTimer = Timer.scheduledTimer(withTimeInterval: 4.0, repeats: true) { _ in
+            withAnimation(.easeInOut(duration: 1.5)) {
+                currentThumbnailIndex = (currentThumbnailIndex + 1) % thumbnails.count
+            }
+        }
+    }
+    
+    private func stopAnimation() {
+        animationTimer?.invalidate()
+        animationTimer = nil
+    }
 }
 
 struct TagDetailView: View {
@@ -234,7 +342,7 @@ struct TagDetailView: View {
                 Color.black
                     .ignoresSafeArea()
                 
-                AssetGridView(assetService: assetService, authService: authService, albumId: nil, personId: nil, tagId: tag.id, onAssetsLoaded: nil)
+                AssetGridView(assetService: assetService, authService: authService, albumId: nil, personId: nil, tagId: tag.id, isAllPhotos: false, onAssetsLoaded: nil)
             }
             .navigationTitle(tag.name)
             .toolbar {
@@ -249,9 +357,7 @@ struct TagDetailView: View {
 }
 
 #Preview {
-    let networkService = NetworkService()
-    let authService = AuthenticationService(networkService: networkService)
-    let assetService = AssetService(networkService: networkService)
-    let tagService = TagService(networkService: networkService)
+    let (_, authService, assetService, _, peopleService, tagService) =
+         MockServiceFactory.createMockServices()
     TagsGridView(tagService: tagService, authService: authService, assetService: assetService)
 }

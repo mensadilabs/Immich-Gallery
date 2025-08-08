@@ -12,38 +12,46 @@ struct WhatsNewView: View {
     @State private var opacity: Double = 0
     
     private let changelogContent = """
-VERSION|1.0.5 Build 1
 
-IMPROVEMENT|Better Settings Navigation
-- Fixed focus issues
-- More intuitive menu-style pickers replace the old segmented controls for color picker. 
-- Made changes to code in Image Grid/Photos Tab to make it nicer. Please report if you notice issues. 
+VERSION|1.0.8 Build 1
+
+NEW_FEATURE|Custom sort order
+- Customize sort order for all photos and collections separately
+- Shuffle mode for Slideshow (beta)
+
+IMPROVEMENT|Settings view changes
+- ⭐⭐⭐⭐⭐ An option to leave a review in App Store. 
+- Better organization of Settings.
+- Album and Tag view styling cleanup.
+- Album view now includes an icon to indicate shared albums and displays owner name.
+
+BUGFIX| Slideshow timer bug on fresh install.
 """
+    /**
+     
+     VERSION|1.0.7 Build 1
 
-//NEW_FEATURE|EXIF Photo Information Display
-//- View detailed photo metadata in fullscreen mode by pressing the up arrow on your remote
-//- See camera settings, location, file size, resolution, and capture date
-//- Swipe down or press down arrow to dismiss the overlay
-//
-//NEW_FEATURE|Customizable Default Tab
-//- Choose your preferred starting tab in Settings → Customization
-//- Options: All Photos, Albums, People, or Tags (if enabled)
-//- App now opens to your selected tab every time you launch
-//
-//NEW_FEATURE|Help & Tips Section
-//- New Help & Tips section in Settings explains key features
-//- Start Slideshow: Press play anywhere in the photo grid to begin slideshow from the highlighted image
-//- Navigate Photos: Use arrow keys or swipe gestures to move between photos in fullscreen
-//
-//IMPROVEMENT|Better Settings Navigation
-//- Fixed picker behavior - settings now require a click/tap to change instead of changing when you just focus on them
-//- More intuitive menu-style pickers replace the old segmented controls
-//
-//BUGFIX|Navigation and Display
-//- Updated navigation hints now show how to access photo details
-//- Consistent Date Formatting across all views
-//- Improved performance and stability
-//"""
+     NEW_FEATURE|Animated Thumbnails
+     - Albums, People, and Tags now show dynamic slideshow previews of their content
+     - Smooth 1.5-second fade transitions between thumbnails every 4 seconds
+     - Smart animation that pauses when focused and resumes when unfocused
+     - Performance optimized with thumbnail caching and loads maximum 10 images per animation
+
+     NEW_FEATURE|User Control Settings
+     - New "Enable Thumbnail Animation" toggle in Settings under Slideshow & Display
+     - Animation enabled by default for immediate visual enhancement
+     - Real-time setting changes with no restart required
+     - Graceful fallbacks when no images are available for animation
+
+
+     VERSION|1.0.5 Build 1
+
+     IMPROVEMENT|Better Settings Navigation
+     - Fixed focus issues
+     - More intuitive menu-style pickers replace the old segmented controls for color picker.
+     - Made changes to code in Image Grid/Photos Tab to make it nicer. Please report if you notice issues.
+     */
+
     
     var body: some View {
         NavigationView {
@@ -66,15 +74,38 @@ IMPROVEMENT|Better Settings Navigation
                     
                     // Content
                     ScrollView {
-                        LazyVGrid(columns: [
-                            GridItem(.flexible(), spacing: 20),
-                            GridItem(.flexible(), spacing: 20)
-                        ], spacing: 20) {
-                            ForEach(parseChangelog(), id: \.title) { section in
-                                ChangelogCard(section: section)
+                        LazyVStack(spacing: 20) {
+                            let sections = parseChangelog()
+                            
+                            ForEach(Array(sections.enumerated()), id: \.element.title) { index, section in
+                                if section.type == .version {
+                                    // Version sections take full width
+                                    ChangelogCard(section: section)
+                                        .padding(.horizontal, 40)
+                                } else {
+                                    // Other sections use two-column layout
+                                    let nonVersionSections = sections.filter { $0.type != .version }
+                                    let sectionIndex = nonVersionSections.firstIndex { $0.title == section.title } ?? 0
+                                    
+                                    if sectionIndex % 2 == 0 {
+                                        // Start a new row
+                                        let nextSection = sectionIndex + 1 < nonVersionSections.count ? nonVersionSections[sectionIndex + 1] : nil
+                                        
+                                        HStack(spacing: 20) {
+                                            ChangelogCard(section: section)
+                                            
+                                            if let nextSection = nextSection {
+                                                ChangelogCard(section: nextSection)
+                                            } else {
+                                                Spacer()
+                                            }
+                                        }
+                                        .padding(.horizontal, 40)
+                                    }
+                                    // Skip odd-indexed sections as they're handled in the HStack above
+                                }
                             }
                         }
-                        .padding(.horizontal, 40)
                         .padding(.bottom, 100)
                     }
                 }

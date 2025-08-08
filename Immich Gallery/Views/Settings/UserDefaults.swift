@@ -14,7 +14,10 @@ extension UserDefaults {
     }
     
     var slideshowInterval: TimeInterval {
-        get { double(forKey: "slideshowInterval") }
+        get { 
+            let value = double(forKey: "slideshowInterval")
+            return value > 0 ? value : 6.0
+        }
         set { set(newValue, forKey: "slideshowInterval") }
     }
     
@@ -41,5 +44,26 @@ extension UserDefaults {
     var enableKenBurnsEffect: Bool {
         get { bool(forKey: "enableKenBurnsEffect") }
         set { set(newValue, forKey: "enableKenBurnsEffect") }
+    }
+    
+    var enableThumbnailAnimation: Bool {
+        get { 
+            // Default to true if the key doesn't exist yet
+            if object(forKey: "enableThumbnailAnimation") == nil {
+                return true
+            }
+            return bool(forKey: "enableThumbnailAnimation")
+        }
+        set { set(newValue, forKey: "enableThumbnailAnimation") }
+    }
+    
+    var enableSlideshowShuffle: Bool {
+        get { bool(forKey: "enableSlideshowShuffle") }
+        set { set(newValue, forKey: "enableSlideshowShuffle") }
+    }
+    
+    var allPhotosSortOrder: String {
+        get { string(forKey: "allPhotosSortOrder") ?? "desc" }
+        set { set(newValue, forKey: "allPhotosSortOrder") }
     }
 }

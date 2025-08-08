@@ -60,6 +60,9 @@ struct SettingsView: View {
     @AppStorage("use24HourClock") private var use24HourClock = true
     @AppStorage("enableReflectionsInSlideshow") private var enableReflectionsInSlideshow = true
     @AppStorage("enableKenBurnsEffect") private var enableKenBurnsEffect = false
+    @AppStorage("enableThumbnailAnimation") private var enableThumbnailAnimation = true
+    @AppStorage("enableSlideshowShuffle") private var enableSlideshowShuffle = false
+    @AppStorage("allPhotosSortOrder") private var allPhotosSortOrder = "desc"
     @FocusState private var isMinusFocused: Bool
     @FocusState private var isPlusFocused: Bool
     @FocusState private var focusedColor: String?
@@ -250,11 +253,9 @@ struct SettingsView: View {
                             }
                         }
                         
-                        // Display Settings Section
-                        SettingsSection(title: "Customization") {
+                        // Interface Settings Section
+                        SettingsSection(title: "Interface") {
                             AnyView(VStack(spacing: 12) {
-                                
-                                
                                 SettingsRow(
                                     icon: "tag",
                                     title: "Show Tags Tab",
@@ -281,19 +282,50 @@ struct SettingsView: View {
                                 )
                                 
                                 SettingsRow(
-                                    icon: "arrow.up.arrow.down",
-                                    title: "Sort Order for everything",
-                                    subtitle: "Order assets by creation date",
+                                    icon: "play.rectangle.on.rectangle",
+                                    title: "Enable Thumbnail Animation",
+                                    subtitle: "Animate thumbnails in Albums, People, and Tags views",
+                                    content: AnyView(Toggle("", isOn: $enableThumbnailAnimation).labelsHidden())
+                                )
+                            })
+                        }
+                        
+                        // Sorting Settings Section
+                        SettingsSection(title: "Sorting") {
+                            AnyView(VStack(spacing: 12) {
+                                SettingsRow(
+                                    icon: "photo.on.rectangle",
+                                    title: "All Photos Sort Order",
+                                    subtitle: "Order photos in the All Photos tab",
                                     content: AnyView(
-                                        Picker("Sort Order", selection: $assetSortOrder) {
+                                        Picker("All Photos Sort Order", selection: $allPhotosSortOrder) {
                                             Text("Newest First").tag("desc")
                                             Text("Oldest First").tag("asc")
                                         }
-                                            .pickerStyle(.menu)
-                                            .frame(width: 300, alignment: .trailing)
+                                        .pickerStyle(.menu)
+                                        .frame(width: 300, alignment: .trailing)
                                     )
                                 )
                                 
+                                SettingsRow(
+                                    icon: "arrow.up.arrow.down",
+                                    title: "Albums & Collections Sort Order",
+                                    subtitle: "Order photos in Albums, People, and Tags",
+                                    content: AnyView(
+                                        Picker("Collections Sort Order", selection: $assetSortOrder) {
+                                            Text("Newest First").tag("desc")
+                                            Text("Oldest First").tag("asc")
+                                        }
+                                        .pickerStyle(.menu)
+                                        .frame(width: 300, alignment: .trailing)
+                                    )
+                                )
+                            })
+                        }
+                        
+                        // Slideshow Settings Section
+                        SettingsSection(title: "Slideshow") {
+                            AnyView(VStack(spacing: 12) {
                                 SlideshowSettings(
                                     slideshowInterval: $slideshowInterval,
                                     slideshowBackgroundColor: $slideshowBackgroundColor,
@@ -301,6 +333,7 @@ struct SettingsView: View {
                                     hideOverlay: $hideImageOverlay,
                                     enableReflections: $enableReflectionsInSlideshow,
                                     enableKenBurns: $enableKenBurnsEffect,
+                                    enableShuffle: $enableSlideshowShuffle,
                                     isMinusFocused: $isMinusFocused,
                                     isPlusFocused: $isPlusFocused,
                                     focusedColor: $focusedColor
@@ -362,6 +395,28 @@ struct SettingsView: View {
                                         icon: "doc.text",
                                         title: "What's New",
                                         subtitle: "View changelog and latest features",
+                                        content: AnyView(
+                                            HStack(spacing: 8) {
+                                                Image(systemName: "chevron.right")
+                                                    .foregroundColor(.blue)
+                                                    .font(.caption)
+                                            }
+                                            .padding(.horizontal, 12)
+                                            .padding(.vertical, 6)
+                                            .background(Color.blue.opacity(0.1))
+                                            .cornerRadius(8)
+                                        )
+                                    )
+                                }
+                                .buttonStyle(.plain)
+                                
+                                Button(action: {
+                                    requestAppStoreReview()
+                                }) {
+                                    SettingsRow(
+                                        icon: "star",
+                                        title: "Rate App",
+                                        subtitle: "Leave a review on the App Store",
                                         content: AnyView(
                                             HStack(spacing: 8) {
                                                 Image(systemName: "chevron.right")
@@ -568,6 +623,13 @@ struct SettingsView: View {
                 print("❌ Failed to refresh server connection: \(error)")
                 // You could add an alert here to show the error to the user
             }
+        }
+    }
+    
+    private func requestAppStoreReview() {
+        let appStoreID = "id6748482378"
+        if let url = URL(string: "itms-apps://itunes.apple.com/app/id\(appStoreID)?action=write-review") {
+            UIApplication.shared.open(url)
         }
     }
 }
