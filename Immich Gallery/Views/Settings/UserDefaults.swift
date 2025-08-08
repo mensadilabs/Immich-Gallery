@@ -14,7 +14,10 @@ extension UserDefaults {
     }
     
     var slideshowInterval: TimeInterval {
-        get { double(forKey: "slideshowInterval") }
+        get { 
+            let value = double(forKey: "slideshowInterval")
+            return value > 0 ? value : 6.0
+        }
         set { set(newValue, forKey: "slideshowInterval") }
     }
     
@@ -52,5 +55,10 @@ extension UserDefaults {
             return bool(forKey: "enableThumbnailAnimation")
         }
         set { set(newValue, forKey: "enableThumbnailAnimation") }
+    }
+    
+    var enableSlideshowShuffle: Bool {
+        get { bool(forKey: "enableSlideshowShuffle") }
+        set { set(newValue, forKey: "enableSlideshowShuffle") }
     }
 }

@@ -31,6 +31,8 @@ struct SlideshowView: View {
     @State private var dimensionMultiplier:Double = UserDefaults.standard.enableReflectionsInSlideshow ?  0.9 : 1.0
     @State private var kenBurnsScale: CGFloat = 1.0
     @State private var kenBurnsOffset: CGSize = .zero
+    @State private var enableShuffle: Bool = UserDefaults.standard.enableSlideshowShuffle
+    @State private var shuffledAssets: [ImmichAsset] = []
     @FocusState private var isFocused: Bool
     
     enum SlideDirection {
@@ -70,6 +72,10 @@ struct SlideshowView: View {
     // Global slide animation duration for both slide-in and slide-out
     private let slideAnimationDuration: Double = 1.5 
     
+    // Computed property to get current assets array (shuffled or original)
+    private var currentAssets: [ImmichAsset] {
+        enableShuffle ? shuffledAssets : assets
+    }
     
     var body: some View {
         ZStack {
@@ -78,7 +84,7 @@ struct SlideshowView: View {
                 .ignoresSafeArea()
                 .animation(.easeInOut(duration: 0.6), value: dominantColor)
             
-            if assets.isEmpty {
+            if currentAssets.isEmpty {
                 VStack {
                     Image(systemName: "photo.on.rectangle.angled")
                         .font(.system(size: 60))
@@ -128,7 +134,7 @@ struct SlideshowView: View {
                                                     VStack {
                                                         HStack {
                                                             Spacer()
-                                                            LockScreenStyleOverlay(asset: assets[currentIndex], isSlideshowMode: true)
+                                                            LockScreenStyleOverlay(asset: currentAssets[currentIndex], isSlideshowMode: true)
                                                                 .opacity(isTransitioning ? 0.0 : 1.0)
                                                                 .animation(.easeInOut(duration: slideAnimationDuration), value: isTransitioning)
                                                         }
@@ -142,7 +148,7 @@ struct SlideshowView: View {
                                                         Spacer()
                                                         HStack {
                                                             Spacer()
-                                                            LockScreenStyleOverlay(asset: assets[currentIndex], isSlideshowMode: true)
+                                                            LockScreenStyleOverlay(asset: currentAssets[currentIndex], isSlideshowMode: true)
                                                                 .opacity(isTransitioning ? 0.0 : 1.0)
                                                                 .animation(.easeInOut(duration: slideAnimationDuration), value: isTransitioning)
                                                                 .padding(.trailing, 20)
@@ -223,7 +229,11 @@ struct SlideshowView: View {
             isFocused = true
             preloadedImages.removeAll() // Clear any existing preloaded images
             preloadedDominantColors.removeAll() // Clear any existing preloaded dominant colors
-            currentIndex = max(0, min(startingIndex, assets.count - 1)) // Set starting index with bounds check
+            
+            // Initialize shuffle if enabled
+            initializeShuffle()
+            
+            currentIndex = max(0, min(startingIndex, currentAssets.count - 1)) // Set starting index with bounds check
             
             // Prevent display from sleeping during slideshow
             UIApplication.shared.isIdleTimerDisabled = true
@@ -252,8 +262,7 @@ struct SlideshowView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
             // Update all settings if they changed
-            let newInterval = UserDefaults.standard.slideshowInterval
-            slideInterval = newInterval > 0 ? newInterval : 6.0
+            slideInterval = UserDefaults.standard.slideshowInterval
             
             let newBackgroundColor = UserDefaults.standard.slideshowBackgroundColor
             let previousBackgroundColor = slideshowBackgroundColor
@@ -285,12 +294,12 @@ struct SlideshowView: View {
         }
     }
     private func loadCurrentImage() {
-        guard currentIndex >= 0 && currentIndex < assets.count else { 
-            print("SlideshowView: Index out of bounds - \(currentIndex), assets count: \(assets.count)")
+        guard currentIndex >= 0 && currentIndex < currentAssets.count else { 
+            print("SlideshowView: Index out of bounds - \(currentIndex), assets count: \(currentAssets.count)")
             return 
         }
         
-        let asset = assets[currentIndex]
+        let asset = currentAssets[currentIndex]
         
         // Check if image is already preloaded
         if let preloadedImage = preloadedImages[asset.id] {
@@ -393,8 +402,8 @@ struct SlideshowView: View {
     }
     
     private func nextImage() {
-        print("SlideshowView: nextImage() called - currentIndex: \(currentIndex), assets count: \(assets.count)")
-        guard currentIndex < assets.count - 1 else { 
+        print("SlideshowView: nextImage() called - currentIndex: \(currentIndex), assets count: \(currentAssets.count)")
+        guard currentIndex < currentAssets.count - 1 else { 
             print("SlideshowView: nextImage() guard failed - at last image")
             return 
         }
@@ -407,7 +416,7 @@ struct SlideshowView: View {
         
         // Wait for slide out to complete, then change image and direction
         DispatchQueue.main.asyncAfter(deadline: .now() + slideAnimationDuration) {
-            if self.currentIndex + 1 < self.assets.count {
+            if self.currentIndex + 1 < self.currentAssets.count {
                 print("SlideshowView: Advancing from index \(self.currentIndex) to \(self.currentIndex + 1)")
                 // Set new slide direction for the incoming image
                 let directions: [SlideDirection] = [.left, .right, .up, .down, .diagonal_up_left, .diagonal_up_right, .diagonal_down_left, .diagonal_down_right, .zoom_out]
@@ -424,8 +433,8 @@ struct SlideshowView: View {
         stopAutoAdvance()
         // Start a one-shot timer after the image is loaded and visible
         autoAdvanceTimer = Timer.scheduledTimer(withTimeInterval: slideInterval, repeats: false) { _ in
-            print("SlideshowView: Timer fired - currentIndex: \(self.currentIndex), assets count: \(self.assets.count) \(slideInterval)")
-            if self.currentIndex < self.assets.count - 1 {
+            print("SlideshowView: Timer fired - currentIndex: \(self.currentIndex), assets count: \(self.currentAssets.count) \(slideInterval)")
+            if self.currentIndex < self.currentAssets.count - 1 {
                 print("SlideshowView: Advancing to next image")
                 self.nextImage()
             } else {
@@ -455,10 +464,10 @@ struct SlideshowView: View {
         let nextIndex = currentIndex + 1
         
         // Handle looping back to start
-        let actualNextIndex = nextIndex >= assets.count ? 0 : nextIndex
-        guard actualNextIndex < assets.count else { return }
+        let actualNextIndex = nextIndex >= currentAssets.count ? 0 : nextIndex
+        guard actualNextIndex < currentAssets.count else { return }
         
-        let nextAsset = assets[actualNextIndex]
+        let nextAsset = currentAssets[actualNextIndex]
         
         // Don't preload if already cached
         guard preloadedImages[nextAsset.id] == nil else { return }
@@ -633,6 +642,23 @@ struct SlideshowView: View {
             kenBurnsOffset = endOffset
         }
     }
+    
+    // MARK: - Shuffle Methods
+    
+    private func initializeShuffle() {
+        enableShuffle = UserDefaults.standard.enableSlideshowShuffle
+        if enableShuffle {
+            shuffleAssets()
+        } else {
+            shuffledAssets = []
+        }
+    }
+    
+    private func shuffleAssets() {
+        shuffledAssets = assets.shuffled()
+        print("SlideshowView: Assets shuffled - original count: \(assets.count), shuffled count: \(shuffledAssets.count)")
+    }
+    
 }
 
 #Preview {

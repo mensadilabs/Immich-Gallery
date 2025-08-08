@@ -61,6 +61,7 @@ struct SettingsView: View {
     @AppStorage("enableReflectionsInSlideshow") private var enableReflectionsInSlideshow = true
     @AppStorage("enableKenBurnsEffect") private var enableKenBurnsEffect = false
     @AppStorage("enableThumbnailAnimation") private var enableThumbnailAnimation = true
+    @AppStorage("enableSlideshowShuffle") private var enableSlideshowShuffle = false
     @FocusState private var isMinusFocused: Bool
     @FocusState private var isPlusFocused: Bool
     @FocusState private var focusedColor: String?
@@ -303,6 +304,7 @@ struct SettingsView: View {
                                     enableReflections: $enableReflectionsInSlideshow,
                                     enableKenBurns: $enableKenBurnsEffect,
                                     enableThumbnailAnimation: $enableThumbnailAnimation,
+                                    enableShuffle: $enableSlideshowShuffle,
                                     isMinusFocused: $isMinusFocused,
                                     isPlusFocused: $isPlusFocused,
                                     focusedColor: $focusedColor

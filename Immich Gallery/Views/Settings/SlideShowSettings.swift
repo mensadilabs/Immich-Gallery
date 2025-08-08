@@ -18,6 +18,7 @@ struct SlideshowSettings: View {
     @Binding var enableReflections: Bool
     @Binding var enableKenBurns: Bool
     @Binding var enableThumbnailAnimation: Bool
+    @Binding var enableShuffle: Bool
     @FocusState.Binding var isMinusFocused: Bool
     @FocusState.Binding var isPlusFocused: Bool
     @FocusState.Binding var focusedColor: String?
@@ -124,6 +125,13 @@ struct SlideshowSettings: View {
                         .pickerStyle(.menu)
                         .frame(width: 300, alignment: .trailing)
                 )
+            )
+            
+            SettingsRow(
+                icon: "shuffle",
+                title: "Shuffle Images",
+                subtitle: "Randomly shuffle image order during slideshow",
+                content: AnyView(Toggle("", isOn: $enableShuffle).labelsHidden())
             )
             
             SettingsRow(
