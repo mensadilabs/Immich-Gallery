@@ -129,7 +129,7 @@ struct SlideshowSettings: View {
             
             SettingsRow(
                 icon: "shuffle",
-                title: "Shuffle Images",
+                title: "Shuffle Images (beta)",
                 subtitle: "Randomly shuffle image order during slideshow",
                 content: AnyView(Toggle("", isOn: $enableShuffle).labelsHidden())
             )
@@ -179,7 +179,7 @@ struct SlideshowSettings: View {
                     )) {
                         Text("None").tag("none")
                         Text("Reflections").tag("reflections")
-                        Text("Ken Burns (beta)").tag("kenBurns")
+                        Text("Ken Burns").tag("kenBurns")
                     }
                     .pickerStyle(.menu)
                     .frame(width: 300, alignment: .trailing)

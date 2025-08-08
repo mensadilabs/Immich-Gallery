@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import StoreKit
 
 // MARK: - Reusable Components
 
@@ -380,6 +381,28 @@ struct SettingsView: View {
                                     )
                                 }
                                 .buttonStyle(.plain)
+                                
+                                Button(action: {
+                                    requestAppStoreReview()
+                                }) {
+                                    SettingsRow(
+                                        icon: "star",
+                                        title: "Rate App",
+                                        subtitle: "Leave a review on the App Store",
+                                        content: AnyView(
+                                            HStack(spacing: 8) {
+                                                Image(systemName: "chevron.right")
+                                                    .foregroundColor(.blue)
+                                                    .font(.caption)
+                                            }
+                                            .padding(.horizontal, 12)
+                                            .padding(.vertical, 6)
+                                            .background(Color.blue.opacity(0.1))
+                                            .cornerRadius(8)
+                                        )
+                                    )
+                                }
+                                .buttonStyle(.plain)
                             })
                         }
                         
@@ -572,6 +595,13 @@ struct SettingsView: View {
                 print("❌ Failed to refresh server connection: \(error)")
                 // You could add an alert here to show the error to the user
             }
+        }
+    }
+    
+    private func requestAppStoreReview() {
+        let appStoreID = "id6748482378"
+        if let url = URL(string: "itms-apps://itunes.apple.com/app/id\(appStoreID)?action=write-review") {
+            UIApplication.shared.open(url)
         }
     }
 }
