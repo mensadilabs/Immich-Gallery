@@ -18,6 +18,7 @@ struct ContentView: View {
     @StateObject private var albumService: AlbumService
     @StateObject private var peopleService: PeopleService
     @StateObject private var tagService: TagService
+    @StateObject private var searchService: SearchService
     @State private var selectedTab = 0
     @State private var refreshTrigger = UUID()
     @State private var showWhatsNew = false
@@ -33,6 +34,7 @@ struct ContentView: View {
         _albumService = StateObject(wrappedValue: AlbumService(networkService: networkService))
         _peopleService = StateObject(wrappedValue: PeopleService(networkService: networkService))
         _tagService = StateObject(wrappedValue: TagService(networkService: networkService))
+        _searchService = StateObject(wrappedValue: SearchService(networkService: networkService))
     }
     
     var body: some View {
@@ -79,13 +81,21 @@ struct ContentView: View {
                                 .tag(3)
                         }
                         
+                        SearchView(searchService: searchService, assetService: assetService, authService: authService)
+                            .errorBoundary(context: "Search Tab")
+                            .tabItem {
+                                Image(systemName: "magnifyingglass")
+                                Text("Search")
+                            }
+                            .tag(showTagsTab ? 4 : 3)
+                        
                         SettingsView(authService: authService)
                             .errorBoundary(context: "Settings Tab")
                             .tabItem {
                                 Image(systemName: "gear")
                                 Text("Settings")
                             }
-                            .tag(showTagsTab ? 4 : 3)
+                            .tag(showTagsTab ? 5 : 4)
                     }
             .onAppear {
                         setDefaultTab()
