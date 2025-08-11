@@ -79,7 +79,13 @@ class AuthenticationService: ObservableObject {
                 do {
                     let authResponse = try JSONDecoder().decode(AuthResponse.self, from: data)
                     self?.networkService.saveCredentials(serverURL: serverURL, token: authResponse.accessToken)
+                    
+                    // Save email to both standard and shared UserDefaults
                     UserDefaults.standard.set(email, forKey: "immich_user_email")
+                    if let sharedDefaults = UserDefaults(suiteName: "group.com.sanketh.dev.Immich-Gallery") {
+                        sharedDefaults.set(email, forKey: "immich_user_email")
+                    }
+                    
                     self?.isAuthenticated = true
                     print("AuthenticationService: Successfully authenticated user: \(email)")
                     
