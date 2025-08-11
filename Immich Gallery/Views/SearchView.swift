@@ -118,7 +118,7 @@ struct SearchView: View {
                     }
             }
         }
-        .searchable(text: $searchText, prompt: "Search for photos...")
+        .searchable(text: $searchText, prompt: "Search by context: Mountains, sunsets, etc...")
         .onSubmit(of: .search) {
             performSearch()
         }
