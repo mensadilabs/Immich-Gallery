@@ -113,7 +113,7 @@ struct ContentView: View {
                                 .tag(TabName.tags.rawValue)
                         }
                         
-                        SearchView(searchService: searchService, assetService: assetService, authService: authService, onReturnToPhotos: returnToPhotosTab)
+                        SearchView(searchService: searchService, assetService: assetService, authService: authService)
                             .errorBoundary(context: "Search Tab")
                             .tabItem {
                                 Image(systemName: TabName.search.iconName)
