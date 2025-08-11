@@ -63,6 +63,7 @@ struct SettingsView: View {
     @AppStorage("enableThumbnailAnimation") private var enableThumbnailAnimation = true
     @AppStorage("enableSlideshowShuffle") private var enableSlideshowShuffle = false
     @AppStorage("allPhotosSortOrder") private var allPhotosSortOrder = "desc"
+    @AppStorage("enableTopShelf") private var enableTopShelf = true
     @FocusState private var isMinusFocused: Bool
     @FocusState private var isPlusFocused: Bool
     @FocusState private var focusedColor: String?
@@ -286,6 +287,13 @@ struct SettingsView: View {
                                     title: "Enable Thumbnail Animation",
                                     subtitle: "Animate thumbnails in Albums, People, and Tags views",
                                     content: AnyView(Toggle("", isOn: $enableThumbnailAnimation).labelsHidden())
+                                )
+                                
+                                SettingsRow(
+                                    icon: "tv",
+                                    title: "Top Shelf Extension",
+                                    subtitle: "Show recent photos on Apple TV home screen",
+                                    content: AnyView(Toggle("", isOn: $enableTopShelf).labelsHidden())
                                 )
                             })
                         }

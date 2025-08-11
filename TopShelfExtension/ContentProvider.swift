@@ -12,6 +12,16 @@ class ContentProvider: TVTopShelfContentProvider {
 
     override func loadTopShelfContent() async -> (any TVTopShelfContent)? {
         print("TopShelf: loadTopShelfContent() called")
+        
+        // Check if Top Shelf is enabled in settings (default to true if not set)
+        let isTopShelfEnabled = sharedDefaults.object(forKey: "enableTopShelf") as? Bool ?? true
+        print("TopShelf: Top Shelf enabled in settings: \(isTopShelfEnabled)")
+        
+        if !isTopShelfEnabled {
+            print("TopShelf: Top Shelf is disabled, returning nil")
+            return nil
+        }
+        
         do {
             let content = try await createTopShelfContent()
             print("TopShelf: Successfully created content with sections")

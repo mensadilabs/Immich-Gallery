@@ -16,6 +16,7 @@ struct AssetGridView: View {
     let tagId: String? // Optional tag ID to filter assets
     let isAllPhotos: Bool // Whether this is the All Photos tab
     let onAssetsLoaded: (([ImmichAsset]) -> Void)? // Callback for when assets are loaded
+    let deepLinkAssetId: String? // Asset ID to highlight from deep link
     @State private var assets: [ImmichAsset] = []
     @State private var isLoading = false
     @State private var isLoadingMore = false
@@ -177,6 +178,12 @@ struct AssetGridView: View {
                                 }
                                 }
                             }
+                        .onChange(of: deepLinkAssetId) { assetId in
+                            if let assetId = assetId {
+                                print("AssetGridView: Deep link asset ID received: \(assetId)")
+                                handleDeepLinkAsset(assetId)
+                            }
+                        }
                         }
                     }
                 }
@@ -374,6 +381,29 @@ struct AssetGridView: View {
         let imageAssets = assets.filter { $0.type == .image }
         if !imageAssets.isEmpty {
             showingSlideshow = true
+        }
+    }
+    
+    private func handleDeepLinkAsset(_ assetId: String) {
+        // Check if the asset is already loaded
+        if assets.contains(where: { $0.id == assetId }) {
+            print("AssetGridView: Asset \(assetId) found in loaded assets, scrolling and focusing")
+            focusedAssetId = assetId
+            isProgrammaticFocusChange = true
+        } else {
+            print("AssetGridView: Asset \(assetId) not found in current loaded assets")
+            // For now, just load the first page and hope the asset is there
+            // In a more complex implementation, we could search for the asset across pages
+            if assets.isEmpty {
+                loadAssets()
+                // After loading, try to find the asset again
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                    if let foundAsset = assets.first(where: { $0.id == assetId }) {
+                        focusedAssetId = foundAsset.id
+                        isProgrammaticFocusChange = true
+                    }
+                }
+            }
         }
     }
 }

@@ -57,6 +57,7 @@ struct ContentView: View {
     @AppStorage("defaultStartupTab") private var defaultStartupTab = "photos"
     @AppStorage("lastSeenVersion") private var lastSeenVersion = ""
     @State private var searchTabHighlighted = false
+    @State private var deepLinkAssetId: String?
     
     init() {
         let networkService = NetworkService()
@@ -79,7 +80,7 @@ struct ContentView: View {
                 } else {
                     // Main app interface
                     TabView(selection: $selectedTab) {
-                        AssetGridView(assetService: assetService, authService: authService, albumId: nil, personId: nil, tagId: nil, isAllPhotos: true, onAssetsLoaded: nil)
+                        AssetGridView(assetService: assetService, authService: authService, albumId: nil, personId: nil, tagId: nil, isAllPhotos: true, onAssetsLoaded: nil, deepLinkAssetId: deepLinkAssetId)
                             .errorBoundary(context: "Photos Tab")
                             .tabItem {
                                 Image(systemName: TabName.photos.iconName)
@@ -147,6 +148,20 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .refreshAllTabs)) { _ in
             // Refresh all tabs by generating a new UUID
             refreshTrigger = UUID()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("OpenAsset"))) { notification in
+            if let assetId = notification.userInfo?["assetId"] as? String {
+                print("ContentView: Received OpenAsset notification for asset: \(assetId)")
+                
+                // Switch to Photos tab and set deep link asset ID
+                selectedTab = TabName.photos.rawValue
+                deepLinkAssetId = assetId
+                
+                // Clear the deep link after a moment to avoid stale state
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                    deepLinkAssetId = nil
+                }
+            }
         }
         .sheet(isPresented: $showWhatsNew) {
             WhatsNewView(onDismiss: {

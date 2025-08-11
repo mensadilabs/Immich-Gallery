@@ -342,7 +342,7 @@ struct TagDetailView: View {
                 Color.black
                     .ignoresSafeArea()
                 
-                AssetGridView(assetService: assetService, authService: authService, albumId: nil, personId: nil, tagId: tag.id, isAllPhotos: false, onAssetsLoaded: nil)
+                AssetGridView(assetService: assetService, authService: authService, albumId: nil, personId: nil, tagId: tag.id, isAllPhotos: false, onAssetsLoaded: nil, deepLinkAssetId: nil)
             }
             .navigationTitle(tag.name)
             .toolbar {
