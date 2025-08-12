@@ -43,6 +43,11 @@ extension Notification.Name {
 }
 
 struct ContentView: View {
+    // Auto slideshow state
+    @AppStorage(UserDefaultsKeys.autoSlideshowTimeout) private var autoSlideshowTimeout: Int = 0
+    @State private var inactivityTimer: Timer? = nil
+    @State private var showAutoSlideshow = false
+    @State private var lastInteractionDate = Date()
     @StateObject private var networkService = NetworkService()
     @StateObject private var authService: AuthenticationService
     @StateObject private var assetService: AssetService
@@ -71,7 +76,7 @@ struct ContentView: View {
     }
     
     var body: some View {
-        NavigationView {
+    NavigationView {
             ZStack {
                 if !authService.isAuthenticated {
                     // Show sign-in view
@@ -130,14 +135,25 @@ struct ContentView: View {
                             }
                             .tag(TabName.settings.rawValue)
                     }
-            .onAppear {
+                    .onAppear {
                         setDefaultTab()
                         checkForAppUpdate()
+                        startInactivityTimer()
                     }
                     .onChange(of: selectedTab) { oldValue, newValue in
                         searchTabHighlighted = false
                         print("Tab changed from \(oldValue) to \(newValue)")
-                    }                    .id(refreshTrigger) // Force refresh when user switches
+                        resetInactivityTimer()
+                    }
+                    .onChange(of: autoSlideshowTimeout) { _, _ in
+                        startInactivityTimer()
+                    }
+                    .id(refreshTrigger) // Force refresh when user switches
+                    .sheet(isPresented: $showAutoSlideshow, onDismiss: { resetInactivityTimer() }) {
+                        // Start slideshow from all photos
+                        AssetGridView(assetService: assetService, authService: authService, albumId: nil, personId: nil, tagId: nil, isAllPhotos: true, onAssetsLoaded: nil, deepLinkAssetId: nil)
+                        // Optionally, you could present a dedicated SlideshowView here
+                    }
                     // .accentColor(.blue)
                 }
             }
@@ -154,7 +170,15 @@ struct ContentView: View {
                 print("ContentView: Received OpenAsset notification for asset: \(assetId)")
                 
                 // Switch to Photos tab and set deep link asset ID
-                selectedTab = TabName.photos.rawValue
+                                            .contentShape(Rectangle())
+                                            .highPriorityGesture(
+                                                DragGesture(minimumDistance: 0)
+                                                    .onChanged { _ in resetInactivityTimer() }
+                                            )
+                                            .simultaneousGesture(
+                                                TapGesture().onEnded { resetInactivityTimer() }
+                                            )
+                                            .onAppear {
                 deepLinkAssetId = assetId
                 
                 // Clear the deep link after a moment to avoid stale state
@@ -171,6 +195,29 @@ struct ContentView: View {
        }
     }
     
+    // MARK: - Inactivity Timer Logic
+    private func startInactivityTimer() {
+        inactivityTimer?.invalidate()
+        inactivityTimer = nil
+        if autoSlideshowTimeout > 0 {
+            inactivityTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
+                let elapsed = Date().timeIntervalSince(lastInteractionDate)
+                if elapsed > Double(autoSlideshowTimeout * 60) {
+                    inactivityTimer?.invalidate()
+                    inactivityTimer = nil
+                    showAutoSlideshow = true
+                }
+            }
+        }
+    }
+
+    private func resetInactivityTimer() {
+        lastInteractionDate = Date()
+        if showAutoSlideshow {
+            showAutoSlideshow = false
+        }
+    }
+
     private func setDefaultTab() {
         switch defaultStartupTab {
         case "albums":

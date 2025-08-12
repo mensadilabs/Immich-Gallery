@@ -5,7 +5,9 @@
 //  Created by mensadi-labs on 2025-06-29.
 //
 
+
 import SwiftUI
+import AutoSlideshowTimeoutPicker
 
 // MARK: - Reusable Components
 
@@ -64,6 +66,7 @@ struct SettingsView: View {
     @AppStorage("enableSlideshowShuffle") private var enableSlideshowShuffle = false
     @AppStorage("allPhotosSortOrder") private var allPhotosSortOrder = "desc"
     @AppStorage("enableTopShelf", store: UserDefaults(suiteName: AppConstants.appGroupIdentifier)) private var enableTopShelf = false
+    @AppStorage("autoSlideshowTimeout") private var autoSlideshowTimeout: Int = 0 // 0 = off
     @FocusState private var isMinusFocused: Bool
     @FocusState private var isPlusFocused: Bool
     @FocusState private var focusedColor: String?
@@ -346,6 +349,12 @@ struct SettingsView: View {
                                     isMinusFocused: $isMinusFocused,
                                     isPlusFocused: $isPlusFocused,
                                     focusedColor: $focusedColor
+                                )
+                                SettingsRow(
+                                    icon: "clock.arrow.circlepath",
+                                    title: "Auto-Start Slideshow",
+                                    subtitle: "Start slideshow after inactivity",
+                                    content: AnyView(AutoSlideshowTimeoutPicker(timeout: $autoSlideshowTimeout))
                                 )
                             })
                         }
