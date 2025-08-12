@@ -9,61 +9,61 @@ import Foundation
 // Extension to make overlay setting easily accessible throughout the app
 extension UserDefaults {
     var hideImageOverlay: Bool {
-        get { bool(forKey: "hideImageOverlay") }
-        set { set(newValue, forKey: "hideImageOverlay") }
+        get { bool(forKey: UserDefaultsKeys.hideImageOverlay) }
+        set { set(newValue, forKey: UserDefaultsKeys.hideImageOverlay) }
     }
     
     var slideshowInterval: TimeInterval {
         get { 
-            let value = double(forKey: "slideshowInterval")
+            let value = double(forKey: UserDefaultsKeys.slideshowInterval)
             return value > 0 ? value : 6.0
         }
-        set { set(newValue, forKey: "slideshowInterval") }
+        set { set(newValue, forKey: UserDefaultsKeys.slideshowInterval) }
     }
     
     var slideshowBackgroundColor: String {
-        get { string(forKey: "slideshowBackgroundColor") ?? "black" }
-        set { set(newValue, forKey: "slideshowBackgroundColor") }
+        get { string(forKey: UserDefaultsKeys.slideshowBackgroundColor) ?? "black" }
+        set { set(newValue, forKey: UserDefaultsKeys.slideshowBackgroundColor) }
     }
     
     var showTagsTab: Bool {
-        get { bool(forKey: "showTagsTab") }
-        set { set(newValue, forKey: "showTagsTab") }
+        get { bool(forKey: UserDefaultsKeys.showTagsTab) }
+        set { set(newValue, forKey: UserDefaultsKeys.showTagsTab) }
     }
     
     var use24HourClock: Bool {
-        get { bool(forKey: "use24HourClock") }
-        set { set(newValue, forKey: "use24HourClock") }
+        get { bool(forKey: UserDefaultsKeys.use24HourClock) }
+        set { set(newValue, forKey: UserDefaultsKeys.use24HourClock) }
     }
     
     var enableReflectionsInSlideshow: Bool {
-        get { bool(forKey: "enableReflectionsInSlideshow") }
-        set { set(newValue, forKey: "enableReflectionsInSlideshow") }
+        get { bool(forKey: UserDefaultsKeys.enableReflectionsInSlideshow) }
+        set { set(newValue, forKey: UserDefaultsKeys.enableReflectionsInSlideshow) }
     }
     
     var enableKenBurnsEffect: Bool {
-        get { bool(forKey: "enableKenBurnsEffect") }
-        set { set(newValue, forKey: "enableKenBurnsEffect") }
+        get { bool(forKey: UserDefaultsKeys.enableKenBurnsEffect) }
+        set { set(newValue, forKey: UserDefaultsKeys.enableKenBurnsEffect) }
     }
     
     var enableThumbnailAnimation: Bool {
         get { 
             // Default to true if the key doesn't exist yet
-            if object(forKey: "enableThumbnailAnimation") == nil {
+            if object(forKey: UserDefaultsKeys.enableThumbnailAnimation) == nil {
                 return true
             }
-            return bool(forKey: "enableThumbnailAnimation")
+            return bool(forKey: UserDefaultsKeys.enableThumbnailAnimation)
         }
-        set { set(newValue, forKey: "enableThumbnailAnimation") }
+        set { set(newValue, forKey: UserDefaultsKeys.enableThumbnailAnimation) }
     }
     
     var enableSlideshowShuffle: Bool {
-        get { bool(forKey: "enableSlideshowShuffle") }
-        set { set(newValue, forKey: "enableSlideshowShuffle") }
+        get { bool(forKey: UserDefaultsKeys.enableSlideshowShuffle) }
+        set { set(newValue, forKey: UserDefaultsKeys.enableSlideshowShuffle) }
     }
     
     var allPhotosSortOrder: String {
-        get { string(forKey: "allPhotosSortOrder") ?? "desc" }
-        set { set(newValue, forKey: "allPhotosSortOrder") }
+        get { string(forKey: UserDefaultsKeys.allPhotosSortOrder) ?? "desc" }
+        set { set(newValue, forKey: UserDefaultsKeys.allPhotosSortOrder) }
     }
 }

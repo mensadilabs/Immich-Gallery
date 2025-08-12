@@ -39,7 +39,7 @@ enum TabName: Int, CaseIterable {
 }
 
 extension Notification.Name {
-    static let refreshAllTabs = Notification.Name("refreshAllTabs")
+    static let refreshAllTabs = Notification.Name(NotificationNames.refreshAllTabs)
 }
 
 struct ContentView: View {
@@ -53,9 +53,9 @@ struct ContentView: View {
     @State private var selectedTab = 0
     @State private var refreshTrigger = UUID()
     @State private var showWhatsNew = false
-    @AppStorage("showTagsTab") private var showTagsTab = false
-    @AppStorage("defaultStartupTab") private var defaultStartupTab = "photos"
-    @AppStorage("lastSeenVersion") private var lastSeenVersion = ""
+    @AppStorage(UserDefaultsKeys.showTagsTab) private var showTagsTab = false
+    @AppStorage(UserDefaultsKeys.defaultStartupTab) private var defaultStartupTab = "photos"
+    @AppStorage(UserDefaultsKeys.lastSeenVersion) private var lastSeenVersion = ""
     @State private var searchTabHighlighted = false
     @State private var deepLinkAssetId: String?
     
@@ -149,7 +149,7 @@ struct ContentView: View {
             // Refresh all tabs by generating a new UUID
             refreshTrigger = UUID()
         }
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("OpenAsset"))) { notification in
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name(NotificationNames.openAsset))) { notification in
             if let assetId = notification.userInfo?["assetId"] as? String {
                 print("ContentView: Received OpenAsset notification for asset: \(assetId)")
                 

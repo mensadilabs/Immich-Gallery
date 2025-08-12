@@ -81,9 +81,9 @@ class AuthenticationService: ObservableObject {
                     self?.networkService.saveCredentials(serverURL: serverURL, token: authResponse.accessToken)
                     
                     // Save email to both standard and shared UserDefaults
-                    UserDefaults.standard.set(email, forKey: "immich_user_email")
+                    UserDefaults.standard.set(email, forKey: UserDefaultsKeys.userEmail)
                     if let sharedDefaults = UserDefaults(suiteName: AppConstants.appGroupIdentifier) {
-                        sharedDefaults.set(email, forKey: "immich_user_email")
+                        sharedDefaults.set(email, forKey: UserDefaultsKeys.userEmail)
                     }
                     
                     self?.isAuthenticated = true

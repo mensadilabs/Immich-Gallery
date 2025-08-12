@@ -19,13 +19,13 @@ struct Immich_GalleryApp: App {
     }
     
     private func handleURL(_ url: URL) {
-        guard url.scheme == "immichgallery" else { return }
+        guard url.scheme == AppSchemes.immichGallery else { return }
         
         if url.host == "asset", url.pathComponents.count > 1 {
             let assetId = url.pathComponents[1]
             
             NotificationCenter.default.post(
-                name: NSNotification.Name("OpenAsset"),
+                name: NSNotification.Name(NotificationNames.openAsset),
                 object: nil,
                 userInfo: ["assetId": assetId]
             )

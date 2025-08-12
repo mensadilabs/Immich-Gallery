@@ -14,7 +14,7 @@ class ContentProvider: TVTopShelfContentProvider {
         print("TopShelf: loadTopShelfContent() called")
         
         // Check if Top Shelf is enabled in settings (default to true if not set)
-        let isTopShelfEnabled = sharedDefaults.bool(forKey: "enableTopShelf")
+        let isTopShelfEnabled = sharedDefaults.bool(forKey: UserDefaultsKeys.enableTopShelf)
         print("TopShelf: Top Shelf enabled in settings: \(isTopShelfEnabled)")
         
         if !isTopShelfEnabled {
@@ -117,9 +117,9 @@ class ContentProvider: TVTopShelfContentProvider {
     private func fetchFirst5Photos() async throws -> [SimpleAsset] {
         print("TopShelf: Starting to fetch first 5 photos")
         
-        let serverURL = sharedDefaults.string(forKey: "immich_server_url")
-        let accessToken = sharedDefaults.string(forKey: "immich_access_token")
-        let isTopShelfEnabledFromDefaults = sharedDefaults.bool(forKey: "enableTopShelf")
+        let serverURL = sharedDefaults.string(forKey: UserDefaultsKeys.serverURL)
+        let accessToken = sharedDefaults.string(forKey: UserDefaultsKeys.accessToken)
+        let isTopShelfEnabledFromDefaults = sharedDefaults.bool(forKey: UserDefaultsKeys.enableTopShelf)
         
         print("top shelf \(isTopShelfEnabledFromDefaults)")
         
@@ -182,8 +182,8 @@ class ContentProvider: TVTopShelfContentProvider {
 
     private func downloadAndCacheImage(for asset: SimpleAsset) async -> URL? {
         print("TopShelf: Starting image download for asset: \(asset.id)")
-        guard let serverURL = sharedDefaults.string(forKey: "immich_server_url"),
-              let accessToken = sharedDefaults.string(forKey: "immich_access_token") else {
+        guard let serverURL = sharedDefaults.string(forKey: UserDefaultsKeys.serverURL),
+              let accessToken = sharedDefaults.string(forKey: UserDefaultsKeys.accessToken) else {
             print("TopShelf: Missing credentials for image download")
             return nil
         }
@@ -258,7 +258,7 @@ class ContentProvider: TVTopShelfContentProvider {
     }
     
     private func getThumbnailURL(for asset: SimpleAsset) -> URL {
-        guard let serverURL = sharedDefaults.string(forKey: "immich_server_url") else {
+        guard let serverURL = sharedDefaults.string(forKey: UserDefaultsKeys.serverURL) else {
             return URL(string: "about:blank")!
         }
         
