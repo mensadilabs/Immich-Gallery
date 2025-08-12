@@ -17,6 +17,7 @@ A native Apple TV app for browsing your self-hosted Immich photo library with a 
 
 <a href="https://www.buymeacoffee.com/zzpr69dnqtr" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-blue.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
 
+<img width="3840" height="2160" alt="Simulator Screenshot - Apple TV 4K (3rd generation) - 2025-08-11 at 18 23 16" src="https://github.com/user-attachments/assets/c802a515-e775-4068-af4c-0f90879cf41b" />
 <img width="1515" height="849" alt="image" src="https://github.com/user-attachments/assets/be1bcc49-2086-4a6f-9070-d3c62cb1be8a" />
 
 https://github.com/user-attachments/assets/78987a7a-ef62-497c-828f-f7b99851ffb3
