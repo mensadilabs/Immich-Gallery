@@ -39,24 +39,30 @@ class ContentProvider: TVTopShelfContentProvider {
         let assets = try await fetchFirst5Photos()
         print("TopShelf: Fetched \(assets.count) assets")
         
-        let sectionItems = await withTaskGroup(of: TVTopShelfSectionedItem?.self) { group in
+        let sectionItems = await withTaskGroup(of: (Int, TVTopShelfSectionedItem?).self) { group in
             for (index, asset) in assets.enumerated() {
                 group.addTask {
                     print("TopShelf: Processing asset \(index + 1)/\(assets.count): \(asset.originalFileName)")
-                    return await self.createTopShelfItem(for: asset)
+                    let item = await self.createTopShelfItem(for: asset)
+                    return (index, item)
                 }
             }
             
-            var items: [TVTopShelfSectionedItem] = []
-            for await item in group {
+            var indexedItems: [(Int, TVTopShelfSectionedItem)] = []
+            for await (index, item) in group {
                 if let item = item {
                     print("TopShelf: Successfully created item: \(item.title ?? "No title")")
-                    items.append(item)
+                    indexedItems.append((index, item))
                 } else {
-                    print("TopShelf: Failed to create item")
+                    print("TopShelf: Failed to create item at index \(index)")
                 }
             }
-            print("TopShelf: Created \(items.count) items total")
+            
+            // Sort by original index to preserve order
+            indexedItems.sort { $0.0 < $1.0 }
+            let items = indexedItems.map { $0.1 }
+            
+            print("TopShelf: Created \(items.count) items total in correct order")
             return items
         }
         
