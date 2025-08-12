@@ -63,7 +63,7 @@ struct SettingsView: View {
     @AppStorage("enableThumbnailAnimation") private var enableThumbnailAnimation = true
     @AppStorage("enableSlideshowShuffle") private var enableSlideshowShuffle = false
     @AppStorage("allPhotosSortOrder") private var allPhotosSortOrder = "desc"
-    @AppStorage("enableTopShelf", store: UserDefaults(suiteName: "group.com.sanketh.dev.Immich-Gallery")) private var enableTopShelf = false
+    @AppStorage("enableTopShelf", store: UserDefaults(suiteName: AppConstants.appGroupIdentifier)) private var enableTopShelf = false
     @FocusState private var isMinusFocused: Bool
     @FocusState private var isPlusFocused: Bool
     @FocusState private var focusedColor: String?

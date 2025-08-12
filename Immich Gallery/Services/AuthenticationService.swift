@@ -82,7 +82,7 @@ class AuthenticationService: ObservableObject {
                     
                     // Save email to both standard and shared UserDefaults
                     UserDefaults.standard.set(email, forKey: "immich_user_email")
-                    if let sharedDefaults = UserDefaults(suiteName: "group.com.sanketh.dev.Immich-Gallery") {
+                    if let sharedDefaults = UserDefaults(suiteName: AppConstants.appGroupIdentifier) {
                         sharedDefaults.set(email, forKey: "immich_user_email")
                     }
                     

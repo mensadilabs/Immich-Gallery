@@ -163,12 +163,12 @@ struct ContentView: View {
                 }
             }
         }
-        .sheet(isPresented: $showWhatsNew) {
-            WhatsNewView(onDismiss: {
-                showWhatsNew = false
-                lastSeenVersion = getCurrentAppVersion()
-            })
-        }
+       .sheet(isPresented: $showWhatsNew) {
+           WhatsNewView(onDismiss: {
+               showWhatsNew = false
+               lastSeenVersion = getCurrentAppVersion()
+           })
+       }
     }
     
     private func setDefaultTab() {

@@ -22,7 +22,7 @@ class NetworkService: ObservableObject {
     
     // MARK: - Credential Management
     private var sharedDefaults: UserDefaults {
-        return UserDefaults(suiteName: "group.com.sanketh.dev.Immich-Gallery") ?? UserDefaults.standard
+        return UserDefaults(suiteName: AppConstants.appGroupIdentifier) ?? UserDefaults.standard
     }
     
     private func migrateCredentialsToSharedContainer() {

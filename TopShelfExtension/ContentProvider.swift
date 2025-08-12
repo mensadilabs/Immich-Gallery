@@ -107,7 +107,7 @@ class ContentProvider: TVTopShelfContentProvider {
     }
     
     private var sharedDefaults: UserDefaults {
-        let suiteName = "group.com.sanketh.dev.Immich-Gallery"
+        let suiteName = AppConstants.appGroupIdentifier
         let defaults = UserDefaults(suiteName: suiteName) ?? UserDefaults.standard
         print("TopShelf: Using UserDefaults suite: \(suiteName)")
         print(defaults)
@@ -188,7 +188,7 @@ class ContentProvider: TVTopShelfContentProvider {
             return nil
         }
         
-        guard let appGroupContainer = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.com.sanketh.dev.Immich-Gallery") else {
+        guard let appGroupContainer = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: AppConstants.appGroupIdentifier) else {
             print("TopShelf: Failed to get App Group container URL")
             return nil
         }
