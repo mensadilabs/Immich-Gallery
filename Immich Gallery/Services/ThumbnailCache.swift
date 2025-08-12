@@ -78,7 +78,6 @@ class ThumbnailCache: NSObject, ObservableObject {
         
         // Check disk cache
         if let diskImage = await loadFromDisk(cacheKey: cacheKey) {
-            print("💾 Disk cache hit: \(cacheKey)")
             // Store in memory cache
             let cachedImage = CachedImage(image: diskImage, size: diskImage.jpegData(compressionQuality: 0.8)?.count ?? 0)
             memoryCache.setObject(cachedImage, forKey: cacheKey as NSString, cost: cachedImage.size)

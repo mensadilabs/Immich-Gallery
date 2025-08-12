@@ -256,12 +256,12 @@ struct SignInView: View {
                     )
                     
                     if let userData = try? JSONEncoder().encode(savedUser) {
-                        UserDefaults.standard.set(userData, forKey: "immich_user_\(userId)")
+                        UserDefaults.standard.set(userData, forKey: "\(UserDefaultsKeys.userPrefix)\(userId)")
                         print("SignInView: Saved user data for \(authResponse.userEmail)")
                     }
                     
                     // Save token directly: "user@server" : token
-                    UserDefaults.standard.set(authResponse.accessToken, forKey: "immich_token_\(userId)")
+                    UserDefaults.standard.set(authResponse.accessToken, forKey: "\(UserDefaultsKeys.tokenPrefix)\(userId)")
                     print("SignInView: Saved token for \(authResponse.userEmail) - starts with: \(String(authResponse.accessToken.prefix(20)))...")
                     
                     onUserAdded?()

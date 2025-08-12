@@ -379,7 +379,8 @@ struct AlbumDetailView: View {
                     isAllPhotos: false,
                     onAssetsLoaded: { loadedAssets in
                         self.albumAssets = loadedAssets
-                    }
+                    },
+                    deepLinkAssetId: nil
                 )
             }
             .navigationTitle(album.albumName)

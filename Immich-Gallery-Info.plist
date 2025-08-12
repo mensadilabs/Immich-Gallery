@@ -4,5 +4,16 @@
 <dict>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.sanketh.dev.Immich-Gallery.urlscheme</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>immichgallery</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

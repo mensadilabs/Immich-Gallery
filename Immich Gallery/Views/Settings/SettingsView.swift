@@ -63,6 +63,7 @@ struct SettingsView: View {
     @AppStorage("enableThumbnailAnimation") private var enableThumbnailAnimation = true
     @AppStorage("enableSlideshowShuffle") private var enableSlideshowShuffle = false
     @AppStorage("allPhotosSortOrder") private var allPhotosSortOrder = "desc"
+    @AppStorage("enableTopShelf", store: UserDefaults(suiteName: AppConstants.appGroupIdentifier)) private var enableTopShelf = false
     @FocusState private var isMinusFocused: Bool
     @FocusState private var isPlusFocused: Bool
     @FocusState private var focusedColor: String?
@@ -287,6 +288,14 @@ struct SettingsView: View {
                                     subtitle: "Animate thumbnails in Albums, People, and Tags views",
                                     content: AnyView(Toggle("", isOn: $enableThumbnailAnimation).labelsHidden())
                                 )
+                                
+                                 
+                                SettingsRow(
+                                    icon: "tv",
+                                    title: "Top Shelf Extension",
+                                    subtitle: "Show recent photos on Apple TV home screen",
+                                    content: AnyView(Toggle("", isOn: $enableTopShelf).labelsHidden())
+                                )
                             })
                         }
                         
@@ -495,7 +504,7 @@ struct SettingsView: View {
         
         // Load other saved users
         let userDefaults = UserDefaults.standard
-        let savedUserKeys = userDefaults.dictionaryRepresentation().keys.filter { $0.hasPrefix("immich_user_") }
+        let savedUserKeys = userDefaults.dictionaryRepresentation().keys.filter { $0.hasPrefix(UserDefaultsKeys.userPrefix) }
         
         for key in savedUserKeys {
             if let userData = userDefaults.data(forKey: key),
@@ -521,7 +530,7 @@ struct SettingsView: View {
         }
         
         // Get the token for the selected user directly from UserDefaults
-        if let token = UserDefaults.standard.string(forKey: "immich_token_\(user.id)") {
+        if let token = UserDefaults.standard.string(forKey: "\(UserDefaultsKeys.tokenPrefix)\(user.id)") {
             print("SettingsView: Found token for user \(user.email), switching...")
             print("SettingsView: Token starts with: \(String(token.prefix(20)))...")
             
@@ -544,7 +553,7 @@ struct SettingsView: View {
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                             self.loadSavedUsers()
                             // Refresh the app by posting a notification
-                            NotificationCenter.default.post(name: .refreshAllTabs, object: nil)
+                            NotificationCenter.default.post(name: NSNotification.Name(NotificationNames.refreshAllTabs), object: nil)
                         }
                     }
                 } catch {
@@ -577,12 +586,12 @@ struct SettingsView: View {
         
         // Save user data
         if let userData = try? JSONEncoder().encode(user) {
-            UserDefaults.standard.set(userData, forKey: "immich_user_\(userId)")
+            UserDefaults.standard.set(userData, forKey: "\(UserDefaultsKeys.userPrefix)\(userId)")
             print("SettingsView: Saved user data for \(currentUser.email)")
         }
         
         // Save token directly: "user@server" : token
-        UserDefaults.standard.set(accessToken, forKey: "immich_token_\(userId)")
+        UserDefaults.standard.set(accessToken, forKey: "\(UserDefaultsKeys.tokenPrefix)\(userId)")
         print("SettingsView: Saved token for user \(currentUser.email)")
         print("SettingsView: Token starts with: \(String(accessToken.prefix(20)))...")
     }
@@ -591,10 +600,10 @@ struct SettingsView: View {
         print("SettingsView: Removing user \(user.email)")
         
         // Remove user data
-        UserDefaults.standard.removeObject(forKey: "immich_user_\(user.id)")
+        UserDefaults.standard.removeObject(forKey: "\(UserDefaultsKeys.userPrefix)\(user.id)")
         
         // Remove token directly
-        UserDefaults.standard.removeObject(forKey: "immich_token_\(user.id)")
+        UserDefaults.standard.removeObject(forKey: "\(UserDefaultsKeys.tokenPrefix)\(user.id)")
         
         // Reload the saved users list
         loadSavedUsers()
@@ -617,7 +626,7 @@ struct SettingsView: View {
                 
                 // Post notification to refresh all tabs
                 DispatchQueue.main.async {
-                    NotificationCenter.default.post(name: .refreshAllTabs, object: nil)
+                    NotificationCenter.default.post(name: NSNotification.Name(NotificationNames.refreshAllTabs), object: nil)
                 }
             } catch {
                 print("❌ Failed to refresh server connection: \(error)")

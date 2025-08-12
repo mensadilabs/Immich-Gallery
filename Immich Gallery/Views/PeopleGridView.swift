@@ -362,7 +362,8 @@ struct PersonPhotosView: View {
                     isAllPhotos: false,
                     onAssetsLoaded: { loadedAssets in
                         self.personAssets = loadedAssets
-                    }
+                    },
+                    deepLinkAssetId: nil
                 )
             }
             .navigationTitle(person.name.isEmpty ? "Unknown Person" : person.name)

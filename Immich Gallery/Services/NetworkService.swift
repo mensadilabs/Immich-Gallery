@@ -16,13 +16,37 @@ class NetworkService: ObservableObject {
     private let session = URLSession.shared
     
     init() {
+        migrateCredentialsToSharedContainer()
         loadSavedCredentials()
     }
     
     // MARK: - Credential Management
+    private var sharedDefaults: UserDefaults {
+        return UserDefaults(suiteName: AppConstants.appGroupIdentifier) ?? UserDefaults.standard
+    }
+    
+    private func migrateCredentialsToSharedContainer() {
+        // Check if we already have credentials in shared container
+        if sharedDefaults.string(forKey: UserDefaultsKeys.serverURL) != nil {
+            return // Already migrated
+        }
+        
+        // Check if we have credentials in standard UserDefaults to migrate
+        if let serverURL = UserDefaults.standard.string(forKey: UserDefaultsKeys.serverURL),
+           let accessToken = UserDefaults.standard.string(forKey: UserDefaultsKeys.accessToken) {
+            print("NetworkService: Migrating credentials to shared container")
+            sharedDefaults.set(serverURL, forKey: UserDefaultsKeys.serverURL)
+            sharedDefaults.set(accessToken, forKey: UserDefaultsKeys.accessToken)
+            
+            if let email = UserDefaults.standard.string(forKey: UserDefaultsKeys.userEmail) {
+                sharedDefaults.set(email, forKey: UserDefaultsKeys.userEmail)
+            }
+        }
+    }
+    
     private func loadSavedCredentials() {
-        if let savedURL = UserDefaults.standard.string(forKey: "immich_server_url"),
-           let savedToken = UserDefaults.standard.string(forKey: "immich_access_token") {
+        if let savedURL = sharedDefaults.string(forKey: UserDefaultsKeys.serverURL),
+           let savedToken = sharedDefaults.string(forKey: UserDefaultsKeys.accessToken) {
             baseURL = savedURL
             accessToken = savedToken
             print("NetworkService: Loaded saved credentials - baseURL: \(baseURL)")
@@ -33,16 +57,27 @@ class NetworkService: ObservableObject {
     
     func saveCredentials(serverURL: String, token: String) {
         print("NetworkService: Saving credentials - serverURL: \(serverURL)")
-        UserDefaults.standard.set(serverURL, forKey: "immich_server_url")
-        UserDefaults.standard.set(token, forKey: "immich_access_token")
+        sharedDefaults.set(serverURL, forKey: UserDefaultsKeys.serverURL)
+        sharedDefaults.set(token, forKey: UserDefaultsKeys.accessToken)
+        
+        // Also save to standard UserDefaults for backward compatibility
+        UserDefaults.standard.set(serverURL, forKey: UserDefaultsKeys.serverURL)
+        UserDefaults.standard.set(token, forKey: UserDefaultsKeys.accessToken)
+        
         baseURL = serverURL
         accessToken = token
     }
     
     func clearCredentials() {
-        UserDefaults.standard.removeObject(forKey: "immich_server_url")
-        UserDefaults.standard.removeObject(forKey: "immich_access_token")
-        UserDefaults.standard.removeObject(forKey: "immich_user_email")
+        sharedDefaults.removeObject(forKey: UserDefaultsKeys.serverURL)
+        sharedDefaults.removeObject(forKey: UserDefaultsKeys.accessToken)
+        sharedDefaults.removeObject(forKey: UserDefaultsKeys.userEmail)
+        
+        // Also clear from standard UserDefaults
+        UserDefaults.standard.removeObject(forKey: UserDefaultsKeys.serverURL)
+        UserDefaults.standard.removeObject(forKey: UserDefaultsKeys.accessToken)
+        UserDefaults.standard.removeObject(forKey: UserDefaultsKeys.userEmail)
+        
         baseURL = ""
         accessToken = nil
     }

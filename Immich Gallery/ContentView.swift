@@ -7,8 +7,39 @@
 
 import SwiftUI
 
+enum TabName: Int, CaseIterable {
+    case photos = 0
+    case albums = 1
+    case people = 2
+    case tags = 3
+    case search = 4
+    case settings = 5
+    
+    var title: String {
+        switch self {
+        case .photos: return "Photos"
+        case .albums: return "Albums"
+        case .people: return "People"
+        case .tags: return "Tags"
+        case .search: return "Search"
+        case .settings: return "Settings"
+        }
+    }
+    
+    var iconName: String {
+        switch self {
+        case .photos: return "photo.on.rectangle"
+        case .albums: return "folder"
+        case .people: return "person.crop.circle"
+        case .tags: return "tag"
+        case .search: return "magnifyingglass"
+        case .settings: return "gear"
+        }
+    }
+}
+
 extension Notification.Name {
-    static let refreshAllTabs = Notification.Name("refreshAllTabs")
+    static let refreshAllTabs = Notification.Name(NotificationNames.refreshAllTabs)
 }
 
 struct ContentView: View {
@@ -18,12 +49,15 @@ struct ContentView: View {
     @StateObject private var albumService: AlbumService
     @StateObject private var peopleService: PeopleService
     @StateObject private var tagService: TagService
+    @StateObject private var searchService: SearchService
     @State private var selectedTab = 0
     @State private var refreshTrigger = UUID()
     @State private var showWhatsNew = false
-    @AppStorage("showTagsTab") private var showTagsTab = false
-    @AppStorage("defaultStartupTab") private var defaultStartupTab = "photos"
-    @AppStorage("lastSeenVersion") private var lastSeenVersion = ""
+    @AppStorage(UserDefaultsKeys.showTagsTab) private var showTagsTab = false
+    @AppStorage(UserDefaultsKeys.defaultStartupTab) private var defaultStartupTab = "photos"
+    @AppStorage(UserDefaultsKeys.lastSeenVersion) private var lastSeenVersion = ""
+    @State private var searchTabHighlighted = false
+    @State private var deepLinkAssetId: String?
     
     init() {
         let networkService = NetworkService()
@@ -33,6 +67,7 @@ struct ContentView: View {
         _albumService = StateObject(wrappedValue: AlbumService(networkService: networkService))
         _peopleService = StateObject(wrappedValue: PeopleService(networkService: networkService))
         _tagService = StateObject(wrappedValue: TagService(networkService: networkService))
+        _searchService = StateObject(wrappedValue: SearchService(networkService: networkService))
     }
     
     var body: some View {
@@ -45,53 +80,62 @@ struct ContentView: View {
                 } else {
                     // Main app interface
                     TabView(selection: $selectedTab) {
-                        AssetGridView(assetService: assetService, authService: authService, albumId: nil, personId: nil, tagId: nil, isAllPhotos: true, onAssetsLoaded: nil)
+                        AssetGridView(assetService: assetService, authService: authService, albumId: nil, personId: nil, tagId: nil, isAllPhotos: true, onAssetsLoaded: nil, deepLinkAssetId: deepLinkAssetId)
                             .errorBoundary(context: "Photos Tab")
                             .tabItem {
-                                Image(systemName: "photo.on.rectangle")
-                                Text("Photos")
+                                Image(systemName: TabName.photos.iconName)
+                                Text(TabName.photos.title)
                             }
-                            .tag(0)
+                            .tag(TabName.photos.rawValue)
                         
                         AlbumListView(albumService: albumService, authService: authService, assetService: assetService)
                             .errorBoundary(context: "Albums Tab")
                             .tabItem {
-                                Image(systemName: "folder")
-                                Text("Albums")
+                                Image(systemName: TabName.albums.iconName)
+                                Text(TabName.albums.title)
                             }
-                            .tag(1)
+                            .tag(TabName.albums.rawValue)
                         
                         PeopleGridView(peopleService: peopleService, authService: authService, assetService: assetService)
                             .errorBoundary(context: "People Tab")
                             .tabItem {
-                                Image(systemName: "person.crop.circle")
-                                Text("People")
+                                Image(systemName: TabName.people.iconName)
+                                Text(TabName.people.title)
                             }
-                            .tag(2)
+                            .tag(TabName.people.rawValue)
                         
                         if showTagsTab {
                             TagsGridView(tagService: tagService, authService: authService, assetService: assetService)
                                 .errorBoundary(context: "Tags Tab")
                                 .tabItem {
-                                    Image(systemName: "tag")
-                                    Text("Tags")
+                                    Image(systemName: TabName.tags.iconName)
+                                    Text(TabName.tags.title)
                                 }
-                                .tag(3)
+                                .tag(TabName.tags.rawValue)
                         }
+                        
+                        SearchView(searchService: searchService, assetService: assetService, authService: authService)
+                            .errorBoundary(context: "Search Tab")
+                            .tabItem {
+                                Image(systemName: TabName.search.iconName)
+                                Text(TabName.search.title)
+                            }
+                            .tag(TabName.search.rawValue)
                         
                         SettingsView(authService: authService)
                             .errorBoundary(context: "Settings Tab")
                             .tabItem {
-                                Image(systemName: "gear")
-                                Text("Settings")
+                                Image(systemName: TabName.settings.iconName)
+                                Text(TabName.settings.title)
                             }
-                            .tag(showTagsTab ? 4 : 3)
+                            .tag(TabName.settings.rawValue)
                     }
             .onAppear {
                         setDefaultTab()
                         checkForAppUpdate()
                     }
                     .onChange(of: selectedTab) { oldValue, newValue in
+                        searchTabHighlighted = false
                         print("Tab changed from \(oldValue) to \(newValue)")
                     }                    .id(refreshTrigger) // Force refresh when user switches
                     // .accentColor(.blue)
@@ -105,28 +149,42 @@ struct ContentView: View {
             // Refresh all tabs by generating a new UUID
             refreshTrigger = UUID()
         }
-        .sheet(isPresented: $showWhatsNew) {
-            WhatsNewView(onDismiss: {
-                showWhatsNew = false
-                lastSeenVersion = getCurrentAppVersion()
-            })
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name(NotificationNames.openAsset))) { notification in
+            if let assetId = notification.userInfo?["assetId"] as? String {
+                print("ContentView: Received OpenAsset notification for asset: \(assetId)")
+                
+                // Switch to Photos tab and set deep link asset ID
+                selectedTab = TabName.photos.rawValue
+                deepLinkAssetId = assetId
+                
+                // Clear the deep link after a moment to avoid stale state
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                    deepLinkAssetId = nil
+                }
+            }
         }
+       .sheet(isPresented: $showWhatsNew) {
+           WhatsNewView(onDismiss: {
+               showWhatsNew = false
+               lastSeenVersion = getCurrentAppVersion()
+           })
+       }
     }
     
     private func setDefaultTab() {
         switch defaultStartupTab {
         case "albums":
-            selectedTab = 1
+            selectedTab = TabName.albums.rawValue
         case "people":
-            selectedTab = 2
+            selectedTab = TabName.people.rawValue
         case "tags":
             if showTagsTab {
-                selectedTab = 3
+                selectedTab = TabName.tags.rawValue
             } else {
-                selectedTab = 0 // Default to photos if tags tab is disabled
+                selectedTab = TabName.photos.rawValue // Default to photos if tags tab is disabled
             }
         default: // "photos"
-            selectedTab = 0
+            selectedTab = TabName.photos.rawValue
         }
     }
     

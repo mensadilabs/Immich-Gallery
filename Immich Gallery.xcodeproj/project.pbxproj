@@ -6,6 +6,11 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		2F2863002E4971C90032B966 /* TVServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2F2862FF2E4971C90032B966 /* TVServices.framework */; };
+		2F2863072E4971C90032B966 /* TopShelfExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 2F2862FD2E4971C90032B966 /* TopShelfExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		2F23BA7E2E1234CA005C563C /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -21,21 +26,58 @@
 			remoteGlobalIDString = 2F23BA6C2E1234C8005C563C;
 			remoteInfo = "Immich Gallery";
 		};
+		2F2863052E4971C90032B966 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 2F23BA652E1234C8005C563C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 2F2862FC2E4971C90032B966;
+			remoteInfo = TopShelfExtension;
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		2F2863082E4971C90032B966 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				2F2863072E4971C90032B966 /* TopShelfExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		2F23BA6D2E1234C8005C563C /* Immich Gallery.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Immich Gallery.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		2F23BA7D2E1234CA005C563C /* Immich GalleryTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Immich GalleryTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		2F23BA872E1234CA005C563C /* Immich GalleryUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Immich GalleryUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		2F2862FD2E4971C90032B966 /* TopShelfExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TopShelfExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		2F2862FF2E4971C90032B966 /* TVServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = TVServices.framework; path = System/Library/Frameworks/TVServices.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		2F28630C2E4971C90032B966 /* Exceptions for "TopShelfExtension" folder in "TopShelfExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 2F2862FC2E4971C90032B966 /* TopShelfExtension */;
+		};
 		2F766F112E3AEC6400AEF3B2 /* Exceptions for "Immich Gallery" folder in "Immich Gallery" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				"svg-icon.svg",
 			);
 			target = 2F23BA6C2E1234C8005C563C /* Immich Gallery */;
+		};
+		2FDBDAF42E4AC9DB00344677 /* Exceptions for "Shared" folder in "TopShelfExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				AppConstants.swift,
+			);
+			target = 2F2862FC2E4971C90032B966 /* TopShelfExtension */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -56,6 +98,22 @@
 		2F23BA8A2E1234CA005C563C /* Immich GalleryUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = "Immich GalleryUITests";
+			sourceTree = "<group>";
+		};
+		2F2863012E4971C90032B966 /* TopShelfExtension */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				2F28630C2E4971C90032B966 /* Exceptions for "TopShelfExtension" folder in "TopShelfExtension" target */,
+			);
+			path = TopShelfExtension;
+			sourceTree = "<group>";
+		};
+		2FDBDAF32E4AC9D200344677 /* Shared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				2FDBDAF42E4AC9DB00344677 /* Exceptions for "Shared" folder in "TopShelfExtension" target */,
+			);
+			path = Shared;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -82,15 +140,26 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		2F2862FA2E4971C90032B966 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2F2863002E4971C90032B966 /* TVServices.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		2F23BA642E1234C8005C563C = {
 			isa = PBXGroup;
 			children = (
+				2FDBDAF32E4AC9D200344677 /* Shared */,
 				2F23BA6F2E1234C8005C563C /* Immich Gallery */,
 				2F23BA802E1234CA005C563C /* Immich GalleryTests */,
 				2F23BA8A2E1234CA005C563C /* Immich GalleryUITests */,
+				2F2863012E4971C90032B966 /* TopShelfExtension */,
+				2F2862FE2E4971C90032B966 /* Frameworks */,
 				2F23BA6E2E1234C8005C563C /* Products */,
 			);
 			sourceTree = "<group>";
@@ -101,8 +170,17 @@
 				2F23BA6D2E1234C8005C563C /* Immich Gallery.app */,
 				2F23BA7D2E1234CA005C563C /* Immich GalleryTests.xctest */,
 				2F23BA872E1234CA005C563C /* Immich GalleryUITests.xctest */,
+				2F2862FD2E4971C90032B966 /* TopShelfExtension.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		2F2862FE2E4971C90032B966 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				2F2862FF2E4971C90032B966 /* TVServices.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -115,13 +193,16 @@
 				2F23BA692E1234C8005C563C /* Sources */,
 				2F23BA6A2E1234C8005C563C /* Frameworks */,
 				2F23BA6B2E1234C8005C563C /* Resources */,
+				2F2863082E4971C90032B966 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				2F2863062E4971C90032B966 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				2F23BA6F2E1234C8005C563C /* Immich Gallery */,
+				2FDBDAF32E4AC9D200344677 /* Shared */,
 			);
 			name = "Immich Gallery";
 			packageProductDependencies = (
@@ -176,6 +257,28 @@
 			productReference = 2F23BA872E1234CA005C563C /* Immich GalleryUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		2F2862FC2E4971C90032B966 /* TopShelfExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 2F28630B2E4971C90032B966 /* Build configuration list for PBXNativeTarget "TopShelfExtension" */;
+			buildPhases = (
+				2F2862F92E4971C90032B966 /* Sources */,
+				2F2862FA2E4971C90032B966 /* Frameworks */,
+				2F2862FB2E4971C90032B966 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				2F2863012E4971C90032B966 /* TopShelfExtension */,
+			);
+			name = TopShelfExtension;
+			packageProductDependencies = (
+			);
+			productName = TopShelfExtension;
+			productReference = 2F2862FD2E4971C90032B966 /* TopShelfExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -197,6 +300,9 @@
 						CreatedOnToolsVersion = 16.2;
 						TestTargetID = 2F23BA6C2E1234C8005C563C;
 					};
+					2F2862FC2E4971C90032B966 = {
+						CreatedOnToolsVersion = 16.2;
+					};
 				};
 			};
 			buildConfigurationList = 2F23BA682E1234C8005C563C /* Build configuration list for PBXProject "Immich Gallery" */;
@@ -216,6 +322,7 @@
 				2F23BA6C2E1234C8005C563C /* Immich Gallery */,
 				2F23BA7C2E1234CA005C563C /* Immich GalleryTests */,
 				2F23BA862E1234CA005C563C /* Immich GalleryUITests */,
+				2F2862FC2E4971C90032B966 /* TopShelfExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -236,6 +343,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		2F23BA852E1234CA005C563C /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		2F2862FB2E4971C90032B966 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -266,6 +380,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		2F2862F92E4971C90032B966 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -278,6 +399,11 @@
 			isa = PBXTargetDependency;
 			target = 2F23BA6C2E1234C8005C563C /* Immich Gallery */;
 			targetProxy = 2F23BA882E1234CA005C563C /* PBXContainerItemProxy */;
+		};
+		2F2863062E4971C90032B966 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 2F2862FC2E4971C90032B966 /* TopShelfExtension */;
+			targetProxy = 2F2863052E4971C90032B966 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -407,6 +533,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = "App Icon & Top Shelf Image";
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
+				CODE_SIGN_ENTITLEMENTS = "Immich Gallery/Immich Gallery.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"Immich Gallery/Preview Content\"";
@@ -420,7 +547,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.8;
+				MARKETING_VERSION = 1.0.9;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.sanketh.dev.Immich-Gallery";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -435,6 +562,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = "App Icon & Top Shelf Image";
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
+				CODE_SIGN_ENTITLEMENTS = "Immich Gallery/Immich Gallery.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"Immich Gallery/Preview Content\"";
@@ -448,7 +576,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.8;
+				MARKETING_VERSION = 1.0.9;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.sanketh.dev.Immich-Gallery";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -529,6 +657,58 @@
 			};
 			name = Release;
 		};
+		2F2863092E4971C90032B966 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = TopShelfExtension/TopShelfExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 2F58933V55;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = TopShelfExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = TopShelfExtension;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.sanketh.dev.Immich-Gallery.TopShelfExtension";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 3;
+			};
+			name = Debug;
+		};
+		2F28630A2E4971C90032B966 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = TopShelfExtension/TopShelfExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 2F58933V55;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = TopShelfExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = TopShelfExtension;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.sanketh.dev.Immich-Gallery.TopShelfExtension";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 3;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -564,6 +744,15 @@
 			buildConfigurations = (
 				2F23BA982E1234CA005C563C /* Debug */,
 				2F23BA992E1234CA005C563C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		2F28630B2E4971C90032B966 /* Build configuration list for PBXNativeTarget "TopShelfExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2F2863092E4971C90032B966 /* Debug */,
+				2F28630A2E4971C90032B966 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

@@ -7,176 +7,7 @@
 
 import SwiftUI
 
-struct WhatsNewView: View {
-    let onDismiss: () -> Void
-    @State private var opacity: Double = 0
-    
-    private let changelogContent = """
-
-VERSION|1.0.8 Build 1
-
-NEW_FEATURE|Custom sort order
-- Customize sort order for all photos and collections separately
-- Shuffle mode for Slideshow (beta)
-
-IMPROVEMENT|Settings view changes
-- ⭐⭐⭐⭐⭐ An option to leave a review in App Store. 
-- Better organization of Settings.
-- Album and Tag view styling cleanup.
-- Album view now includes an icon to indicate shared albums and displays owner name.
-
-BUGFIX| Slideshow timer bug on fresh install.
-"""
-    /**
-     
-     VERSION|1.0.7 Build 1
-
-     NEW_FEATURE|Animated Thumbnails
-     - Albums, People, and Tags now show dynamic slideshow previews of their content
-     - Smooth 1.5-second fade transitions between thumbnails every 4 seconds
-     - Smart animation that pauses when focused and resumes when unfocused
-     - Performance optimized with thumbnail caching and loads maximum 10 images per animation
-
-     NEW_FEATURE|User Control Settings
-     - New "Enable Thumbnail Animation" toggle in Settings under Slideshow & Display
-     - Animation enabled by default for immediate visual enhancement
-     - Real-time setting changes with no restart required
-     - Graceful fallbacks when no images are available for animation
-
-
-     VERSION|1.0.5 Build 1
-
-     IMPROVEMENT|Better Settings Navigation
-     - Fixed focus issues
-     - More intuitive menu-style pickers replace the old segmented controls for color picker.
-     - Made changes to code in Image Grid/Photos Tab to make it nicer. Please report if you notice issues.
-     */
-
-    
-    var body: some View {
-        NavigationView {
-            ZStack {
-                // Background
-                Color.black.ignoresSafeArea()
-                
-                VStack(spacing: 30) {
-                    // Header
-                    VStack(spacing: 12) {
-                        Text("What's New in Immich Gallery")
-                            .font(.system(size: 48, weight: .bold))
-                            .foregroundColor(.white)
-                        
-                        Text("•Navigate using the touch surface or directional pad • View anytime in Settings • Press back to close •")
-                            .font(.system(size: 24, weight: .medium))
-                            .foregroundColor(.gray)
-                    }
-                    .padding(.top, 40)
-                    
-                    // Content
-                    ScrollView {
-                        LazyVStack(spacing: 20) {
-                            let sections = parseChangelog()
-                            
-                            ForEach(Array(sections.enumerated()), id: \.element.title) { index, section in
-                                if section.type == .version {
-                                    // Version sections take full width
-                                    ChangelogCard(section: section)
-                                        .padding(.horizontal, 40)
-                                } else {
-                                    // Other sections use two-column layout
-                                    let nonVersionSections = sections.filter { $0.type != .version }
-                                    let sectionIndex = nonVersionSections.firstIndex { $0.title == section.title } ?? 0
-                                    
-                                    if sectionIndex % 2 == 0 {
-                                        // Start a new row
-                                        let nextSection = sectionIndex + 1 < nonVersionSections.count ? nonVersionSections[sectionIndex + 1] : nil
-                                        
-                                        HStack(spacing: 20) {
-                                            ChangelogCard(section: section)
-                                            
-                                            if let nextSection = nextSection {
-                                                ChangelogCard(section: nextSection)
-                                            } else {
-                                                Spacer()
-                                            }
-                                        }
-                                        .padding(.horizontal, 40)
-                                    }
-                                    // Skip odd-indexed sections as they're handled in the HStack above
-                                }
-                            }
-                        }
-                        .padding(.bottom, 100)
-                    }
-                }
-                .opacity(opacity)
-            }
-        }
-        .navigationViewStyle(StackNavigationViewStyle())
-        .onAppear {
-            withAnimation(.easeOut(duration: 0.6)) {
-                opacity = 1.0
-            }
-        }
-        .onExitCommand {
-            onDismiss()
-        }
-    }
-    
-    private func parseChangelog() -> [ChangelogSection] {
-        let lines = changelogContent.components(separatedBy: .newlines)
-        var sections: [ChangelogSection] = []
-        var currentSection = ChangelogSection(title: "", type: .version, items: [])
-        
-        for line in lines {
-            let trimmedLine = line.trimmingCharacters(in: .whitespaces)
-            
-            if trimmedLine.isEmpty {
-                continue
-            }
-            
-            // Check if it's a section header with type
-            if trimmedLine.contains("|") {
-                // Save previous section
-                if !currentSection.title.isEmpty || !currentSection.items.isEmpty {
-                    sections.append(currentSection)
-                }
-                
-                let components = trimmedLine.components(separatedBy: "|")
-                if components.count == 2 {
-                    let typeString = components[0]
-                    let title = components[1]
-                    
-                    let sectionType: ChangelogSectionType
-                    switch typeString {
-                    case "VERSION":
-                        sectionType = .version
-                    case "NEW_FEATURE":
-                        sectionType = .newFeature
-                    case "IMPROVEMENT":
-                        sectionType = .improvement
-                    case "BUGFIX":
-                        sectionType = .bugFix
-                    default:
-                        sectionType = .other
-                    }
-                    
-                    currentSection = ChangelogSection(title: title, type: sectionType, items: [])
-                }
-            } else if trimmedLine.hasPrefix("-") {
-                // It's a bullet point
-                currentSection.items.append(String(trimmedLine.dropFirst(1).trimmingCharacters(in: .whitespaces)))
-            }
-        }
-        
-        // Add the last section
-        if !currentSection.title.isEmpty || !currentSection.items.isEmpty {
-            sections.append(currentSection)
-        }
-        
-        return sections
-    }
-}
+// MARK: - Data Models
 
 enum ChangelogSectionType {
     case version
@@ -186,11 +17,128 @@ enum ChangelogSectionType {
     case other
 }
 
-struct ChangelogSection {
+struct ChangelogSection: Identifiable {
+    let id = UUID()
     let title: String
     let type: ChangelogSectionType
     var items: [String]
 }
+
+// MARK: - View
+
+struct WhatsNewView: View {
+    let onDismiss: () -> Void
+    @State private var opacity: Double = 0
+    
+    private let changelogContent = """
+    VERSION|1.0.9 Build 1
+    NEW_FEATURE|Context Search
+    - Helps you find whatever your heart longs for, or at least the picture your heart longs for.
+
+    BUGFIX|Mostly code stuff here.
+    """
+    
+    private let gridSpacing: CGFloat = 20
+    private let horizontalPadding: CGFloat = 40
+    
+    var body: some View {
+        NavigationView {
+            ZStack {
+                Color.black.ignoresSafeArea()
+                
+                VStack(spacing: 30) {
+                    headerView
+                    
+                    ScrollView {
+                        LazyVStack(spacing: gridSpacing) {
+                            changelogContentSections
+                        }
+                        .padding(.bottom, 100)
+                    }
+                }
+                .opacity(opacity)
+            }
+        }
+        .navigationViewStyle(StackNavigationViewStyle())
+        .onAppear { withAnimation(.easeOut(duration: 0.6)) { opacity = 1.0 } }
+        .onExitCommand { onDismiss() }
+    }
+}
+
+// MARK: - Subviews
+
+private extension WhatsNewView {
+    var headerView: some View {
+        VStack(spacing: 12) {
+            Text("What's New in Immich Gallery")
+                .font(.system(size: 48, weight: .bold))
+                .foregroundColor(.white)
+            
+            Text("• Navigate with the touch surface or directional pad • View anytime in Settings • Press back to close •")
+                .font(.system(size: 24, weight: .medium))
+                .foregroundColor(.gray)
+        }
+        .padding(.top, 40)
+    }
+    
+    var changelogContentSections: some View {
+        let sections = parseChangelog()
+        
+        return ForEach(sections) { section in
+                // Grid for non-version sections
+                LazyVGrid(columns: Array(repeating: .init(.flexible(), spacing: gridSpacing), count: 1), spacing: gridSpacing) {
+                    ChangelogCard(section: section).padding(.horizontal)
+            }
+        }
+    }
+}
+
+// MARK: - Parsing Logic
+
+private extension WhatsNewView {
+    func parseChangelog() -> [ChangelogSection] {
+        var sections: [ChangelogSection] = []
+        var currentSection: ChangelogSection?
+        
+        for line in changelogContent.components(separatedBy: .newlines) {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            guard !trimmed.isEmpty else { continue }
+            
+            if trimmed.contains("|") {
+                if let section = currentSection {
+                    sections.append(section)
+                }
+                let (type, title) = parseHeader(trimmed)
+                currentSection = ChangelogSection(title: title, type: type, items: [])
+            } else if trimmed.hasPrefix("-") {
+                currentSection?.items.append(String(trimmed.dropFirst().trimmingCharacters(in: .whitespaces)))
+            }
+        }
+        
+        if let section = currentSection {
+            sections.append(section)
+        }
+        
+        return sections
+    }
+    
+    func parseHeader(_ line: String) -> (ChangelogSectionType, String) {
+        let components = line.components(separatedBy: "|")
+        guard components.count == 2 else { return (.other, line) }
+        
+        let type: ChangelogSectionType
+        switch components[0] {
+        case "VERSION": type = .version
+        case "NEW_FEATURE": type = .newFeature
+        case "IMPROVEMENT": type = .improvement
+        case "BUGFIX": type = .bugFix
+        default: type = .other
+        }
+        return (type, components[1])
+    }
+}
+
+// MARK: - Card View
 
 struct ChangelogCard: View {
     let section: ChangelogSection
@@ -198,78 +146,21 @@ struct ChangelogCard: View {
     
     private func getTypeInfo() -> (icon: String, color: Color, badge: String) {
         switch section.type {
-        case .version:
-            return ("app.badge.fill", .blue, "VERSION")
-        case .newFeature:
-            return ("sparkles", .green, "NEW")
-        case .improvement:
-            return ("arrow.up.circle.fill", .orange, "IMPROVED")
-        case .bugFix:
-            return ("wrench.and.screwdriver.fill", .red, "FIXED")
-        case .other:
-            return ("info.circle.fill", .gray, "INFO")
+        case .version: return ("app.badge.fill", .blue, "VERSION")
+        case .newFeature: return ("sparkles", .green, "NEW")
+        case .improvement: return ("arrow.up.circle.fill", .orange, "IMPROVED")
+        case .bugFix: return ("ladybug.slash", .red, "FIXED")
+        case .other: return ("info.circle.fill", .gray, "INFO")
         }
     }
     
     var body: some View {
-        Button(action: {
-            // No action needed, just for focus
-        }) {
+        let typeInfo = getTypeInfo()
+        
+        return Button(action: {}) {
             VStack(alignment: .leading, spacing: 16) {
-                // Header with type badge and icon
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        let typeInfo = getTypeInfo()
-                        
-                        // Type badge
-                        Text(typeInfo.badge)
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(
-                                RoundedRectangle(cornerRadius: 6)
-                                    .fill(typeInfo.color)
-                            )
-                        
-                        Spacer()
-                        
-                        // Icon
-                        Image(systemName: typeInfo.icon)
-                            .font(.title2)
-                            .foregroundColor(typeInfo.color)
-                    }
-                    
-                    // Title
-                    Text(section.title)
-                        .font(.system(size: 24, weight: .bold))
-                        .foregroundColor(.white)
-                        .multilineTextAlignment(.leading)
-                        .lineLimit(2)
-                }
-                
-                // Items list
-                if !section.items.isEmpty {
-                    VStack(alignment: .leading, spacing: 8) {
-                        ForEach(section.items, id: \.self) { item in
-                            HStack(alignment: .top, spacing: 10) {
-                                // Bullet point
-                                Circle()
-                                    .fill(getTypeInfo().color)
-                                    .frame(width: 6, height: 6)
-                                    .padding(.top, 8)
-                                
-                                Text(item)
-                                    .font(.system(size: 25))
-                                    .foregroundColor(.white)
-                                    .multilineTextAlignment(.leading)
-                                    .fixedSize(horizontal: false, vertical: true)
-                                
-                                Spacer()
-                            }
-                        }
-                    }
-                }
+                header(typeInfo)
+                if !section.items.isEmpty { itemsList(typeInfo) }
             }
             .padding(20)
             .frame(maxWidth: .infinity, minHeight: 300, alignment: .topLeading)
@@ -278,18 +169,61 @@ struct ChangelogCard: View {
                     .fill(isFocused ? Color.white.opacity(0.1) : Color.black.opacity(0.3))
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
-                            .stroke(isFocused ? getTypeInfo().color : Color.gray.opacity(0.3), lineWidth: isFocused ? 3 : 1)
+                            .stroke(isFocused ? typeInfo.color : Color.gray.opacity(0.3), lineWidth: isFocused ? 3 : 1)
                     )
             )
-            .scaleEffect(isFocused ? 1.05 : 1.0)
-            .animation(.easeInOut(duration: 0.2), value: isFocused)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(CardButtonStyle())
         .focusable()
+    }
+    
+    private func header(
+        _ typeInfo: (icon: String, color: Color, badge: String)
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Text(typeInfo.badge)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(typeInfo.color)
+                    )
+                Spacer()
+                Image(systemName: typeInfo.icon)
+                    .font(.title2)
+                    .foregroundColor(typeInfo.color)
+            }
+            .padding(.bottom, 8)
+
+            Text(section.title)
+                .font(.system(size: 24, weight: .bold))
+                .foregroundColor(.white)
+                .multilineTextAlignment(.leading)
+                .lineLimit(2)
+        }
+    }
+    
+    private func itemsList(_ typeInfo: (icon: String, color: Color, badge: String)) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ForEach(section.items, id: \.self) { item in
+                HStack(alignment: .top, spacing: 10) {
+                    Circle()
+                        .fill(typeInfo.color)
+                        .frame(width: 6, height: 6)
+                        .padding(.top, 8)
+                    Text(item)
+                        .font(.system(size: 25))
+                        .foregroundColor(.white)
+                        .multilineTextAlignment(.leading)
+                }
+            }
+        }
     }
 }
 
 #Preview {
     WhatsNewView(onDismiss: {})
 }
-
