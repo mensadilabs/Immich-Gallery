@@ -32,7 +32,7 @@ struct WhatsNewView: View {
     
     private let changelogContent = """
     VERSION|1.0.10
-    NEW_FEATURE | Top Shelf Integration
+    NEW_FEATURE| Top Shelf Integration
     - Puts your recent photos front and center on the TV Top Shelf — a cleaner look for your home screen (and yes, you can hide it if you’re feeling shy).
     """
     
