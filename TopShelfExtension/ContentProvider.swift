@@ -14,7 +14,7 @@ class ContentProvider: TVTopShelfContentProvider {
         print("TopShelf: loadTopShelfContent() called")
         
         // Check if Top Shelf is enabled in settings (default to true if not set)
-        let isTopShelfEnabled = sharedDefaults.object(forKey: "enableTopShelf") as? Bool ?? true
+        let isTopShelfEnabled = sharedDefaults.bool(forKey: "enableTopShelf")
         print("TopShelf: Top Shelf enabled in settings: \(isTopShelfEnabled)")
         
         if !isTopShelfEnabled {
@@ -110,6 +110,7 @@ class ContentProvider: TVTopShelfContentProvider {
         let suiteName = "group.com.sanketh.dev.Immich-Gallery"
         let defaults = UserDefaults(suiteName: suiteName) ?? UserDefaults.standard
         print("TopShelf: Using UserDefaults suite: \(suiteName)")
+        print(defaults)
         return defaults
     }
     
@@ -118,8 +119,11 @@ class ContentProvider: TVTopShelfContentProvider {
         
         let serverURL = sharedDefaults.string(forKey: "immich_server_url")
         let accessToken = sharedDefaults.string(forKey: "immich_access_token")
+        let isTopShelfEnabledFromDefaults = sharedDefaults.bool(forKey: "enableTopShelf")
         
-        print("TopShelf: Credentials check - serverURL: \(serverURL != nil ? "✓" : "✗"), accessToken: \(accessToken != nil ? "✓" : "✗")")
+        print("top shelf \(isTopShelfEnabledFromDefaults)")
+        
+        print("TopShelf: Credentials check - serverURL: \(serverURL), accessToken: \(accessToken != nil ? "✓" : "✗")")
         if let url = serverURL { print("TopShelf: Server URL: \(url)") }
         if let token = accessToken { print("TopShelf: Access token: \(String(token.prefix(20)))...") }
         
