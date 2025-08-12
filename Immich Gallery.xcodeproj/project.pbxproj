@@ -72,6 +72,13 @@
 			);
 			target = 2F23BA6C2E1234C8005C563C /* Immich Gallery */;
 		};
+		2FDBDAF42E4AC9DB00344677 /* Exceptions for "Shared" folder in "TopShelfExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				AppConstants.swift,
+			);
+			target = 2F2862FC2E4971C90032B966 /* TopShelfExtension */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -99,6 +106,14 @@
 				2F28630C2E4971C90032B966 /* Exceptions for "TopShelfExtension" folder in "TopShelfExtension" target */,
 			);
 			path = TopShelfExtension;
+			sourceTree = "<group>";
+		};
+		2FDBDAF32E4AC9D200344677 /* Shared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				2FDBDAF42E4AC9DB00344677 /* Exceptions for "Shared" folder in "TopShelfExtension" target */,
+			);
+			path = Shared;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -139,6 +154,7 @@
 		2F23BA642E1234C8005C563C = {
 			isa = PBXGroup;
 			children = (
+				2FDBDAF32E4AC9D200344677 /* Shared */,
 				2F23BA6F2E1234C8005C563C /* Immich Gallery */,
 				2F23BA802E1234CA005C563C /* Immich GalleryTests */,
 				2F23BA8A2E1234CA005C563C /* Immich GalleryUITests */,
@@ -186,6 +202,7 @@
 			);
 			fileSystemSynchronizedGroups = (
 				2F23BA6F2E1234C8005C563C /* Immich Gallery */,
+				2FDBDAF32E4AC9D200344677 /* Shared */,
 			);
 			name = "Immich Gallery";
 			packageProductDependencies = (
