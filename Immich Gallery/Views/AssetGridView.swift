@@ -248,6 +248,9 @@ struct AssetGridView: View {
                 }
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name(NotificationNames.startAutoSlideshow))) { _ in
+                startSlideshow()
+        }
     }
     
     private func loadAssets() {

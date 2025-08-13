@@ -22,6 +22,7 @@ struct UserDefaultsKeys {
     // Settings
     static let hideImageOverlay = "hideImageOverlay"
     static let slideshowInterval = "slideshowInterval"
+    static let autoSlideshowTimeout = "autoSlideshowTimeout" // in minutes, 0 = off
     static let slideshowBackgroundColor = "slideshowBackgroundColor"
     static let showTagsTab = "showTagsTab"
     static let use24HourClock = "use24HourClock"
@@ -44,4 +45,5 @@ struct AppSchemes {
 struct NotificationNames {
     static let openAsset = "OpenAsset"
     static let refreshAllTabs = "refreshAllTabs"
+    static let startAutoSlideshow = "startAutoSlideshow"
 }

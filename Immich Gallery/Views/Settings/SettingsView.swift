@@ -5,6 +5,7 @@
 //  Created by mensadi-labs on 2025-06-29.
 //
 
+
 import SwiftUI
 
 // MARK: - Reusable Components
@@ -65,6 +66,7 @@ struct SettingsView: View {
     @AppStorage("allPhotosSortOrder") private var allPhotosSortOrder = "desc"
     @AppStorage("enableTopShelf", store: UserDefaults(suiteName: AppConstants.appGroupIdentifier)) private var enableTopShelf = false
     @AppStorage("topShelfStyle", store: UserDefaults(suiteName: AppConstants.appGroupIdentifier)) private var topShelfStyle = "carousel"
+    @AppStorage(UserDefaultsKeys.autoSlideshowTimeout) private var autoSlideshowTimeout: Int = 0 // 0 = off
     @FocusState private var isMinusFocused: Bool
     @FocusState private var isPlusFocused: Bool
     @FocusState private var focusedColor: String?
@@ -354,6 +356,7 @@ struct SettingsView: View {
                                     enableReflections: $enableReflectionsInSlideshow,
                                     enableKenBurns: $enableKenBurnsEffect,
                                     enableShuffle: $enableSlideshowShuffle,
+                                    autoSlideshowTimeout: $autoSlideshowTimeout,
                                     isMinusFocused: $isMinusFocused,
                                     isPlusFocused: $isPlusFocused,
                                     focusedColor: $focusedColor

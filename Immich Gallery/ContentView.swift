@@ -43,6 +43,10 @@ extension Notification.Name {
 }
 
 struct ContentView: View {
+    // Auto slideshow state
+    @AppStorage(UserDefaultsKeys.autoSlideshowTimeout) private var autoSlideshowTimeout: Int = 0
+    @State private var inactivityTimer: Timer? = nil
+    @State private var lastInteractionDate = Date()
     @StateObject private var networkService = NetworkService()
     @StateObject private var authService: AuthenticationService
     @StateObject private var assetService: AssetService
@@ -71,7 +75,7 @@ struct ContentView: View {
     }
     
     var body: some View {
-        NavigationView {
+    NavigationView {
             ZStack {
                 if !authService.isAuthenticated {
                     // Show sign-in view
@@ -130,14 +134,19 @@ struct ContentView: View {
                             }
                             .tag(TabName.settings.rawValue)
                     }
-            .onAppear {
+                    .onAppear {
                         setDefaultTab()
                         checkForAppUpdate()
+                        startInactivityTimer()
                     }
                     .onChange(of: selectedTab) { oldValue, newValue in
                         searchTabHighlighted = false
-                        print("Tab changed from \(oldValue) to \(newValue)")
-                    }                    .id(refreshTrigger) // Force refresh when user switches
+                        resetInactivityTimer()
+                    }
+                    .onChange(of: autoSlideshowTimeout) { _, _ in
+                        startInactivityTimer()
+                    }
+                    .id(refreshTrigger) // Force refresh when user switches
                     // .accentColor(.blue)
                 }
             }
@@ -163,6 +172,10 @@ struct ContentView: View {
                 }
             }
         }
+        .contentShape(Rectangle())
+        .simultaneousGesture(
+            TapGesture().onEnded { resetInactivityTimer() }
+        )
        .sheet(isPresented: $showWhatsNew) {
            WhatsNewView(onDismiss: {
                showWhatsNew = false
@@ -171,6 +184,27 @@ struct ContentView: View {
        }
     }
     
+    // MARK: - Inactivity Timer Logic
+    private func startInactivityTimer() {
+        inactivityTimer?.invalidate()
+        inactivityTimer = nil
+        if autoSlideshowTimeout > 0 {
+            inactivityTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
+                let elapsed = Date().timeIntervalSince(lastInteractionDate)
+                if elapsed > Double(autoSlideshowTimeout * 60) {
+                    inactivityTimer?.invalidate()
+                    inactivityTimer = nil
+                    // Post notification to start auto slideshow
+                    NotificationCenter.default.post(name: NSNotification.Name(NotificationNames.startAutoSlideshow), object: nil)
+                }
+            }
+        }
+    }
+
+    private func resetInactivityTimer() {
+        lastInteractionDate = Date()
+    }
+
     private func setDefaultTab() {
         switch defaultStartupTab {
         case "albums":
