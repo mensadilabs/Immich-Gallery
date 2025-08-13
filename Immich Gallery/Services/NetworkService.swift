@@ -10,7 +10,7 @@ import Foundation
 /// Base networking service that handles HTTP requests and authentication
 class NetworkService: ObservableObject {
     // MARK: - Configuration
-    @Published var baseURL: String = ""
+    @Published var baseURL: String = "http://localhost:2283"
     @Published var accessToken: String?
     
     private let session = URLSession.shared
