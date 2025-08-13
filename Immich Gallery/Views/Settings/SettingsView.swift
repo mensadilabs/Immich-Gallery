@@ -64,6 +64,7 @@ struct SettingsView: View {
     @AppStorage("enableSlideshowShuffle") private var enableSlideshowShuffle = false
     @AppStorage("allPhotosSortOrder") private var allPhotosSortOrder = "desc"
     @AppStorage("enableTopShelf", store: UserDefaults(suiteName: AppConstants.appGroupIdentifier)) private var enableTopShelf = false
+    @AppStorage("topShelfStyle", store: UserDefaults(suiteName: AppConstants.appGroupIdentifier)) private var topShelfStyle = "carousel"
     @FocusState private var isMinusFocused: Bool
     @FocusState private var isPlusFocused: Bool
     @FocusState private var focusedColor: String?
@@ -296,6 +297,22 @@ struct SettingsView: View {
                                     subtitle: "Show recent photos on Apple TV home screen",
                                     content: AnyView(Toggle("", isOn: $enableTopShelf).labelsHidden())
                                 )
+                                
+                                if enableTopShelf {
+                                    SettingsRow(
+                                        icon: "rectangle.grid.1x2",
+                                        title: "Top Shelf Style",
+                                        subtitle: "Choose between compact sectioned or wide carousel display",
+                                        content: AnyView(
+                                            Picker("Top Shelf Style", selection: $topShelfStyle) {
+                                                Text("Compact").tag("sectioned")
+                                                Text("Fullscreen").tag("carousel")
+                                            }
+                                            .pickerStyle(.menu)
+                                            .frame(width: 300, alignment: .trailing)
+                                        )
+                                    )
+                                }
                             })
                         }
                         
