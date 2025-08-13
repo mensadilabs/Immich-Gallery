@@ -309,7 +309,7 @@ class ContentProvider: TVTopShelfContentProvider {
         }
         
         // Download image
-        let thumbnailURL = "\(serverURL)/api/assets/\(asset.id)/original"
+        let thumbnailURL = "\(serverURL)/api/assets/\(asset.id)/thumbnail?format=webp&size=fullsize"
         print("TopShelf: Downloading image from: \(thumbnailURL)")
         guard let url = URL(string: thumbnailURL) else { 
             print("TopShelf: Invalid thumbnail URL")
