@@ -9,6 +9,8 @@ import TVServices
 import Foundation
 
 class ContentProvider: TVTopShelfContentProvider {
+    
+    let TOTAL_ITEMS_COUNT = 10
            
     override func loadTopShelfContent() async -> (any TVTopShelfContent)? {
         print("TopShelf: loadTopShelfContent() called")
@@ -35,7 +37,7 @@ class ContentProvider: TVTopShelfContentProvider {
     }
     
     private func createTopShelfContent() async throws -> TVTopShelfContent {
-        let assets = try await fetchFirst5Photos()
+        let assets = try await fetchPhotos()
         print("TopShelf: Fetched \(assets.count) assets")
         
         // Check user preference for TopShelf style
@@ -204,8 +206,8 @@ class ContentProvider: TVTopShelfContentProvider {
         return defaults
     }
     
-    private func fetchFirst5Photos() async throws -> [SimpleAsset] {
-        print("TopShelf: Starting to fetch first 5 photos")
+    private func fetchPhotos() async throws -> [SimpleAsset] {
+        print("TopShelf: Starting to fetch first \(TOTAL_ITEMS_COUNT) photos")
         
         let serverURL = sharedDefaults.string(forKey: UserDefaultsKeys.serverURL)
         let accessToken = sharedDefaults.string(forKey: UserDefaultsKeys.accessToken)
@@ -231,7 +233,7 @@ class ContentProvider: TVTopShelfContentProvider {
         
         let searchRequest: [String: Any] = [
             "page": 1,
-            "size": 10,
+            "size": TOTAL_ITEMS_COUNT,
             "withPeople": false,
             "order": "desc",
             "withExif": false,
@@ -264,7 +266,7 @@ class ContentProvider: TVTopShelfContentProvider {
         
         print("TopShelf: Decoding response...")
         let searchResponse = try JSONDecoder().decode(SimpleSearchResponse.self, from: data)
-        let imageAssets = Array(searchResponse.assets.items.filter { $0.type == "IMAGE" }.prefix(5))
+        let imageAssets = Array(searchResponse.assets.items.filter { $0.type == "IMAGE" }.prefix(TOTAL_ITEMS_COUNT))
         print("TopShelf: Found \(imageAssets.count) image assets")
         return imageAssets
     }
