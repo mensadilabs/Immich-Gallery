@@ -31,11 +31,9 @@ struct WhatsNewView: View {
     @State private var opacity: Double = 0
     
     private let changelogContent = """
-    VERSION|1.0.9 Build 1
-    NEW_FEATURE|Context Search
-    - Helps you find whatever your heart longs for, or at least the picture your heart longs for.
-
-    BUGFIX|Mostly code stuff here.
+    VERSION|1.0.10
+    NEW_FEATURE| Top Shelf Integration
+    - Shows your recent photos on your Homescreen. Of course, you can hide it if you're feeling shy!
     """
     
     private let gridSpacing: CGFloat = 20
@@ -74,7 +72,7 @@ private extension WhatsNewView {
                 .font(.system(size: 48, weight: .bold))
                 .foregroundColor(.white)
             
-            Text("• Navigate with the touch surface or directional pad • View anytime in Settings • Press back to close •")
+            Text("Enjoying the app? Don't foget to leave a review.")
                 .font(.system(size: 24, weight: .medium))
                 .foregroundColor(.gray)
         }
