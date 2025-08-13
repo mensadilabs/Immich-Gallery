@@ -130,14 +130,17 @@ struct ContentView: View {
                             }
                             .tag(TabName.settings.rawValue)
                     }
-            .onAppear {
+                    .onAppear {
                         setDefaultTab()
                         checkForAppUpdate()
+                        // Trigger refresh of all tabs (new photo check) on app launch
+                        NotificationCenter.default.post(name: .refreshAllTabs, object: nil)
                     }
                     .onChange(of: selectedTab) { oldValue, newValue in
                         searchTabHighlighted = false
                         print("Tab changed from \(oldValue) to \(newValue)")
-                    }                    .id(refreshTrigger) // Force refresh when user switches
+                    }
+                    .id(refreshTrigger) // Force refresh when user switches
                     // .accentColor(.blue)
                 }
             }
