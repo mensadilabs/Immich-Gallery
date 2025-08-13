@@ -34,6 +34,13 @@ struct WhatsNewView: View {
     VERSION|1.0.10
     NEW_FEATURE| Top Shelf Integration
     - Shows your recent photos on your Homescreen. Of course, you can hide it if you're feeling shy!
+    - Choose between Full screen or sectioned view. 
+    
+    NEW_FEATURE| Auto Start Slideshow after x minutes of inactivity
+    - Depending on your activty pace, you can choose a time that fits. There is a 60 minute option for the 🦥.
+    
+    INFO| Now supports HTTP. You must use use "http://" as the url, no protocol results in https request.
+    - Not all servers go to college so it's unfair to ask for a certificate.
     """
     
     private let gridSpacing: CGFloat = 20
