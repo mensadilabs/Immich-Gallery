@@ -18,6 +18,7 @@ struct SlideshowSettings: View {
     @Binding var enableReflections: Bool
     @Binding var enableKenBurns: Bool
     @Binding var enableShuffle: Bool
+    @Binding var autoSlideshowTimeout: Int
     @FocusState.Binding var isMinusFocused: Bool
     @FocusState.Binding var isPlusFocused: Bool
     @FocusState.Binding var focusedColor: String?
@@ -112,71 +113,92 @@ struct SlideshowSettings: View {
             )
             
             // Clock Format Setting
-            SettingsRow(
-                icon: "clock",
-                title: "Clock Format",
-                subtitle: "Time format for slideshow overlay.",
-                content: AnyView(
-                    Picker("Clock Format", selection: $use24HourClock) {
-                        Text("12 Hour").tag(false)
-                        Text("24 Hour").tag(true)
-                    }
-                        .pickerStyle(.menu)
-                        .frame(width: 300, alignment: .trailing)
-                )
-            )
+             SettingsRow(
+                 icon: "clock",
+                 title: "Clock Format",
+                 subtitle: "Time format for slideshow overlay.",
+                 content: AnyView(
+                     Picker("Clock Format", selection: $use24HourClock) {
+                         Text("12 Hour").tag(false)
+                         Text("24 Hour").tag(true)
+                     }
+                         .pickerStyle(.menu)
+                         .frame(width: 300, alignment: .trailing)
+                 )
+             )
             
             SettingsRow(
                 icon: "shuffle",
                 title: "Shuffle Images (beta)",
                 subtitle: "Randomly shuffle image order during slideshow",
-                content: AnyView(Toggle("", isOn: $enableShuffle).labelsHidden())
+                content: AnyView(
+                    Picker("Shuffle Images", selection: $enableShuffle) {
+                        Text("Off").tag(false)
+                        Text("On").tag(true)
+                    }
+                    .pickerStyle(.menu)
+                    .frame(width: 300, alignment: .trailing)
+                )
             )
             
             SettingsRow(
                 icon: "eye.slash",
                 title: "Hide Image Overlays",
                 subtitle: "Hide clock, date, location overlay from slideshow and fullscreen view.",
-                content: AnyView(Toggle("", isOn: $hideOverlay).labelsHidden())
-            )
-            
-            SettingsRow(
-                icon: "camera.macro.circle",
-                title: "Image Effects",
-                subtitle: "Choose visual effects for slideshow images",
                 content: AnyView(
-                    Picker("Image Effects", selection: Binding(
-                        get: {
-                            if enableKenBurns {
-                                return "kenBurns"
-                            } else if enableReflections {
-                                return "reflections"
-                            } else {
-                                return "none"
-                            }
-                        },
-                        set: { newValue in
-                            switch newValue {
-                            case "kenBurns":
-                                enableKenBurns = true
-                                enableReflections = false
-                            case "reflections":
-                                enableKenBurns = false
-                                enableReflections = true
-                            default: // "none"
-                                enableKenBurns = false
-                                enableReflections = false
-                            }
-                        }
-                    )) {
-                        Text("None").tag("none")
-                        Text("Reflections").tag("reflections")
-                        Text("Ken Burns").tag("kenBurns")
+                    Picker("Hide Image Overlays", selection: $hideOverlay) {
+                        Text("Off").tag(false)
+                        Text("On").tag(true)
                     }
                     .pickerStyle(.menu)
                     .frame(width: 300, alignment: .trailing)
                 )
             )
+            
+             SettingsRow(
+                 icon: "clock.arrow.circlepath",
+                 title: "Auto-Start Slideshow",
+                 subtitle: "Start slideshow after inactivity",
+                 content: AnyView(AutoSlideshowTimeoutPicker(timeout: $autoSlideshowTimeout))
+             )
+            
+             SettingsRow(
+                 icon: "camera.macro.circle",
+                 title: "Image Effects",
+                 subtitle: "Choose visual effects for slideshow images",
+                 content: AnyView(
+                     Picker("Image Effects", selection: Binding(
+                         get: {
+                             if enableKenBurns {
+                                 return "kenBurns"
+                             } else if enableReflections {
+                                 return "reflections"
+                             } else {
+                                 return "none"
+                             }
+                         },
+                         set: { newValue in
+                             switch newValue {
+                             case "kenBurns":
+                                 enableKenBurns = true
+                                 enableReflections = false
+                             case "reflections":
+                                 enableKenBurns = false
+                                 enableReflections = true
+                             default: // "none"
+                                 enableKenBurns = false
+                                 enableReflections = false
+                             }
+                         }
+                     )) {
+                         Text("None").tag("none")
+                         Text("Reflections").tag("reflections")
+                         Text("Ken Burns").tag("kenBurns")
+                     }
+                     .pickerStyle(.menu)
+                     .frame(width: 300, alignment: .trailing)
+                 )
+             )
         }
         .alert("Performance Warning", isPresented: $showPerformanceAlert) {
             Button("Cancel", role: .cancel) { }
@@ -200,3 +222,35 @@ struct SlideshowSettings: View {
         }
     }
 }
+
+
+#Preview {
+    @State var slideshowInterval: Double = 6.0
+    @State var slideshowBackgroundColor = "white"
+    @State var use24HourClock = true
+    @State var hideOverlay = true
+    @State var enableReflections = true
+    @State var enableKenBurns = false
+    @State var enableShuffle = false
+    @State var autoSlideshowTimeout = 5
+    @FocusState var isMinusFocused: Bool
+    @FocusState var isPlusFocused: Bool
+    @FocusState var focusedColor: String?
+    
+    return SlideshowSettings(
+        slideshowInterval: $slideshowInterval,
+        slideshowBackgroundColor: $slideshowBackgroundColor,
+        use24HourClock: $use24HourClock,
+        hideOverlay: $hideOverlay,
+        enableReflections: $enableReflections,
+        enableKenBurns: $enableKenBurns,
+        enableShuffle: $enableShuffle,
+        autoSlideshowTimeout: $autoSlideshowTimeout,
+        isMinusFocused: $isMinusFocused,
+        isPlusFocused: $isPlusFocused,
+        focusedColor: $focusedColor
+    )
+    .preferredColorScheme(.light)
+    .padding()
+}
+
