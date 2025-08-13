@@ -85,7 +85,7 @@ struct SettingsView: View {
                 
                 ScrollView {
                     LazyVStack(spacing: 30) {
-
+                        
                         // Current User Section
                         if let user = authService.currentUser {
                             VStack(alignment: .leading, spacing: 16) {
@@ -131,20 +131,14 @@ struct SettingsView: View {
                             refreshServerConnection()
                         }) {
                             HStack {
-                                Image(systemName: "server.rack")
-                                    .foregroundColor(.green)
-                                    .font(.title2)
+                                Image(systemName: authService.baseURL.lowercased().hasPrefix("https") ? "lock.fill" : "lock.open.fill")
+                                    .foregroundColor(authService.baseURL.lowercased().hasPrefix("https") ? .green : .red)
+                                    .font(.headline)
+                                    .padding()
                                 
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("Server")
-                                        .font(.headline)
-                                        .foregroundColor(.primary)
-                                    Text(authService.baseURL)
-                                        .font(.subheadline)
-                                        .foregroundColor(.secondary)
-                                        .lineLimit(1)
-                                }
-                                
+                                Text(authService.baseURL)
+                                    .font(.headline)
+                                    .foregroundColor(.primary)
                                 Spacer()
                                 
                                 HStack(spacing: 8) {
@@ -171,40 +165,40 @@ struct SettingsView: View {
                         .buttonStyle(.plain)
                         // User Actions Section
                         VStack(spacing: 16) {
-                                Button(action: {
-                                    showingSignIn = true
-                                }) {
-                                    HStack(spacing: 8) {
-                                        Image(systemName: "person.badge.plus")
-                                            .font(.title2)
-                                            .foregroundColor(.blue)
-                                        Text("Add User")
-                                            .font(.caption)
-                                    }
-                                    .frame(maxWidth: .infinity)
-                                    .padding(16)
-                                    .background(Color.blue.opacity(0.1))
-                                    .cornerRadius(12)
+                            Button(action: {
+                                showingSignIn = true
+                            }) {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "person.badge.plus")
+                                        .font(.title2)
+                                        .foregroundColor(.blue)
+                                    Text("Add User")
+                                        .font(.caption)
                                 }
-                                .buttonStyle(.plain)
-                                
-                                Button(action: {
-                                    showingSignOutAlert = true
-                                }) {
-                                    HStack(spacing: 8) {
-                                        Image(systemName: "rectangle.portrait.and.arrow.right")
-                                            .font(.title2)
-                                            .foregroundColor(.red)
-                                        Text("Sign Out")
-                                            .font(.caption)
-                                            .foregroundColor(.primary)
-                                    }
-                                    .frame(maxWidth: .infinity)
-                                    .padding(16)
-                                    .background(Color.red.opacity(0.1))
-                                    .cornerRadius(12)
+                                .frame(maxWidth: .infinity)
+                                .padding(16)
+                                .background(Color.blue.opacity(0.1))
+                                .cornerRadius(12)
+                            }
+                            .buttonStyle(.plain)
+                            
+                            Button(action: {
+                                showingSignOutAlert = true
+                            }) {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "rectangle.portrait.and.arrow.right")
+                                        .font(.title2)
+                                        .foregroundColor(.red)
+                                    Text("Sign Out")
+                                        .font(.caption)
+                                        .foregroundColor(.primary)
                                 }
-                                .buttonStyle(.plain)
+                                .frame(maxWidth: .infinity)
+                                .padding(16)
+                                .background(Color.red.opacity(0.1))
+                                .cornerRadius(12)
+                            }
+                            .buttonStyle(.plain)
                             
                             // User Switcher
                             if savedUsers.count > 1 {
@@ -278,8 +272,8 @@ struct SettingsView: View {
                                                 Text("Tags").tag("tags")
                                             }
                                         }
-                                        .pickerStyle(.menu)
-                                        .frame(width: 300, alignment: .trailing)
+                                            .pickerStyle(.menu)
+                                            .frame(width: 300, alignment: .trailing)
                                     )
                                 )
                                 
@@ -290,7 +284,7 @@ struct SettingsView: View {
                                     content: AnyView(Toggle("", isOn: $enableThumbnailAnimation).labelsHidden())
                                 )
                                 
-                                 
+                                
                                 SettingsRow(
                                     icon: "tv",
                                     title: "Top Shelf Extension",
@@ -308,8 +302,8 @@ struct SettingsView: View {
                                                 Text("Compact").tag("sectioned")
                                                 Text("Fullscreen").tag("carousel")
                                             }
-                                            .pickerStyle(.menu)
-                                            .frame(width: 300, alignment: .trailing)
+                                                .pickerStyle(.menu)
+                                                .frame(width: 300, alignment: .trailing)
                                         )
                                     )
                                 }
@@ -328,8 +322,8 @@ struct SettingsView: View {
                                             Text("Newest First").tag("desc")
                                             Text("Oldest First").tag("asc")
                                         }
-                                        .pickerStyle(.menu)
-                                        .frame(width: 300, alignment: .trailing)
+                                            .pickerStyle(.menu)
+                                            .frame(width: 300, alignment: .trailing)
                                     )
                                 )
                                 
@@ -342,8 +336,8 @@ struct SettingsView: View {
                                             Text("Newest First").tag("desc")
                                             Text("Oldest First").tag("asc")
                                         }
-                                        .pickerStyle(.menu)
-                                        .frame(width: 300, alignment: .trailing)
+                                            .pickerStyle(.menu)
+                                            .frame(width: 300, alignment: .trailing)
                                     )
                                 )
                             })
@@ -381,10 +375,10 @@ struct SettingsView: View {
                                             Text("Play/Pause")
                                                 .font(.caption)
                                         }
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 6)
-                                        .background(Color.blue.opacity(0.1))
-                                        .cornerRadius(8)
+                                            .padding(.horizontal, 12)
+                                            .padding(.vertical, 6)
+                                            .background(Color.blue.opacity(0.1))
+                                            .cornerRadius(8)
                                     )
                                 )
                                 
@@ -407,10 +401,10 @@ struct SettingsView: View {
                                                 .foregroundColor(.gray)
                                                 .font(.caption)
                                         }
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 6)
-                                        .background(Color.gray.opacity(0.1))
-                                        .cornerRadius(8)
+                                            .padding(.horizontal, 12)
+                                            .padding(.vertical, 6)
+                                            .background(Color.gray.opacity(0.1))
+                                            .cornerRadius(8)
                                     )
                                 )
                                 
@@ -427,10 +421,10 @@ struct SettingsView: View {
                                                     .foregroundColor(.blue)
                                                     .font(.caption)
                                             }
-                                            .padding(.horizontal, 12)
-                                            .padding(.vertical, 6)
-                                            .background(Color.blue.opacity(0.1))
-                                            .cornerRadius(8)
+                                                .padding(.horizontal, 12)
+                                                .padding(.vertical, 6)
+                                                .background(Color.blue.opacity(0.1))
+                                                .cornerRadius(8)
                                         )
                                     )
                                 }
@@ -449,10 +443,10 @@ struct SettingsView: View {
                                                     .foregroundColor(.blue)
                                                     .font(.caption)
                                             }
-                                            .padding(.horizontal, 12)
-                                            .padding(.vertical, 6)
-                                            .background(Color.blue.opacity(0.1))
-                                            .cornerRadius(8)
+                                                .padding(.horizontal, 12)
+                                                .padding(.vertical, 6)
+                                                .background(Color.blue.opacity(0.1))
+                                                .cornerRadius(8)
                                         )
                                     )
                                 }
