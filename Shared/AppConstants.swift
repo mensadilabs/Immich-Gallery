@@ -44,4 +44,5 @@ struct AppSchemes {
 struct NotificationNames {
     static let openAsset = "OpenAsset"
     static let refreshAllTabs = "refreshAllTabs"
+    static let startAutoSlideshow = "startAutoSlideshow"
 }

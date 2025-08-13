@@ -15,6 +15,13 @@ struct AutoSlideshowTimeoutPicker: View {
             }
         }
         .pickerStyle(.menu)
-        .frame(width: 120, alignment: .trailing)
+        .frame(width: 300, alignment: .trailing)
     }
+}
+
+
+#Preview {
+    @Previewable
+    @State var timeout = 10
+    return AutoSlideshowTimeoutPicker(timeout: $timeout)
 }

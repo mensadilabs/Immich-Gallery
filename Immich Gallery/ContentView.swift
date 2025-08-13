@@ -46,7 +46,6 @@ struct ContentView: View {
     // Auto slideshow state
     @AppStorage(UserDefaultsKeys.autoSlideshowTimeout) private var autoSlideshowTimeout: Int = 0
     @State private var inactivityTimer: Timer? = nil
-    @State private var showAutoSlideshow = false
     @State private var lastInteractionDate = Date()
     @StateObject private var networkService = NetworkService()
     @StateObject private var authService: AuthenticationService
@@ -142,18 +141,12 @@ struct ContentView: View {
                     }
                     .onChange(of: selectedTab) { oldValue, newValue in
                         searchTabHighlighted = false
-                        print("Tab changed from \(oldValue) to \(newValue)")
                         resetInactivityTimer()
                     }
                     .onChange(of: autoSlideshowTimeout) { _, _ in
                         startInactivityTimer()
                     }
                     .id(refreshTrigger) // Force refresh when user switches
-                    .sheet(isPresented: $showAutoSlideshow, onDismiss: { resetInactivityTimer() }) {
-                        // Start slideshow from all photos
-                        AssetGridView(assetService: assetService, authService: authService, albumId: nil, personId: nil, tagId: nil, isAllPhotos: true, onAssetsLoaded: nil, deepLinkAssetId: nil)
-                        // Optionally, you could present a dedicated SlideshowView here
-                    }
                     // .accentColor(.blue)
                 }
             }
@@ -170,15 +163,7 @@ struct ContentView: View {
                 print("ContentView: Received OpenAsset notification for asset: \(assetId)")
                 
                 // Switch to Photos tab and set deep link asset ID
-                                            .contentShape(Rectangle())
-                                            .highPriorityGesture(
-                                                DragGesture(minimumDistance: 0)
-                                                    .onChanged { _ in resetInactivityTimer() }
-                                            )
-                                            .simultaneousGesture(
-                                                TapGesture().onEnded { resetInactivityTimer() }
-                                            )
-                                            .onAppear {
+                selectedTab = TabName.photos.rawValue
                 deepLinkAssetId = assetId
                 
                 // Clear the deep link after a moment to avoid stale state
@@ -187,6 +172,10 @@ struct ContentView: View {
                 }
             }
         }
+        .contentShape(Rectangle())
+        .simultaneousGesture(
+            TapGesture().onEnded { resetInactivityTimer() }
+        )
        .sheet(isPresented: $showWhatsNew) {
            WhatsNewView(onDismiss: {
                showWhatsNew = false
@@ -205,7 +194,8 @@ struct ContentView: View {
                 if elapsed > Double(autoSlideshowTimeout * 60) {
                     inactivityTimer?.invalidate()
                     inactivityTimer = nil
-                    showAutoSlideshow = true
+                    // Post notification to start auto slideshow
+                    NotificationCenter.default.post(name: NSNotification.Name(NotificationNames.startAutoSlideshow), object: nil)
                 }
             }
         }
@@ -213,9 +203,6 @@ struct ContentView: View {
 
     private func resetInactivityTimer() {
         lastInteractionDate = Date()
-        if showAutoSlideshow {
-            showAutoSlideshow = false
-        }
     }
 
     private func setDefaultTab() {
