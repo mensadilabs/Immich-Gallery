@@ -31,7 +31,7 @@ struct WhatsNewView: View {
     @State private var opacity: Double = 0
     
     private let changelogContent = """
-    VERSION|1.0.10.1
+    VERSION|1.0.11
     BUFFIX| Fix bugs
     - Top shef portraits no longer do unexpected headstands or cartwheels. I Hope. 
     - Hopefully it also won't crash. But you may see reduced image quality in top shelf. 

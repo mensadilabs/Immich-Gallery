@@ -1,4 +1,4 @@
-# VERSION|1.0.10.1
+# VERSION|1.0.11
 
 BUFFIX| Fix bugs
   - Top shef portraits no longer do unexpected headstands or cartwheels. I Hope. 
