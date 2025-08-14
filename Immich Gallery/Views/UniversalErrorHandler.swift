@@ -178,12 +178,16 @@ struct UniversalErrorDisplayView: View {
             switch immichError {
             case .notAuthenticated:
                 return "Authentication failed. Please check your login credentials and try again."
+            case .forbidden:
+                return "Access forbidden. Please check your permissions or contact your administrator."
             case .invalidURL:
                 return "Invalid server URL. Please check your server configuration in settings."
-            case .serverError:
-                return "Server communication error. Please check your connection and server status."
+            case .serverError(let statusCode):
+                return "Server communication error (HTTP \(statusCode)). Please check your connection and server status."
             case .networkError:
                 return "Network connection error. Please check your internet connection."
+            case .clientError(let statusCode):
+                return "Request error (HTTP \(statusCode)). Please try again or contact support if the issue persists."
             }
         }
         

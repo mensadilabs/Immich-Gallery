@@ -63,7 +63,7 @@ class AssetService: ObservableObject {
     }
 
     func loadVideoURL(asset: ImmichAsset) async throws -> URL {
-        guard asset.type == .video else { throw ImmichError.serverError }
+        guard asset.type == .video else { throw ImmichError.clientError(400) }
         let endpoint = "/api/assets/\(asset.id)/video/playback"
         guard let url = URL(string: "\(networkService.baseURL)\(endpoint)") else {
             throw ImmichError.invalidURL

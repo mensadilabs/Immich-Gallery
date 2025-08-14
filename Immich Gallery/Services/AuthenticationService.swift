@@ -161,15 +161,32 @@ class AuthenticationService: ObservableObject {
     }
     
     private func validateTokenIfNeeded() {
-        guard isAuthenticated && !networkService.baseURL.isEmpty else { return }
+        guard isAuthenticated && !networkService.baseURL.isEmpty else { 
+            print("AuthenticationService: Skipping token validation - not authenticated or no baseURL")
+            return 
+        }
         
         Task {
             do {
                 try await fetchUserInfo()
-            } catch {
-                DispatchQueue.main.async {
-                    self.signOut()
+                print("AuthenticationService: Token validation successful")
+            } catch let error as ImmichError {
+                print("AuthenticationService: Token validation failed with ImmichError: \(error)")
+                
+                if error.shouldLogout {
+                    print("AuthenticationService: Logging out user due to authentication error: \(error)")
+                    DispatchQueue.main.async {
+                        self.signOut()
+                    }
+                } else {
+                    print("AuthenticationService: Preserving authentication state despite error: \(error)")
+                    // For server/network errors, preserve authentication state
+                    // The user will see error messages in the UI but won't be logged out
                 }
+            } catch {
+                print("AuthenticationService: Token validation failed with unexpected error: \(error)")
+                // Handle unexpected errors conservatively - don't logout
+                // This preserves user authentication state for unknown error types
             }
         }
     }
