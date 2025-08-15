@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Immich Gallery for Apple TV</title>
+    <meta name="description"
+        content="A native Apple TV app for browsing your self-hosted Immich photo library with a beautiful, TV-optimized interface.">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, rgb(15, 32, 39) 0%, rgb(32, 58, 67) 50%, rgb(44, 83, 100) 100%);
+            min-height: 100vh;
+        }
+
+        /* Light mode (default) */
+        @media (prefers-color-scheme: light) {
+            body {
+                background: linear-gradient(135deg, rgb(15, 32, 39) 0%, rgb(32, 58, 67) 50%, rgb(44, 83, 100) 100%);
+                color: #333;
+            }
+        }
+
+        /* Dark mode */
+        @media (prefers-color-scheme: dark) {
+            body {
+                background: linear-gradient(135deg, rgb(8, 16, 20) 0%, rgb(16, 29, 34) 50%, rgb(22, 42, 50) 100%);
+                color: #e0e0e0;
+            }
+
+            header {
+                background: rgba(20, 20, 20, 0.95) !important;
+                backdrop-filter: blur(10px);
+            }
+
+            .logo h1 {
+                color: #e0e0e0 !important;
+            }
+
+            .section {
+                background: #1a1a1a !important;
+                color: #e0e0e0;
+            }
+
+            .section:nth-child(even) {
+                background: #2a2a2a !important;
+            }
+
+            .section h3 {
+                color: #e0e0e0 !important;
+            }
+
+            .feature-card {
+                background: #2a2a2a !important;
+                color: #e0e0e0;
+                border: 1px solid #404040;
+            }
+
+            .feature-card h4 {
+                color: #e0e0e0 !important;
+            }
+
+            .feature-card p {
+                color: #b0b0b0 !important;
+            }
+
+            footer {
+                background: #1a1a1a !important;
+                color: #e0e0e0;
+            }
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 24px;
+        }
+
+        .logo h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #2c3e50;
+        }
+
+        .badges {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            height: 20px;
+        }
+
+        .hero {
+            padding: 4rem 0;
+            text-align: center;
+            color: white;
+        }
+
+        .hero h2 {
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .hero p {
+            font-size: 1.3rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 3rem;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            background: #2c3e50;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #34495e;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(44, 62, 80, 0.3);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .btn-coffee {
+            background: linear-gradient(135deg, rgb(32, 58, 67) 0%, rgb(44, 83, 100) 100%);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-coffee:hover {
+            background: linear-gradient(135deg, rgb(44, 83, 100) 0%, rgb(56, 108, 125) 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(44, 83, 100, 0.4);
+        }
+
+        .hero .screenshots {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 3rem;
+            max-width: 1000px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .section {
+            padding: 4rem 0;
+            background: white;
+        }
+
+        .section:nth-child(even) {
+            background: #f8f9fa;
+        }
+
+        .section h3 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 3rem;
+            color: #2c3e50;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .feature-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .feature-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .feature-card h4 {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #2c3e50;
+        }
+
+        .feature-card p {
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .screenshots {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .screenshot {
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s ease;
+        }
+
+        .screenshot:hover {
+            transform: scale(1.05);
+        }
+
+        .screenshot img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .tech-stack {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .tech-item {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+            box-shadow: 0 3px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .tech-item h5 {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #2c3e50;
+        }
+
+        .tech-item p {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .stats {
+            text-align: center;
+            padding: 3rem 0;
+        }
+
+        .stats-grid {
+            display: flex;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-top: 2rem;
+            align-items: center;
+        }
+
+        .stats img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+        }
+
+        footer {
+            background: #2c3e50;
+            color: white;
+            text-align: center;
+            padding: 2rem 0;
+        }
+
+        .footer-content {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .coffee-btn {
+            display: inline-block;
+            transition: transform 0.3s ease;
+        }
+
+        .coffee-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .coffee-btn img {
+            height: 50px;
+            width: auto;
+        }
+
+        @media (max-width: 768px) {
+            .hero h2 {
+                font-size: 2rem;
+            }
+
+            .hero p {
+                font-size: 1.1rem;
+            }
+
+            .section h3 {
+                font-size: 2rem;
+            }
+
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .header-content {
+                flex-direction: column;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <svg class="logo-icon" viewBox="0 0 1280 768" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#4a00e0" />
+                                <stop offset="100%" stop-color="#8e2de2" />
+                            </linearGradient>
+                            <clipPath id="clip">
+                                <rect x="384" y="128" width="512" height="512" rx="48" ry="48" />
+                            </clipPath>
+                        </defs>
+                        <rect width="1280" height="768" fill="url(#bgGradient)" rx="1" ry="1" />
+                        <g clip-path="url(#clip)">
+                            <rect x="440" y="194" width="120" height="120" rx="16" ry="16" fill="#ffcc33" />
+                            <rect x="480" y="338" width="96" height="96" rx="12" ry="12" fill="#33ccff" />
+                            <rect x="584" y="218" width="120" height="120" rx="16" ry="16" fill="#66ff99" />
+                        </g>
+                        <circle cx="668" cy="172" r="20" fill="#fff" />
+                        <path d="M468 388 L528 340 L564 404 L596 372 L644 436 H468 Z" fill="#fff" />
+                    </svg>
+                    <h1>Immich Gallery</h1>
+                </div>
+                <div class="badges">
+                    <img src="https://github.com/mensadilabs/Immich-Gallery/actions/workflows/objective-c-xcode.yml/badge.svg?branch=main"
+                        alt="Build Status" class="badge">
+                    <img src="https://img.shields.io/badge/platform-TvOS-blue" alt="Platform" class="badge">
+                    <img src="https://img.shields.io/github/languages/top/mensadilabs/Immich-Gallery" alt="Language"
+                        class="badge">
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <section class="hero">
+            <div class="container">
+                <h2>Your Photos, Beautiful on Apple TV</h2>
+                <p>A native Apple TV app for browsing your self-hosted Immich photo library with a stunning,
+                    TV-optimized interface.</p>
+
+                <div class="cta-buttons">
+                    <a href="https://www.buymeacoffee.com/zzpr69dnqtr" class="btn btn-coffee">
+                        ☕ Buy me a coffee
+                    </a>
+                    <a href="https://apps.apple.com/ca/app/immich-gallery/id6748482378" class="btn btn-primary">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                            <path
+                                d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
+                        </svg>
+                        Download on App Store
+                    </a>
+                    <a href="https://github.com/mensadilabs/Immich-Gallery" class="btn btn-secondary">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                            <path
+                                d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
+                        </svg>
+                        View on GitHub
+                    </a>
+                </div>
+
+                <div class="screenshots">
+                    <div class="screenshot">
+                        <img src="./screenshots/TopShelf.png"
+                            alt="Main Interface">
+                    </div>
+                    <div class="screenshot">
+                        <img src="./screenshots/login.png"
+                            alt="Login">
+                    </div>
+                    <div class="screenshot">
+                        <img src="./screenshots/all-photos.png"
+                            alt="Photo Grid">
+                    </div>
+                    <div class="screenshot">
+                        <img src="./screenshots/albums.png"
+                            alt="Album Tab">
+                    </div>
+                    <div class="screenshot">
+                        <img src="./screenshots/Search.png"
+                            alt="Search">
+                    </div>
+                    <div class="screenshot">
+                        <img src="./screenshots/Settings.png"
+                            alt="Settings">
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <div class="container">
+                <h3>✨ Key Features</h3>
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon"> 📷 </div>
+                        <h4>All Photos Tab</h4>
+                        <p>Browse your entire photo library in a beautiful grid layout with infinite scrolling and
+                            smooth navigation.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">👥</div>
+                        <h4>People Tab</h4>
+                        <p>Discover photos organized by people with face recognition and animated thumbnail previews.
+                        </p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">📁</div>
+                        <h4>Albums Tab with Shared Albums</h4>
+                        <p>Access your personal albums and shared albums with collaborative photo collections.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🔍</div>
+                        <h4>Smart Search</h4>
+                        <p>Intelligent search functionality to quickly find photos by content, location, or metadata.
+                        </p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🏷️</div>
+                        <h4>Tags View</h4>
+                        <p>Organize and browse photos by custom tags with dynamic animated thumbnails.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">📺</div>
+                        <h4>Top Shelf Integration</h4>
+                        <p>Beautiful Apple TV Top Shelf integration showcasing your latest photos on the home screen.
+                        </p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">⚙️</div>
+                        <h4>Complete Customization</h4>
+                        <p>Extensive customization options for interface, slideshow settings, and user preferences.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🎬</div>
+                        <h4>Slideshow Mode</h4>
+                        <p>Immersive full-screen slideshow with customizable timing and optional clock overlay.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">👤</div>
+                        <h4>Multi User Support</h4>
+                        <p>Support for multiple Immich accounts with seamless switching between different servers.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+
+
+
+        <section class="section stats">
+            <div class="container">
+                <h3>📊 Project Stats</h3>
+                <div class="stats-grid">
+                    <div>
+                        <img src="https://repobeats.axiom.co/api/embed/3fea253de89fc88824c16adb77a456f7e7d657b7.svg"
+                            alt="Repobeats analytics">
+                    </div>
+                    <div>
+                        <img src="https://api.star-history.com/svg?repos=mensadilabs/Immich-Gallery&type=Timeline&theme=dark"
+                            alt="Star History Chart" class="star-history-chart">
+                    </div>
+                </div>
+
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <p>&copy; 2025 Immich Gallery. Open source project available on GitHub.</p>
+                <a href="https://www.buymeacoffee.com/zzpr69dnqtr" target="_blank" class="coffee-btn">
+                    <img src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=☕&slug=zzpr69dnqtr&button_colour=BD5FFF&font_colour=ffffff&font_family=Cookie&outline_colour=000000&coffee_colour=FFDD00"
+                        alt="Buy Me A Coffee - Supporter Count" />
+                </a>
+            </div>
+        </div>
+    </footer>
+</body>
+
+</html>
