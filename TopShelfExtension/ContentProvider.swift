@@ -9,7 +9,9 @@ import TVServices
 import Foundation
 
 class ContentProvider: TVTopShelfContentProvider {
-
+    
+    let TOTAL_ITEMS_COUNT = 10
+           
     override func loadTopShelfContent() async -> (any TVTopShelfContent)? {
         print("TopShelf: loadTopShelfContent() called")
         
@@ -35,26 +37,39 @@ class ContentProvider: TVTopShelfContentProvider {
     }
     
     private func createTopShelfContent() async throws -> TVTopShelfContent {
-        print("TopShelf: Starting to create TopShelf content")
-        let assets = try await fetchFirst5Photos()
+        let assets = try await fetchPhotos()
         print("TopShelf: Fetched \(assets.count) assets")
         
-        let sectionItems = await withTaskGroup(of: (Int, TVTopShelfSectionedItem?).self) { group in
+        // Check user preference for TopShelf style
+        let topShelfStyle = sharedDefaults.string(forKey: UserDefaultsKeys.topShelfStyle) ?? "carousel"
+        print("TopShelf: Using style: \(topShelfStyle)")
+        
+        if topShelfStyle == "sectioned" {
+            return try await createSectionedContent(assets: assets)
+        } else {
+            return try await createCarouselContent(assets: assets)
+        }
+    }
+    
+    private func createCarouselContent(assets: [SimpleAsset]) async throws -> TVTopShelfContent {
+        print("TopShelf: Starting to create TopShelf carousel content")
+        
+        let carouselItems = await withTaskGroup(of: (Int, TVTopShelfCarouselItem?).self) { group in
             for (index, asset) in assets.enumerated() {
                 group.addTask {
                     print("TopShelf: Processing asset \(index + 1)/\(assets.count): \(asset.originalFileName)")
-                    let item = await self.createTopShelfItem(for: asset)
+                    let item = await self.createTopShelfCarouselItem(for: asset)
                     return (index, item)
                 }
             }
             
-            var indexedItems: [(Int, TVTopShelfSectionedItem)] = []
+            var indexedItems: [(Int, TVTopShelfCarouselItem)] = []
             for await (index, item) in group {
                 if let item = item {
-                    print("TopShelf: Successfully created item: \(item.title ?? "No title")")
+                    print("TopShelf: Successfully created carousel item: \(item.title ?? "No title")")
                     indexedItems.append((index, item))
                 } else {
-                    print("TopShelf: Failed to create item at index \(index)")
+                    print("TopShelf: Failed to create carousel item at index \(index)")
                 }
             }
             
@@ -62,7 +77,42 @@ class ContentProvider: TVTopShelfContentProvider {
             indexedItems.sort { $0.0 < $1.0 }
             let items = indexedItems.map { $0.1 }
             
-            print("TopShelf: Created \(items.count) items total in correct order")
+            print("TopShelf: Created \(items.count) carousel items total in correct order")
+            return items
+        }
+        
+        let content = TVTopShelfCarouselContent(style: .details, items: carouselItems)
+        print("TopShelf: Created carousel content with \(carouselItems.count) items")
+        return content
+    }
+    
+    private func createSectionedContent(assets: [SimpleAsset]) async throws -> TVTopShelfContent {
+        print("TopShelf: Starting to create TopShelf sectioned content")
+        
+        let sectionItems = await withTaskGroup(of: (Int, TVTopShelfSectionedItem?).self) { group in
+            for (index, asset) in assets.enumerated() {
+                group.addTask {
+                    print("TopShelf: Processing asset \(index + 1)/\(assets.count): \(asset.originalFileName)")
+                    let item = await self.createTopShelfSectionedItem(for: asset)
+                    return (index, item)
+                }
+            }
+            
+            var indexedItems: [(Int, TVTopShelfSectionedItem)] = []
+            for await (index, item) in group {
+                if let item = item {
+                    print("TopShelf: Successfully created sectioned item: \(item.title ?? "No title")")
+                    indexedItems.append((index, item))
+                } else {
+                    print("TopShelf: Failed to create sectioned item at index \(index)")
+                }
+            }
+            
+            // Sort by original index to preserve order
+            indexedItems.sort { $0.0 < $1.0 }
+            let items = indexedItems.map { $0.1 }
+            
+            print("TopShelf: Created \(items.count) sectioned items total in correct order")
             return items
         }
         
@@ -74,8 +124,34 @@ class ContentProvider: TVTopShelfContentProvider {
         return content
     }
     
-    private func createTopShelfItem(for asset: SimpleAsset) async -> TVTopShelfSectionedItem? {
-        print("TopShelf: Creating item for asset: \(asset.id)")
+    private func createTopShelfCarouselItem(for asset: SimpleAsset) async -> TVTopShelfCarouselItem? {
+        print("TopShelf: Creating carousel item for asset: \(asset.id)")
+        guard let url = URL(string: "immichgallery://asset/\(asset.id)") else { 
+            print("TopShelf: Failed to create deep link URL for asset: \(asset.id)")
+            return nil 
+        }
+        
+        let item = TVTopShelfCarouselItem(identifier: asset.id)
+        item.title = asset.originalFileName
+        item.displayAction = TVTopShelfAction(url: url)
+        print("TopShelf: Created basic carousel item with title: \(asset.originalFileName)")
+        
+        // Download and process image without long-term caching
+        if let imageURL = await downloadImageWithoutCaching(for: asset) {
+            print("TopShelf: Setting processed image URL for carousel item: \(asset.id)")
+            print("TopShelf: Image URL: \(imageURL.absoluteString)")
+            item.setImageURL(imageURL, for: .screenScale1x)
+            item.setImageURL(imageURL, for: .screenScale2x)
+        } else {
+            print("TopShelf: WARNING - No image available for asset: \(asset.id)")
+            print("TopShelf: This carousel item will display without an image")
+        }
+        
+        return item
+    }
+    
+    private func createTopShelfSectionedItem(for asset: SimpleAsset) async -> TVTopShelfSectionedItem? {
+        print("TopShelf: Creating sectioned item for asset: \(asset.id)")
         guard let url = URL(string: "immichgallery://asset/\(asset.id)") else { 
             print("TopShelf: Failed to create deep link URL for asset: \(asset.id)")
             return nil 
@@ -84,32 +160,42 @@ class ContentProvider: TVTopShelfContentProvider {
         let item = TVTopShelfSectionedItem(identifier: asset.id)
         item.title = asset.originalFileName
         item.displayAction = TVTopShelfAction(url: url)
-        print("TopShelf: Created basic item with title: \(asset.originalFileName)")
+        print("TopShelf: Created basic sectioned item with title: \(asset.originalFileName)")
         
-        // Try to download and cache the image, then use file URL
-        if let cachedImageURL = await downloadAndCacheImage(for: asset) {
-            print("TopShelf: Setting file image URL for asset: \(asset.id)")
-            print("TopShelf: Image URL: \(cachedImageURL.absoluteString)")
-            item.setImageURL(cachedImageURL, for: .screenScale1x)
-            item.setImageURL(cachedImageURL, for: .screenScale2x)
+        // Download and process image without long-term caching
+        if let imageURL = await downloadImageWithoutCaching(for: asset) {
+            print("TopShelf: Setting processed image URL for sectioned item: \(asset.id)")
+            print("TopShelf: Image URL: \(imageURL.absoluteString)")
+            item.setImageURL(imageURL, for: .screenScale1x)
+            item.setImageURL(imageURL, for: .screenScale2x)
         } else {
-            print("TopShelf: WARNING - No cached image available for asset: \(asset.id)")
-            print("TopShelf: This item will display without an image")
+            print("TopShelf: WARNING - No image available for asset: \(asset.id)")
+            print("TopShelf: This sectioned item will display without an image")
         }
         
         return item
     }
     
     private func createFallbackContent() -> TVTopShelfContent {
-        print("TopShelf: Creating fallback content")
-        let item = TVTopShelfSectionedItem(identifier: "fallback")
-        item.title = "Immich Gallery"
-        item.displayAction = TVTopShelfAction(url: URL(string: "immichgallery://")!)
+        let topShelfStyle = sharedDefaults.string(forKey: UserDefaultsKeys.topShelfStyle) ?? "carousel"
+        print("TopShelf: Creating fallback content with style: \(topShelfStyle)")
         
-        let section = TVTopShelfItemCollection(items: [item])
-        section.title = "Photos"
-        
-        return TVTopShelfSectionedContent(sections: [section])
+        if topShelfStyle == "sectioned" {
+            let item = TVTopShelfSectionedItem(identifier: "fallback")
+            item.title = "Immich Gallery"
+            item.displayAction = TVTopShelfAction(url: URL(string: "immichgallery://")!)
+            
+            let section = TVTopShelfItemCollection(items: [item])
+            section.title = "Photos"
+            
+            return TVTopShelfSectionedContent(sections: [section])
+        } else {
+            let item = TVTopShelfCarouselItem(identifier: "fallback")
+            item.title = "Immich Gallery"
+            item.displayAction = TVTopShelfAction(url: URL(string: "immichgallery://")!)
+            
+            return TVTopShelfCarouselContent(style: .details, items: [item])
+        }
     }
     
     private var sharedDefaults: UserDefaults {
@@ -120,8 +206,8 @@ class ContentProvider: TVTopShelfContentProvider {
         return defaults
     }
     
-    private func fetchFirst5Photos() async throws -> [SimpleAsset] {
-        print("TopShelf: Starting to fetch first 5 photos")
+    private func fetchPhotos() async throws -> [SimpleAsset] {
+        print("TopShelf: Starting to fetch first \(TOTAL_ITEMS_COUNT) photos")
         
         let serverURL = sharedDefaults.string(forKey: UserDefaultsKeys.serverURL)
         let accessToken = sharedDefaults.string(forKey: UserDefaultsKeys.accessToken)
@@ -131,12 +217,17 @@ class ContentProvider: TVTopShelfContentProvider {
         
         print("TopShelf: Credentials check - serverURL: \(serverURL), accessToken: \(accessToken != nil ? "✓" : "✗")")
         if let url = serverURL { print("TopShelf: Server URL: \(url)") }
-        if let token = accessToken { print("TopShelf: Access token: \(String(token.prefix(20)))...") }
+        if let token = accessToken { 
+            print("TopShelf: Access token: \(String(token.prefix(20)))... (length: \(token.count))")
+        }
         
         guard let serverURL = serverURL, let accessToken = accessToken else {
             print("TopShelf: Missing credentials!")
             throw TopShelfError.missingCredentials
         }
+        
+        // Test token validity first
+        try await testTokenValidity(serverURL: serverURL, accessToken: accessToken)
         
         let urlString = "\(serverURL)/api/search/metadata"
         print("TopShelf: Making request to: \(urlString)")
@@ -147,7 +238,7 @@ class ContentProvider: TVTopShelfContentProvider {
         
         let searchRequest: [String: Any] = [
             "page": 1,
-            "size": 5,
+            "size": TOTAL_ITEMS_COUNT,
             "withPeople": false,
             "order": "desc",
             "withExif": false,
@@ -180,14 +271,14 @@ class ContentProvider: TVTopShelfContentProvider {
         
         print("TopShelf: Decoding response...")
         let searchResponse = try JSONDecoder().decode(SimpleSearchResponse.self, from: data)
-        let imageAssets = Array(searchResponse.assets.items.filter { $0.type == "IMAGE" }.prefix(5))
+        let imageAssets = Array(searchResponse.assets.items.filter { $0.type == "IMAGE" }.prefix(TOTAL_ITEMS_COUNT))
         print("TopShelf: Found \(imageAssets.count) image assets")
         return imageAssets
     }
     
 
-    private func downloadAndCacheImage(for asset: SimpleAsset) async -> URL? {
-        print("TopShelf: Starting image download for asset: \(asset.id)")
+    private func downloadImageWithoutCaching(for asset: SimpleAsset) async -> URL? {
+        print("TopShelf: Starting image download (no caching) for asset: \(asset.id)")
         guard let serverURL = sharedDefaults.string(forKey: UserDefaultsKeys.serverURL),
               let accessToken = sharedDefaults.string(forKey: UserDefaultsKeys.accessToken) else {
             print("TopShelf: Missing credentials for image download")
@@ -199,28 +290,18 @@ class ContentProvider: TVTopShelfContentProvider {
             return nil
         }
         
-        let topShelfCacheDir = appGroupContainer.appendingPathComponent("Library/Caches/TopShelfImages")
-        print("TopShelf: App Group cache directory: \(topShelfCacheDir.path)")
+        let tempDir = appGroupContainer.appendingPathComponent("Library/Caches/TopShelfTemp")
         
-        // Create cache directory if needed
+        // Create temp directory if needed
         do {
-            try FileManager.default.createDirectory(at: topShelfCacheDir, withIntermediateDirectories: true)
-            print("TopShelf: Cache directory created/verified")
+            try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
         } catch {
-            print("TopShelf: ERROR - Failed to create cache directory: \(error)")
+            print("TopShelf: ERROR - Failed to create temp directory: \(error)")
             return nil
         }
         
-        let cachedImageURL = topShelfCacheDir.appendingPathComponent("\(asset.id).webp")
-        
-        // Return cached image if it exists and is recent (within 1 hour)
-        if FileManager.default.fileExists(atPath: cachedImageURL.path),
-           let attributes = try? FileManager.default.attributesOfItem(atPath: cachedImageURL.path),
-           let modificationDate = attributes[.modificationDate] as? Date,
-           Date().timeIntervalSince(modificationDate) < 3600 {
-            print("TopShelf: Using cached image for asset: \(asset.id)")
-            return cachedImageURL
-        }
+        // Use a temporary file that gets overwritten each time
+        let tempImageURL = tempDir.appendingPathComponent("\(asset.id)_temp.webp")
         
         // Download image
         let thumbnailURL = "\(serverURL)/api/assets/\(asset.id)/thumbnail?format=webp&size=preview"
@@ -246,16 +327,17 @@ class ContentProvider: TVTopShelfContentProvider {
             
             guard httpResponse.statusCode == 200 else {
                 print("TopShelf: Image download failed with status: \(httpResponse.statusCode)")
+                if let responseString = String(data: data, encoding: .utf8) {
+                    print("TopShelf: Error response body: \(responseString)")
+                }
                 return nil
             }
             
-            // Save to cache and return file URL
-            try data.write(to: cachedImageURL)
-            print("TopShelf: Image cached successfully at: \(cachedImageURL.path)")
+            // Save to temp file and return file URL
+            try data.write(to: tempImageURL)
+            print("TopShelf: Image saved to temp file: \(tempImageURL.path)")
             
-            // Ensure we return the file URL properly
-            print("TopShelf: Returning file URL: \(cachedImageURL.absoluteString)")
-            return cachedImageURL
+            return tempImageURL
             
         } catch {
             print("TopShelf: Failed to download image for asset \(asset.id): \(error)")
@@ -263,13 +345,37 @@ class ContentProvider: TVTopShelfContentProvider {
         }
     }
     
-    private func getThumbnailURL(for asset: SimpleAsset) -> URL {
-        guard let serverURL = sharedDefaults.string(forKey: UserDefaultsKeys.serverURL) else {
-            return URL(string: "about:blank")!
+    private func testTokenValidity(serverURL: String, accessToken: String) async throws {
+        print("TopShelf: Testing token validity...")
+        let testURL = "\(serverURL)/api/users/me"
+        guard let url = URL(string: testURL) else {
+            print("TopShelf: Invalid test URL")
+            throw TopShelfError.invalidURL
         }
         
-        let thumbnailURL = "\(serverURL)/api/assets/\(asset.id)/thumbnail?format=webp&size=preview"
-        return URL(string: thumbnailURL) ?? URL(string: "about:blank")!
+        var request = URLRequest(url: url)
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            print("TopShelf: Invalid test response")
+            throw TopShelfError.networkError
+        }
+        
+        print("TopShelf: Token test response status: \(httpResponse.statusCode)")
+        
+        if httpResponse.statusCode == 401 {
+            print("TopShelf: Token is invalid or expired!")
+            if let responseString = String(data: data, encoding: .utf8) {
+                print("TopShelf: Token test error response: \(responseString)")
+            }
+            throw TopShelfError.invalidToken
+        } else if httpResponse.statusCode == 200 {
+            print("TopShelf: Token is valid!")
+        } else {
+            print("TopShelf: Unexpected token test response: \(httpResponse.statusCode)")
+        }
     }
 }
 
@@ -291,4 +397,5 @@ enum TopShelfError: Error {
     case missingCredentials
     case networkError
     case invalidURL
+    case invalidToken
 }

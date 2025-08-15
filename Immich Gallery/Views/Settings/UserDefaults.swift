@@ -8,6 +8,13 @@
 import Foundation
 // Extension to make overlay setting easily accessible throughout the app
 extension UserDefaults {
+    var autoSlideshowTimeout: Int {
+        get {
+            let value = integer(forKey: UserDefaultsKeys.autoSlideshowTimeout)
+            return value >= 0 ? value : 0 // 0 = off
+        }
+        set { set(newValue, forKey: UserDefaultsKeys.autoSlideshowTimeout) }
+    }
     var hideImageOverlay: Bool {
         get { bool(forKey: UserDefaultsKeys.hideImageOverlay) }
         set { set(newValue, forKey: UserDefaultsKeys.hideImageOverlay) }

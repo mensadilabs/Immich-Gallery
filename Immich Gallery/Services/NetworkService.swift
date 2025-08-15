@@ -10,7 +10,7 @@ import Foundation
 /// Base networking service that handles HTTP requests and authentication
 class NetworkService: ObservableObject {
     // MARK: - Configuration
-    @Published var baseURL: String = ""
+    @Published var baseURL: String = "http://localhost:2283"
     @Published var accessToken: String?
     
     private let session = URLSession.shared
@@ -114,21 +114,42 @@ class NetworkService: ObservableObject {
             }
         }
         
-        let (data, response) = try await session.data(for: request)
+        let (data, response): (Data, URLResponse)
+        do {
+            (data, response) = try await session.data(for: request)
+        } catch {
+            print("NetworkService: Network error occurred: \(error)")
+            // Handle network connectivity issues (timeouts, connection refused, DNS failures, etc.)
+            throw ImmichError.networkError
+        }
         
         guard let httpResponse = response as? HTTPURLResponse else {
             print("NetworkService: Invalid HTTP response")
-            throw ImmichError.serverError
+            throw ImmichError.networkError
         }
         
         print("NetworkService: Response status code: \(httpResponse.statusCode)")
         
         guard httpResponse.statusCode == 200 else {
-            print("NetworkService: Server error with status \(httpResponse.statusCode)")
+            print("NetworkService: HTTP error with status \(httpResponse.statusCode)")
             if let responseString = String(data: data, encoding: .utf8) {
                 print("NetworkService: Response body: \(responseString)")
             }
-            throw ImmichError.serverError
+            
+            // Classify HTTP status codes into appropriate ImmichError types
+            switch httpResponse.statusCode {
+            case 401:
+                throw ImmichError.notAuthenticated
+            case 403:
+                throw ImmichError.forbidden
+            case 500...599:
+                throw ImmichError.serverError(httpResponse.statusCode)
+            case 400...499:
+                throw ImmichError.clientError(httpResponse.statusCode)
+            default:
+                // For any other status codes, treat as server error
+                throw ImmichError.serverError(httpResponse.statusCode)
+            }
         }
         
         do {
@@ -157,11 +178,37 @@ class NetworkService: ObservableObject {
         var request = URLRequest(url: url)
         request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         
-        let (data, response) = try await session.data(for: request)
+        let (data, response): (Data, URLResponse)
+        do {
+            (data, response) = try await session.data(for: request)
+        } catch {
+            print("NetworkService: Network error occurred in makeDataRequest: \(error)")
+            // Handle network connectivity issues (timeouts, connection refused, DNS failures, etc.)
+            throw ImmichError.networkError
+        }
         
-        guard let httpResponse = response as? HTTPURLResponse,
-              httpResponse.statusCode == 200 else {
-            throw ImmichError.serverError
+        guard let httpResponse = response as? HTTPURLResponse else {
+            print("NetworkService: Invalid HTTP response in makeDataRequest")
+            throw ImmichError.networkError
+        }
+        
+        guard httpResponse.statusCode == 200 else {
+            print("NetworkService: HTTP error in makeDataRequest with status \(httpResponse.statusCode)")
+            
+            // Classify HTTP status codes into appropriate ImmichError types
+            switch httpResponse.statusCode {
+            case 401:
+                throw ImmichError.notAuthenticated
+            case 403:
+                throw ImmichError.forbidden
+            case 500...599:
+                throw ImmichError.serverError(httpResponse.statusCode)
+            case 400...499:
+                throw ImmichError.clientError(httpResponse.statusCode)
+            default:
+                // For any other status codes, treat as server error
+                throw ImmichError.serverError(httpResponse.statusCode)
+            }
         }
         
         return data
@@ -178,21 +225,36 @@ enum HTTPMethod: String {
 }
 
 enum ImmichError: Error, LocalizedError {
-    case notAuthenticated
-    case invalidURL
-    case serverError
-    case networkError
+    case notAuthenticated           // 401 - Invalid/expired token
+    case forbidden                  // 403 - Access denied
+    case invalidURL                 // Malformed URL
+    case serverError(Int)          // 5xx - Server issues
+    case networkError              // Network connectivity issues
+    case clientError(Int)          // 4xx (except 401/403)
+    
+    var shouldLogout: Bool {
+        switch self {
+        case .notAuthenticated, .forbidden:
+            return true
+        case .serverError, .networkError, .invalidURL, .clientError:
+            return false
+        }
+    }
     
     var errorDescription: String? {
         switch self {
         case .notAuthenticated:
             return "Not authenticated. Please log in."
+        case .forbidden:
+            return "Access forbidden. Please check your permissions."
         case .invalidURL:
             return "Invalid URL"
-        case .serverError:
-            return "Server error occurred"
+        case .serverError(let statusCode):
+            return "Server error occurred (HTTP \(statusCode))"
         case .networkError:
             return "Network error occurred"
+        case .clientError(let statusCode):
+            return "Client error occurred (HTTP \(statusCode))"
         }
     }
 } 

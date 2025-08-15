@@ -12,9 +12,9 @@ struct SharedGradientBackground: View {
     var body: some View {
         LinearGradient(
             gradient: Gradient(colors: [
-                Color.blue.opacity(0.3),
-                Color.purple.opacity(0.2),
-                Color.gray.opacity(0.4)
+                Color(red: 15/255, green: 32/255, blue: 39/255),
+                Color(red: 32/255, green: 58/255, blue: 67/255),
+                Color(red: 44/255, green: 83/255, blue: 100/255)
             ]),
             startPoint: .topLeading,
             endPoint: .bottomTrailing
@@ -77,5 +77,5 @@ struct SharedOpaqueBackground: View {
 }
 
 #Preview {
-    SharedOpaqueBackground()
-} 
+    SharedGradientBackground()
+}

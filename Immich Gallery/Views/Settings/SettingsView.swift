@@ -5,6 +5,7 @@
 //  Created by mensadi-labs on 2025-06-29.
 //
 
+
 import SwiftUI
 
 // MARK: - Reusable Components
@@ -64,6 +65,8 @@ struct SettingsView: View {
     @AppStorage("enableSlideshowShuffle") private var enableSlideshowShuffle = false
     @AppStorage("allPhotosSortOrder") private var allPhotosSortOrder = "desc"
     @AppStorage("enableTopShelf", store: UserDefaults(suiteName: AppConstants.appGroupIdentifier)) private var enableTopShelf = false
+    @AppStorage("topShelfStyle", store: UserDefaults(suiteName: AppConstants.appGroupIdentifier)) private var topShelfStyle = "carousel"
+    @AppStorage(UserDefaultsKeys.autoSlideshowTimeout) private var autoSlideshowTimeout: Int = 0 // 0 = off
     @FocusState private var isMinusFocused: Bool
     @FocusState private var isPlusFocused: Bool
     @FocusState private var focusedColor: String?
@@ -71,20 +74,12 @@ struct SettingsView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                LinearGradient(
-                    gradient: Gradient(colors: [
-                        Color.blue.opacity(0.3),
-                        Color.purple.opacity(0.2),
-                        Color.gray.opacity(0.4)
-                    ]),
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
+                SharedGradientBackground()
                 .ignoresSafeArea()
                 
                 ScrollView {
                     LazyVStack(spacing: 30) {
-
+                        
                         // Current User Section
                         if let user = authService.currentUser {
                             VStack(alignment: .leading, spacing: 16) {
@@ -130,20 +125,14 @@ struct SettingsView: View {
                             refreshServerConnection()
                         }) {
                             HStack {
-                                Image(systemName: "server.rack")
-                                    .foregroundColor(.green)
-                                    .font(.title2)
+                                Image(systemName: authService.baseURL.lowercased().hasPrefix("https") ? "lock.fill" : "lock.open.fill")
+                                    .foregroundColor(authService.baseURL.lowercased().hasPrefix("https") ? .green : .red)
+                                    .font(.headline)
+                                    .padding()
                                 
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("Server")
-                                        .font(.headline)
-                                        .foregroundColor(.primary)
-                                    Text(authService.baseURL)
-                                        .font(.subheadline)
-                                        .foregroundColor(.secondary)
-                                        .lineLimit(1)
-                                }
-                                
+                                Text(authService.baseURL)
+                                    .font(.headline)
+                                    .foregroundColor(.primary)
                                 Spacer()
                                 
                                 HStack(spacing: 8) {
@@ -170,40 +159,40 @@ struct SettingsView: View {
                         .buttonStyle(.plain)
                         // User Actions Section
                         VStack(spacing: 16) {
-                                Button(action: {
-                                    showingSignIn = true
-                                }) {
-                                    HStack(spacing: 8) {
-                                        Image(systemName: "person.badge.plus")
-                                            .font(.title2)
-                                            .foregroundColor(.blue)
-                                        Text("Add User")
-                                            .font(.caption)
-                                    }
-                                    .frame(maxWidth: .infinity)
-                                    .padding(16)
-                                    .background(Color.blue.opacity(0.1))
-                                    .cornerRadius(12)
+                            Button(action: {
+                                showingSignIn = true
+                            }) {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "person.badge.plus")
+                                        .font(.title2)
+                                        .foregroundColor(.blue)
+                                    Text("Add User")
+                                        .font(.caption)
                                 }
-                                .buttonStyle(.plain)
-                                
-                                Button(action: {
-                                    showingSignOutAlert = true
-                                }) {
-                                    HStack(spacing: 8) {
-                                        Image(systemName: "rectangle.portrait.and.arrow.right")
-                                            .font(.title2)
-                                            .foregroundColor(.red)
-                                        Text("Sign Out")
-                                            .font(.caption)
-                                            .foregroundColor(.primary)
-                                    }
-                                    .frame(maxWidth: .infinity)
-                                    .padding(16)
-                                    .background(Color.red.opacity(0.1))
-                                    .cornerRadius(12)
+                                .frame(maxWidth: .infinity)
+                                .padding(16)
+                                .background(Color.blue.opacity(0.1))
+                                .cornerRadius(12)
+                            }
+                            .buttonStyle(.plain)
+                            
+                            Button(action: {
+                                showingSignOutAlert = true
+                            }) {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "rectangle.portrait.and.arrow.right")
+                                        .font(.title2)
+                                        .foregroundColor(.red)
+                                    Text("Sign Out")
+                                        .font(.caption)
+                                        .foregroundColor(.primary)
                                 }
-                                .buttonStyle(.plain)
+                                .frame(maxWidth: .infinity)
+                                .padding(16)
+                                .background(Color.red.opacity(0.1))
+                                .cornerRadius(12)
+                            }
+                            .buttonStyle(.plain)
                             
                             // User Switcher
                             if savedUsers.count > 1 {
@@ -277,8 +266,8 @@ struct SettingsView: View {
                                                 Text("Tags").tag("tags")
                                             }
                                         }
-                                        .pickerStyle(.menu)
-                                        .frame(width: 300, alignment: .trailing)
+                                            .pickerStyle(.menu)
+                                            .frame(width: 300, alignment: .trailing)
                                     )
                                 )
                                 
@@ -289,13 +278,29 @@ struct SettingsView: View {
                                     content: AnyView(Toggle("", isOn: $enableThumbnailAnimation).labelsHidden())
                                 )
                                 
-                                 
+                                
                                 SettingsRow(
                                     icon: "tv",
                                     title: "Top Shelf Extension",
                                     subtitle: "Show recent photos on Apple TV home screen",
                                     content: AnyView(Toggle("", isOn: $enableTopShelf).labelsHidden())
                                 )
+                                
+                                if enableTopShelf {
+                                    SettingsRow(
+                                        icon: "rectangle.grid.1x2",
+                                        title: "Top Shelf Style",
+                                        subtitle: "Choose between compact sectioned or wide carousel display",
+                                        content: AnyView(
+                                            Picker("Top Shelf Style", selection: $topShelfStyle) {
+                                                Text("Compact").tag("sectioned")
+                                                Text("Fullscreen").tag("carousel")
+                                            }
+                                                .pickerStyle(.menu)
+                                                .frame(width: 300, alignment: .trailing)
+                                        )
+                                    )
+                                }
                             })
                         }
                         
@@ -311,8 +316,8 @@ struct SettingsView: View {
                                             Text("Newest First").tag("desc")
                                             Text("Oldest First").tag("asc")
                                         }
-                                        .pickerStyle(.menu)
-                                        .frame(width: 300, alignment: .trailing)
+                                            .pickerStyle(.menu)
+                                            .frame(width: 300, alignment: .trailing)
                                     )
                                 )
                                 
@@ -325,8 +330,8 @@ struct SettingsView: View {
                                             Text("Newest First").tag("desc")
                                             Text("Oldest First").tag("asc")
                                         }
-                                        .pickerStyle(.menu)
-                                        .frame(width: 300, alignment: .trailing)
+                                            .pickerStyle(.menu)
+                                            .frame(width: 300, alignment: .trailing)
                                     )
                                 )
                             })
@@ -343,6 +348,7 @@ struct SettingsView: View {
                                     enableReflections: $enableReflectionsInSlideshow,
                                     enableKenBurns: $enableKenBurnsEffect,
                                     enableShuffle: $enableSlideshowShuffle,
+                                    autoSlideshowTimeout: $autoSlideshowTimeout,
                                     isMinusFocused: $isMinusFocused,
                                     isPlusFocused: $isPlusFocused,
                                     focusedColor: $focusedColor
@@ -364,10 +370,10 @@ struct SettingsView: View {
                                             Text("Play/Pause")
                                                 .font(.caption)
                                         }
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 6)
-                                        .background(Color.blue.opacity(0.1))
-                                        .cornerRadius(8)
+                                            .padding(.horizontal, 12)
+                                            .padding(.vertical, 6)
+                                            .background(Color.blue.opacity(0.1))
+                                            .cornerRadius(8)
                                     )
                                 )
                                 
@@ -390,10 +396,10 @@ struct SettingsView: View {
                                                 .foregroundColor(.gray)
                                                 .font(.caption)
                                         }
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 6)
-                                        .background(Color.gray.opacity(0.1))
-                                        .cornerRadius(8)
+                                            .padding(.horizontal, 12)
+                                            .padding(.vertical, 6)
+                                            .background(Color.gray.opacity(0.1))
+                                            .cornerRadius(8)
                                     )
                                 )
                                 
@@ -410,10 +416,10 @@ struct SettingsView: View {
                                                     .foregroundColor(.blue)
                                                     .font(.caption)
                                             }
-                                            .padding(.horizontal, 12)
-                                            .padding(.vertical, 6)
-                                            .background(Color.blue.opacity(0.1))
-                                            .cornerRadius(8)
+                                                .padding(.horizontal, 12)
+                                                .padding(.vertical, 6)
+                                                .background(Color.blue.opacity(0.1))
+                                                .cornerRadius(8)
                                         )
                                     )
                                 }
@@ -432,10 +438,10 @@ struct SettingsView: View {
                                                     .foregroundColor(.blue)
                                                     .font(.caption)
                                             }
-                                            .padding(.horizontal, 12)
-                                            .padding(.vertical, 6)
-                                            .background(Color.blue.opacity(0.1))
-                                            .cornerRadius(8)
+                                                .padding(.horizontal, 12)
+                                                .padding(.vertical, 6)
+                                                .background(Color.blue.opacity(0.1))
+                                                .cornerRadius(8)
                                         )
                                     )
                                 }

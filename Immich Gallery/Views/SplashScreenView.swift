@@ -31,9 +31,12 @@ struct WhatsNewView: View {
     @State private var opacity: Double = 0
     
     private let changelogContent = """
-    VERSION|1.0.10
-    NEW_FEATURE| Top Shelf Integration
-    - Shows your recent photos on your Homescreen. Of course, you can hide it if you're feeling shy!
+    VERSION|1.0.11
+    BUFFIX| Fix bugs
+    - Top shef portraits no longer do unexpected headstands or cartwheels. I Hope. 
+    - Hopefully it also won't crash. But you may see reduced image quality in top shelf. 
+    - Better error handling.
+    - Changed color gradient, this is much better on the eyes, I think. 
     """
     
     private let gridSpacing: CGFloat = 20
