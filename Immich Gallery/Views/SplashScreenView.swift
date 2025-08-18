@@ -31,8 +31,15 @@ struct WhatsNewView: View {
     @State private var opacity: Double = 0
     
     private let changelogContent = """
+    VERSION|1.0.12
+    
+    BUGFIX| Fix more bugs
+    - Make slideshow truly random, just like life. Outsourced this to the server. - #43 
+    - Fix inactivity timer - Browse fast or the automatic slideshow will catch up to you - #43 
+    - Remove date of birth from people tab - WAF+10 - #44
+    
     VERSION|1.0.11
-    BUFFIX| Fix bugs
+    BUGFIX| Fix bugs
     - Top shef portraits no longer do unexpected headstands or cartwheels. I Hope. 
     - Hopefully it also won't crash. But you may see reduced image quality in top shelf. 
     - Better error handling.
@@ -75,7 +82,7 @@ private extension WhatsNewView {
                 .font(.system(size: 48, weight: .bold))
                 .foregroundColor(.white)
             
-            Text("Enjoying the app? Don't foget to leave a review.")
+            Text("Be a star - leave a star, or five.")
                 .font(.system(size: 24, weight: .medium))
                 .foregroundColor(.gray)
         }
