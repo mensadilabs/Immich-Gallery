@@ -9,7 +9,9 @@ import SwiftUI
 import UIKit
 
 struct SlideshowView: View {
-    let assets: [ImmichAsset]
+    let albumId: String?
+    let personId: String?
+    let tagId: String?
     let assetService: AssetService
     let startingIndex: Int
     @Environment(\.dismiss) private var dismiss
@@ -32,7 +34,11 @@ struct SlideshowView: View {
     @State private var kenBurnsScale: CGFloat = 1.0
     @State private var kenBurnsOffset: CGSize = .zero
     @State private var enableShuffle: Bool = UserDefaults.standard.enableSlideshowShuffle
-    @State private var shuffledAssets: [ImmichAsset] = []
+    @State private var assets: [ImmichAsset] = []
+    @State private var hasMoreAssets = true
+    @State private var currentPage = 1
+    @State private var isLoadingAssets = false
+    @State private var loadAssetsTask: Task<Void, Never>?
     @FocusState private var isFocused: Bool
     
     enum SlideDirection {
@@ -72,9 +78,9 @@ struct SlideshowView: View {
     // Global slide animation duration for both slide-in and slide-out
     private let slideAnimationDuration: Double = 1.5 
     
-    // Computed property to get current assets array (shuffled or original)
+    // Computed property to get current assets array
     private var currentAssets: [ImmichAsset] {
-        enableShuffle ? shuffledAssets : assets
+        assets
     }
     
     var body: some View {
@@ -230,18 +236,18 @@ struct SlideshowView: View {
             preloadedImages.removeAll() // Clear any existing preloaded images
             preloadedDominantColors.removeAll() // Clear any existing preloaded dominant colors
             
-            // Initialize shuffle if enabled
-            initializeShuffle()
-            
-            currentIndex = max(0, min(startingIndex, currentAssets.count - 1)) // Set starting index with bounds check
-            
             // Prevent display from sleeping during slideshow
             UIApplication.shared.isIdleTimerDisabled = true
             print("SlideshowView: Display sleep disabled")
             
-            loadCurrentImage()
+            // Load initial assets
+            loadInitialAssets()
         }
         .onDisappear {
+            // Cancel any ongoing tasks first
+            loadAssetsTask?.cancel()
+            loadAssetsTask = nil
+            
             stopAutoAdvance()
             preloadedImages.removeAll() // Clear preloaded images to free memory
             preloadedDominantColors.removeAll() // Clear preloaded dominant colors to free memory
@@ -249,6 +255,9 @@ struct SlideshowView: View {
             // Re-enable display sleep when slideshow ends
             UIApplication.shared.isIdleTimerDisabled = false
             print("SlideshowView: Display sleep re-enabled")
+            
+            // Restart auto-slideshow timer when slideshow ends
+            NotificationCenter.default.post(name: NSNotification.Name("restartAutoSlideshowTimer"), object: nil)
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.willResignActiveNotification)) { _ in
             // Re-enable display sleep when app goes to background
@@ -403,8 +412,11 @@ struct SlideshowView: View {
     
     private func nextImage() {
         print("SlideshowView: nextImage() called - currentIndex: \(currentIndex), assets count: \(currentAssets.count)")
+        
+        // Check if we can advance to next asset in current batch
         guard currentIndex < currentAssets.count - 1 else { 
-            print("SlideshowView: nextImage() guard failed - at last image")
+            print("SlideshowView: At last image in batch, loading more assets")
+            loadMoreAssets()
             return 
         }
         
@@ -416,16 +428,12 @@ struct SlideshowView: View {
         
         // Wait for slide out to complete, then change image and direction
         DispatchQueue.main.asyncAfter(deadline: .now() + slideAnimationDuration) {
-            if self.currentIndex + 1 < self.currentAssets.count {
-                print("SlideshowView: Advancing from index \(self.currentIndex) to \(self.currentIndex + 1)")
-                // Set new slide direction for the incoming image
-                let directions: [SlideDirection] = [.left, .right, .up, .down, .diagonal_up_left, .diagonal_up_right, .diagonal_down_left, .diagonal_down_right, .zoom_out]
-                self.slideDirection = directions.randomElement() ?? .right
-                self.currentIndex += 1
-                self.loadCurrentImage()
-            } else {
-                print("SlideshowView: Cannot advance further - at last image")
-            }
+            print("SlideshowView: Advancing from index \(self.currentIndex) to \(self.currentIndex + 1)")
+            // Set new slide direction for the incoming image
+            let directions: [SlideDirection] = [.left, .right, .up, .down, .diagonal_up_left, .diagonal_up_right, .diagonal_down_left, .diagonal_down_right, .zoom_out]
+            self.slideDirection = directions.randomElement() ?? .right
+            self.currentIndex += 1
+            self.loadCurrentImage()
         }
     }
     
@@ -643,21 +651,143 @@ struct SlideshowView: View {
         }
     }
     
-    // MARK: - Shuffle Methods
+    // MARK: - Asset Loading Methods
     
-    private func initializeShuffle() {
-        enableShuffle = UserDefaults.standard.enableSlideshowShuffle
-        if enableShuffle {
-            shuffleAssets()
-        } else {
-            shuffledAssets = []
+    private func loadInitialAssets() {
+        isLoadingAssets = true
+        loadAssetsTask = Task {
+            do {
+                let searchResult: SearchResult
+                if enableShuffle {
+                    // For shuffle mode, get initial random assets
+                    searchResult = try await assetService.fetchRandomAssets(
+                        albumIds: albumId != nil ? [albumId!] : nil,
+                        personIds: personId != nil ? [personId!] : nil,
+                        tagIds: tagId != nil ? [tagId!] : nil,
+                        limit: 50
+                    )
+                } else {
+                    // For normal mode, get paginated assets
+                    searchResult = try await assetService.fetchAssets(
+                        page: currentPage,
+                        limit: 50,
+                        albumId: albumId,
+                        personId: personId,
+                        tagId: tagId
+                    )
+                }
+                
+                // Check if task was cancelled
+                try Task.checkCancellation()
+                
+                await MainActor.run {
+                    let imageAssets = searchResult.assets.filter { $0.type == .image }
+                    self.assets = imageAssets
+                    self.hasMoreAssets = searchResult.nextPage != nil || enableShuffle // Always has more for shuffle
+                    self.currentIndex = max(0, min(startingIndex, imageAssets.count - 1))
+                    self.isLoadingAssets = false
+                    
+                    if !imageAssets.isEmpty {
+                        self.loadCurrentImage()
+                    } else {
+                        print("SlideshowView: No image assets found")
+                        self.isLoading = false
+                    }
+                }
+            } catch is CancellationError {
+                await MainActor.run {
+                    print("SlideshowView: Initial asset loading cancelled")
+                    self.isLoading = false
+                    self.isLoadingAssets = false
+                }
+            } catch {
+                await MainActor.run {
+                    print("SlideshowView: Failed to load initial assets: \(error)")
+                    self.isLoading = false
+                    self.isLoadingAssets = false
+                }
+            }
         }
     }
     
-    private func shuffleAssets() {
-        shuffledAssets = assets.shuffled()
-        print("SlideshowView: Assets shuffled - original count: \(assets.count), shuffled count: \(shuffledAssets.count)")
+    private func loadMoreAssets() {
+        // Prevent multiple simultaneous loads
+        guard !isLoadingAssets else {
+            print("SlideshowView: Already loading assets, skipping")
+            return
+        }
+        
+        isLoadingAssets = true
+        loadAssetsTask?.cancel() // Cancel any existing task
+        
+        loadAssetsTask = Task {
+            do {
+                // Check if task was cancelled
+                try Task.checkCancellation()
+                
+                let searchResult: SearchResult
+                if enableShuffle {
+                    // For shuffle mode, get more random assets
+                    searchResult = try await assetService.fetchRandomAssets(
+                        albumIds: albumId != nil ? [albumId!] : nil,
+                        personIds: personId != nil ? [personId!] : nil,
+                        tagIds: tagId != nil ? [tagId!] : nil,
+                        limit: 50
+                    )
+                } else {
+                    // For non-shuffle mode, get next page of sequential assets
+                    await MainActor.run {
+                        self.currentPage += 1
+                    }
+                    searchResult = try await assetService.fetchAssets(
+                        page: currentPage,
+                        limit: 50,
+                        albumId: albumId,
+                        personId: personId,
+                        tagId: tagId
+                    )
+                }
+                
+                // Check if task was cancelled before updating UI
+                try Task.checkCancellation()
+                
+                await MainActor.run {
+                    let imageAssets = searchResult.assets.filter { $0.type == .image }
+                    self.assets.append(contentsOf: imageAssets)
+                    self.hasMoreAssets = searchResult.nextPage != nil || enableShuffle // Always has more for shuffle
+                    self.isLoadingAssets = false
+                    
+                    // Start slide out animation, then continue with next image
+                    withAnimation(.easeInOut(duration: slideAnimationDuration)) {
+                        self.isTransitioning = true
+                    }
+                    
+                    DispatchQueue.main.asyncAfter(deadline: .now() + slideAnimationDuration) {
+                        // Check if view still exists before continuing
+                        guard !Task.isCancelled else { return }
+                        
+                        let directions: [SlideDirection] = [.left, .right, .up, .down, .diagonal_up_left, .diagonal_up_right, .diagonal_down_left, .diagonal_down_right, .zoom_out]
+                        self.slideDirection = directions.randomElement() ?? .right
+                        self.currentIndex += 1
+                        self.loadCurrentImage()
+                    }
+                }
+            } catch is CancellationError {
+                await MainActor.run {
+                    print("SlideshowView: Asset loading cancelled")
+                    self.isLoadingAssets = false
+                }
+            } catch {
+                await MainActor.run {
+                    print("SlideshowView: Failed to load more assets: \(error)")
+                    self.isLoadingAssets = false
+                    // For shuffle mode, always try again; for sequential, mark as no more
+                    self.hasMoreAssets = enableShuffle
+                }
+            }
+        }
     }
+    
     
 }
 
@@ -703,5 +833,5 @@ struct SlideshowView: View {
         )
     ]
     
-     return SlideshowView(assets: mockAssets, assetService: assetService, startingIndex: 0)
+     return SlideshowView(albumId: nil, personId: nil, tagId: nil, assetService: assetService, startingIndex: 0)
 }

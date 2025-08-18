@@ -208,7 +208,7 @@ struct AssetGridView: View {
                 // Find the index of the current asset in the filtered image assets
                 let startingIndex = currentAssetIndex < assets.count ? 
                     (imageAssets.firstIndex(of: assets[currentAssetIndex]) ?? 0) : 0
-                SlideshowView(assets: imageAssets, assetService: assetService, startingIndex: startingIndex)
+                SlideshowView(albumId: albumId, personId: personId, tagId: tagId, assetService: assetService, startingIndex: 0)
             }
         }
         .onPlayPauseCommand(perform: {
@@ -249,7 +249,8 @@ struct AssetGridView: View {
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name(NotificationNames.startAutoSlideshow))) { _ in
-                startSlideshow()
+            print("AssetGridView: Received auto-slideshow notification")
+            startSlideshow()
         }
     }
     
@@ -381,10 +382,9 @@ struct AssetGridView: View {
     }
     
     private func startSlideshow() {
-        let imageAssets = assets.filter { $0.type == .image }
-        if !imageAssets.isEmpty {
-            showingSlideshow = true
-        }
+        // Stop auto-slideshow timer before starting slideshow
+        NotificationCenter.default.post(name: NSNotification.Name("stopAutoSlideshowTimer"), object: nil)
+        showingSlideshow = true
     }
     
     private func handleDeepLinkAsset(_ assetId: String) {
