@@ -210,12 +210,6 @@ struct PersonThumbnailView: View {
                         }
                     }
                 }
-                
-                if let birthDate = person.birthDate {
-                    Text("Born: \(formatDate(birthDate))")
-                        .font(.caption)
-                        .foregroundColor(.gray)
-                }
             }
             .frame(maxWidth: 300, alignment: .leading)
             .padding(.horizontal, 4)
@@ -385,18 +379,14 @@ struct PersonPhotosView: View {
             })
         }
         .fullScreenCover(isPresented: $showingSlideshow) {
-            let imageAssets = personAssets.filter { $0.type == .image }
-            if !imageAssets.isEmpty {
-                SlideshowView(assets: imageAssets, assetService: assetService, startingIndex: 0)
-            }
+            SlideshowView(albumId: nil, personId: person.id, tagId: nil, assetService: assetService, startingIndex: 0)
         }
     }
     
     private func startSlideshow() {
-        let imageAssets = personAssets.filter { $0.type == .image }
-        if !imageAssets.isEmpty {
-            showingSlideshow = true
-        }
+        // Stop auto-slideshow timer before starting slideshow
+        NotificationCenter.default.post(name: NSNotification.Name("stopAutoSlideshowTimer"), object: nil)
+        showingSlideshow = true
     }
 }
 

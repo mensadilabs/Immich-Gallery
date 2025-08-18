@@ -402,18 +402,14 @@ struct AlbumDetailView: View {
             }
         }
         .fullScreenCover(isPresented: $showingSlideshow) {
-            let imageAssets = albumAssets.filter { $0.type == .image }
-            if !imageAssets.isEmpty {
-                SlideshowView(assets: imageAssets, assetService: assetService, startingIndex: 0)
-            }
+            SlideshowView(albumId: album.id, personId: nil, tagId: nil, assetService: assetService, startingIndex: 0)
         }
     }
     
     private func startSlideshow() {
-        let imageAssets = albumAssets.filter { $0.type == .image }
-        if !imageAssets.isEmpty {
-            showingSlideshow = true
-        }
+        // Stop auto-slideshow timer before starting slideshow
+        NotificationCenter.default.post(name: NSNotification.Name("stopAutoSlideshowTimer"), object: nil)
+        showingSlideshow = true
     }
 }
 
