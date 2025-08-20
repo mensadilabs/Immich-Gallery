@@ -12,8 +12,8 @@ struct SharedGradientBackground: View {
     var body: some View {
         LinearGradient(
             gradient: Gradient(colors: [
-                Color(red: 15/255, green: 32/255, blue: 39/255),
-                Color(red: 32/255, green: 58/255, blue: 67/255),
+                Color(red: 44/255, green: 83/255, blue: 100/255),
+                Color(red: 44/255, green: 83/255, blue: 100/255),
                 Color(red: 44/255, green: 83/255, blue: 100/255)
             ]),
             startPoint: .topLeading,
@@ -65,9 +65,9 @@ struct SharedOpaqueBackground: View {
     var body: some View {
         LinearGradient(
             gradient: Gradient(colors: [
-                Color(red: 0.1, green: 0.1, blue: 0.2),
-                Color(red: 0.15, green: 0.1, blue: 0.25),
-                Color(red: 0.2, green: 0.15, blue: 0.3)
+                Color(red: 44/255, green: 83/255, blue: 100/255),
+                Color(red: 44/255, green: 83/255, blue: 100/255),
+                Color(red: 44/255, green: 83/255, blue: 100/255)
             ]),
             startPoint: .topLeading,
             endPoint: .bottomTrailing
