@@ -350,8 +350,12 @@ struct PersonPhotosView: View {
                 AssetGridView(
                     assetService: assetService,
                     authService: authService,
-                    albumId: nil,
-                    personId: person.id,
+                                        assetProvider: AssetProviderFactory.createProvider(
+                        personId: person.id,
+                        assetService: assetService
+                    ),
+                     albumId: nil,
+                     personId: person.id,
                     tagId: nil,
                     isAllPhotos: false,
                     onAssetsLoaded: { loadedAssets in
