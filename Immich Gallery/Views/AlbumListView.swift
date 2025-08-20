@@ -304,7 +304,8 @@ struct AlbumRowView: View {
         
         Task {
             do {
-                let searchResult = try await assetService.fetchAssets(page: 1, limit: 10, albumId: album.id)
+                let albumProvider = AlbumAssetProvider(albumService: albumService, albumId: album.id)
+                let searchResult = try await albumProvider.fetchAssets(page: 1, limit: 10)
                 let imageAssets = searchResult.assets.filter { $0.type == .image }
                 
                 var loadedThumbnails: [UIImage] = []
@@ -373,6 +374,11 @@ struct AlbumDetailView: View {
                 AssetGridView(
                     assetService: assetService,
                     authService: authService,
+                    assetProvider: AssetProviderFactory.createProvider(
+                        albumId: album.id,
+                        assetService: assetService,
+                        albumService: albumService
+                    ),
                     albumId: album.id,
                     personId: nil,
                     tagId: nil,

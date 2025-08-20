@@ -11,6 +11,7 @@ struct AssetGridView: View {
     @ObservedObject var assetService: AssetService
     @ObservedObject var authService: AuthenticationService
     @ObservedObject private var thumbnailCache = ThumbnailCache.shared
+    let assetProvider: AssetProvider
     let albumId: String? // Optional album ID to filter assets
     let personId: String? // Optional person ID to filter assets
     let tagId: String? // Optional tag ID to filter assets
@@ -267,7 +268,7 @@ struct AssetGridView: View {
         
         Task {
             do {
-                let searchResult = try await assetService.fetchAssets(page: 1, limit: 100, albumId: albumId, personId: personId, tagId: tagId, isAllPhotos: isAllPhotos)
+                let searchResult = try await assetProvider.fetchAssets(page: 1, limit: 100)
                 await MainActor.run {
                     self.assets = searchResult.assets
                     self.nextPage = searchResult.nextPage
@@ -316,7 +317,7 @@ struct AssetGridView: View {
             do {
                 // Extract page number from nextPage string
                 let pageNumber = extractPageFromNextPage(nextPage!)
-                let searchResult = try await assetService.fetchAssets(page: pageNumber, limit: 100, albumId: albumId, personId: personId, tagId: tagId, isAllPhotos: isAllPhotos)
+                let searchResult = try await assetProvider.fetchAssets(page: pageNumber, limit: 100)
                 
                 await MainActor.run {
                     if !searchResult.assets.isEmpty {
@@ -367,7 +368,7 @@ struct AssetGridView: View {
         } else if albumId != nil {
             return "No Photos in Album"
         } else {
-            return "No Photos Found"
+        return "No Photos Found"
         }
     }
     
@@ -377,7 +378,7 @@ struct AssetGridView: View {
         } else if albumId != nil {
             return "This album is empty"
         } else {
-            return "Your photos will appear here"
+        return "Your photos will appear here"
         }
     }
     
