@@ -342,17 +342,7 @@ struct TagDetailView: View {
                 Color.black
                     .ignoresSafeArea()
                 
-                AssetGridView(assetService: assetService,
-                              authService: authService,
-                              assetProvider: AssetProviderFactory.createProvider(
-                                tagId: tag.id,
-                                assetService: assetService
-                              ),
-                              albumId: nil, personId: nil,
-                              tagId: tag.id,
-                              isAllPhotos: false,
-                              onAssetsLoaded: nil,
-                              deepLinkAssetId: nil)
+                AssetGridView(assetService: assetService, authService: authService, albumId: nil, personId: nil, tagId: tag.id, isAllPhotos: false, onAssetsLoaded: nil, deepLinkAssetId: nil)
             }
             .navigationTitle(tag.name)
             .toolbar {
@@ -368,6 +358,6 @@ struct TagDetailView: View {
 
 #Preview {
     let (_, authService, assetService, _, peopleService, tagService) =
-    MockServiceFactory.createMockServices()
+         MockServiceFactory.createMockServices()
     TagsGridView(tagService: tagService, authService: authService, assetService: assetService)
 }

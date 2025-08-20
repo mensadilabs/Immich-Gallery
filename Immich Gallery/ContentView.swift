@@ -75,7 +75,7 @@ struct ContentView: View {
     }
     
     var body: some View {
-        NavigationView {
+    NavigationView {
             ZStack {
                 if !authService.isAuthenticated {
                     // Show sign-in view
@@ -84,23 +84,13 @@ struct ContentView: View {
                 } else {
                     // Main app interface
                     TabView(selection: $selectedTab) {
-                        AssetGridView(
-                            assetService: assetService, 
-                            authService: authService, 
-                            assetProvider: AssetProviderFactory.createProvider(
-                                isAllPhotos: true,
-                                assetService: assetService
-                            ),
-                            albumId: nil, personId: nil, tagId: nil, isAllPhotos: true, 
-                            onAssetsLoaded: nil, 
-                            deepLinkAssetId: deepLinkAssetId
-                        )
-                        .errorBoundary(context: "Photos Tab")
-                        .tabItem {
-                            Image(systemName: TabName.photos.iconName)
-                            Text(TabName.photos.title)
-                        }
-                        .tag(TabName.photos.rawValue)
+                        AssetGridView(assetService: assetService, authService: authService, albumId: nil, personId: nil, tagId: nil, isAllPhotos: true, onAssetsLoaded: nil, deepLinkAssetId: deepLinkAssetId)
+                            .errorBoundary(context: "Photos Tab")
+                            .tabItem {
+                                Image(systemName: TabName.photos.iconName)
+                                Text(TabName.photos.title)
+                            }
+                            .tag(TabName.photos.rawValue)
                         
                         AlbumListView(albumService: albumService, authService: authService, assetService: assetService)
                             .errorBoundary(context: "Albums Tab")
@@ -195,12 +185,12 @@ struct ContentView: View {
             print("ContentView: Restarting auto-slideshow timer")
             resetInactivityTimer()
         }
-        .sheet(isPresented: $showWhatsNew) {
-            WhatsNewView(onDismiss: {
-                showWhatsNew = false
-                lastSeenVersion = getCurrentAppVersion()
-            })
-        }
+       .sheet(isPresented: $showWhatsNew) {
+           WhatsNewView(onDismiss: {
+               showWhatsNew = false
+               lastSeenVersion = getCurrentAppVersion()
+           })
+       }
     }
     
     // MARK: - Inactivity Timer Logic
@@ -227,13 +217,13 @@ struct ContentView: View {
             print("ContentView: Auto-slideshow disabled (timeout = 0)")
         }
     }
-    
+
     private func resetInactivityTimer() {
         print("ContentView: Resetting inactivity timer")
         lastInteractionDate = Date()
         startInactivityTimer() // Restart the timer
     }
-    
+
     private func setDefaultTab() {
         switch defaultStartupTab {
         case "albums":
