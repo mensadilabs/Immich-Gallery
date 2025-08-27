@@ -209,7 +209,7 @@ struct AssetGridView: View {
                 // Find the index of the current asset in the filtered image assets
                 let startingIndex = currentAssetIndex < assets.count ? 
                     (imageAssets.firstIndex(of: assets[currentAssetIndex]) ?? 0) : 0
-                SlideshowView(albumId: albumId, personId: personId, tagId: tagId, assetService: assetService, startingIndex: 0)
+                SlideshowView(albumId: albumId, personId: personId, tagId: tagId, assetService: assetService, startingIndex: startingIndex)
             }
         }
         .onPlayPauseCommand(perform: {

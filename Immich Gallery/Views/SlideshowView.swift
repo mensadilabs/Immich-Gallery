@@ -344,7 +344,9 @@ struct SlideshowView: View {
             
             await MainActor.run {
                 let imageAssets = searchResult.assets.filter { $0.type == .image }
-                self.assetQueue = Array(imageAssets.dropFirst(min(startingIndex, imageAssets.count - 1)))
+                // Handle starting index - drop assets before the starting point\n              
+                let actualStartingIndex = min(startingIndex, max(0, imageAssets.count - 1))               
+                self.assetQueue = Array(imageAssets.dropFirst(actualStartingIndex))
                 self.hasMoreAssets = searchResult.nextPage != nil || enableShuffle
                 print("SlideshowView: Loaded \(imageAssets.count) assets, starting at index \(startingIndex)")
             }
@@ -406,6 +408,11 @@ struct SlideshowView: View {
             }
             
             // Move first image from queue to current
+            guard !self.imageQueue.isEmpty else {
+                print("SlideshowView: No images in queue to show")
+                self.isLoading = false
+                return
+            }
             self.currentImageData = self.imageQueue.removeFirst()
             self.isLoading = false
             
@@ -483,6 +490,10 @@ struct SlideshowView: View {
             self.currentImageData = nil
             
             // Move next image from queue to current
+            guard !self.imageQueue.isEmpty else {
+                print("SlideshowView: No more images in queue to advance")
+                return
+            }
             self.currentImageData = self.imageQueue.removeFirst()
             
             // Set dominant color if available
