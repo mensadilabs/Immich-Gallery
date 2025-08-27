@@ -193,7 +193,7 @@ struct SlideshowSettings: View {
                      )) {
                          Text("None").tag("none")
                          Text("Reflections").tag("reflections")
-                         Text("Ken Burns").tag("kenBurns")
+                         Text("Pan and Zoom").tag("kenBurns")
                      }
                      .pickerStyle(.menu)
                      .frame(width: 300, alignment: .trailing)

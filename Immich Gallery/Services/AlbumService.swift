@@ -17,7 +17,7 @@ class AlbumService: ObservableObject {
     func fetchAlbums() async throws -> [ImmichAlbum] {
         print("AlbumService: Fetching albums from /api/albums")
         let albums = try await networkService.makeRequest(
-            endpoint: "/api/albums",
+            endpoint: "/api/albums?shared=false",
             responseType: [ImmichAlbum].self
         )
 
