@@ -31,6 +31,16 @@ struct WhatsNewView: View {
     @State private var opacity: Double = 0
     
     private let changelogContent = """
+    VERSION|1.0.14
+    
+    IMPROVEMENT| Slideshow optimizations
+    - Rewrite SlideshowView for loading assets dynamically
+    
+    BUGFIX| Albums tab
+    - Fix shared albums are duplicated
+    - Fix slideshow does not work for shared-in albums
+
+    
     VERSION|1.0.12
     
     BUGFIX| Fix more bugs

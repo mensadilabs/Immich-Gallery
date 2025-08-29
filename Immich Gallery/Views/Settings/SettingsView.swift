@@ -274,7 +274,7 @@ struct SettingsView: View {
                                 SettingsRow(
                                     icon: "play.rectangle.on.rectangle",
                                     title: "Enable Thumbnail Animation",
-                                    subtitle: "Animate thumbnails in Albums, People, and Tags views",
+                                    subtitle: "Animate thumbnails in Albums, People, and Tags views.",
                                     content: AnyView(Toggle("", isOn: $enableThumbnailAnimation).labelsHidden())
                                 )
                                 

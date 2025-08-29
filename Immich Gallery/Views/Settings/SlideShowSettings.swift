@@ -130,7 +130,7 @@ struct SlideshowSettings: View {
             SettingsRow(
                 icon: "shuffle",
                 title: "Shuffle Images (beta)",
-                subtitle: "Randomly shuffle image order during slideshow",
+                subtitle: "Randomly shuffle image order during slideshow (This uses `/search/random` endpoint. Does not work when viewing an album that is shared-in. To my knowledge, this is a limitation of Immich random endpoint. If you disagree, open a GH issue with details.) ",
                 content: AnyView(
                     Picker("Shuffle Images", selection: $enableShuffle) {
                         Text("Off").tag(false)
@@ -193,10 +193,10 @@ struct SlideshowSettings: View {
                      )) {
                          Text("None").tag("none")
                          Text("Reflections").tag("reflections")
-                         Text("Ken Burns").tag("kenBurns")
+                         Text("Pan and Zoom").tag("kenBurns")
                      }
                      .pickerStyle(.menu)
-                     .frame(width: 300, alignment: .trailing)
+                     .frame(width: 400, alignment: .trailing)
                  )
              )
         }

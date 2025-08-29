@@ -18,7 +18,8 @@ struct AssetProviderFactory {
     ) -> AssetProvider {
         
         if let albumId = albumId, let albumService = albumService {
-            return AlbumAssetProvider(albumService: albumService, albumId: albumId)
+            print("creating album asset provider")
+            return AlbumAssetProvider(albumService: albumService, assetService: assetService, albumId: albumId)
         } else {
             return GeneralAssetProvider(
                 assetService: assetService,
@@ -32,19 +33,23 @@ struct AssetProviderFactory {
 
 protocol AssetProvider {
     func fetchAssets(page: Int, limit: Int) async throws -> SearchResult
+    func fetchRandomAssets(limit: Int) async throws -> SearchResult
 }
 
 class AlbumAssetProvider: AssetProvider {
     private let albumService: AlbumService
+    private let assetService: AssetService
     private let albumId: String
     private var cachedAlbum: ImmichAlbum?
     
-    init(albumService: AlbumService, albumId: String) {
+    init(albumService: AlbumService, assetService: AssetService, albumId: String) {
         self.albumService = albumService
+        self.assetService = assetService
         self.albumId = albumId
     }
     
     func fetchAssets(page: Int, limit: Int) async throws -> SearchResult {
+        print("fetching assets")
         if page == 1 {
             let album = try await albumService.getAlbumInfo(albumId: albumId, withoutAssets: false)
             cachedAlbum = album
@@ -75,6 +80,15 @@ class AlbumAssetProvider: AssetProvider {
             return SearchResult(assets: pageAssets, total: album.assets.count, nextPage: nextPage)
         }
     }
+    
+    func fetchRandomAssets(limit: Int) async throws -> SearchResult {
+        return try await assetService.fetchRandomAssets(
+            albumIds: [albumId],
+            personIds: nil,
+            tagIds: nil,
+            limit: limit
+        )
+    }
 }
 
 class GeneralAssetProvider: AssetProvider {
@@ -98,6 +112,15 @@ class GeneralAssetProvider: AssetProvider {
             personId: personId,
             tagId: tagId,
             isAllPhotos: isAllPhotos
+        )
+    }
+    
+    func fetchRandomAssets(limit: Int) async throws -> SearchResult {
+        return try await assetService.fetchRandomAssets(
+            albumIds: nil,
+            personIds: personId != nil ? [personId!] : nil,
+            tagIds: tagId != nil ? [tagId!] : nil,
+            limit: limit
         )
     }
 }

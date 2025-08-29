@@ -269,7 +269,11 @@ struct SignInView: View {
                     
                 } catch {
                     showError = true
-                    errorMessage = "Invalid response format from server"
+                    // Show the actual error and raw response for debugging
+                    let responseString = String(data: data, encoding: .utf8) ?? "Unable to decode response"
+                    errorMessage = "JSON decode error: \(error.localizedDescription)\n\nRaw server response: \(responseString)"
+                    print("SignInView: JSON decode error - \(error)")
+                    print("SignInView: Raw response - \(responseString)")
                 }
             }
         }.resume()
