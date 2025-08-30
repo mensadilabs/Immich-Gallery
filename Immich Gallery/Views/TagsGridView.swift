@@ -367,7 +367,7 @@ struct TagDetailView: View {
 }
 
 #Preview {
-    let (_, authService, assetService, _, peopleService, tagService) =
+    let (_, _, authService, assetService, _, peopleService, tagService) =
     MockServiceFactory.createMockServices()
     TagsGridView(tagService: tagService, authService: authService, assetService: assetService)
 }

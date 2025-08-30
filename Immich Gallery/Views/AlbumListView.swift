@@ -417,7 +417,7 @@ struct AlbumDetailView: View {
 }
 
 #Preview {
-    let (_, authService, assetService, albumService, peopleService, _) =
+    let (_, _, authService, assetService, albumService, peopleService, _) =
          MockServiceFactory.createMockServices()
     AlbumListView(albumService: albumService, authService: authService, assetService: assetService)
 }

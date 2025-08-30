@@ -395,7 +395,7 @@ struct PersonPhotosView: View {
 }
 
 #Preview {
-    let (_, authService, assetService, _, peopleService, _) =
+    let (_, _, authService, assetService, _, peopleService, _) =
          MockServiceFactory.createMockServices()
     PeopleGridView(peopleService: peopleService, authService: authService, assetService: assetService)
 }

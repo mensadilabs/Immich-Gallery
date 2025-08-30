@@ -9,6 +9,7 @@ import SwiftUI
 
 struct SignInView: View {
     @ObservedObject var authService: AuthenticationService
+    @ObservedObject var userManager: UserManager
     let mode: Mode
     let onUserAdded: (() -> Void)?
     @Environment(\.dismiss) private var dismiss
@@ -24,8 +25,9 @@ struct SignInView: View {
         case addUser
     }
     
-    init(authService: AuthenticationService, mode: Mode = .signIn, onUserAdded: (() -> Void)? = nil) {
+    init(authService: AuthenticationService, userManager: UserManager, mode: Mode = .signIn, onUserAdded: (() -> Void)? = nil) {
         self.authService = authService
+        self.userManager = userManager
         self.mode = mode
         self.onUserAdded = onUserAdded
     }
@@ -166,123 +168,63 @@ struct SignInView: View {
             return
         }
         
-        if mode == .addUser {
-            // Add user mode: directly handle authentication without affecting current user
-            addUser(serverURL: cleanURL)
-        } else {
-            // Regular sign in mode: use the existing auth service
-            authService.signIn(serverURL: cleanURL, email: email, password: password) { success, error in
-                DispatchQueue.main.async {
-                    isLoading = false
+        Task {
+            do {
+                if mode == .addUser {
+                    // Add user mode: authenticate, save user, and switch to them
+                    let token = try await userManager.authenticateWithCredentials(
+                        serverURL: cleanURL,
+                        email: email,
+                        password: password
+                    )
                     
-                    if !success {
-                        showError = true
-                        errorMessage = error ?? "Failed to sign in. Please check your credentials and try again."
+                    // Find the newly added user
+                    let newUser = userManager.findUser(email: email, serverURL: cleanURL)
+                    
+                    // Switch to the new user
+                    if let newUser = newUser {
+                        try await authService.switchUser(newUser)
+                        
+                        // Refresh the app after switching users
+                        await MainActor.run {
+                            NotificationCenter.default.post(name: NSNotification.Name(NotificationNames.refreshAllTabs), object: nil)
+                        }
                     }
+                    
+                    await MainActor.run {
+                        onUserAdded?()
+                        dismiss()
+                        isLoading = false
+                    }
+                } else {
+                    // Regular sign in mode: use the existing auth service
+                    authService.signIn(serverURL: cleanURL, email: email, password: password) { success, error in
+                        DispatchQueue.main.async {
+                            isLoading = false
+                            
+                            if !success {
+                                showError = true
+                                errorMessage = error ?? "Failed to sign in. Please check your credentials and try again."
+                            }
+                        }
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    isLoading = false
+                    showError = true
+                    errorMessage = error.localizedDescription
                 }
             }
         }
     }
     
-    private func addUser(serverURL: String) {
-        // Direct authentication without affecting current user
-        let loginURL = URL(string: "\(serverURL)/api/auth/login")!
-        var request = URLRequest(url: loginURL)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        
-        let loginData = [
-            "email": email,
-            "password": password
-        ]
-        
-        do {
-            request.httpBody = try JSONSerialization.data(withJSONObject: loginData)
-        } catch {
-            isLoading = false
-            showError = true
-            errorMessage = "Error creating login request"
-            return
-        }
-        
-        URLSession.shared.dataTask(with: request) { data, response, error in
-            DispatchQueue.main.async {
-                isLoading = false
-                
-                if let error = error {
-                    showError = true
-                    errorMessage = "Network error: \(error.localizedDescription)"
-                    return
-                }
-                
-                guard let httpResponse = response as? HTTPURLResponse else {
-                    showError = true
-                    errorMessage = "Invalid response from server"
-                    return
-                }
-                
-                guard let data = data else {
-                    showError = true
-                    errorMessage = "No data received from server"
-                    return
-                }
-                
-                if httpResponse.statusCode != 200 && httpResponse.statusCode != 201 {
-                    if let errorResponse = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                       let message = errorResponse["message"] as? String {
-                        showError = true
-                        errorMessage = message
-                    } else {
-                        showError = true
-                        errorMessage = "Authentication failed (Status: \(httpResponse.statusCode))"
-                    }
-                    return
-                }
-                
-                do {
-                    let authResponse = try JSONDecoder().decode(AuthResponse.self, from: data)
-                    
-                    // Generate unique user ID: "user@server"
-                    let userId = generateUserIdForUser(email: authResponse.userEmail, serverURL: serverURL)
-                    
-                    print("SignInView: Adding new user \(authResponse.userEmail) with ID \(userId)")
-                    
-                    // Save user data
-                    let savedUser = SavedUser(
-                        id: userId,
-                        email: authResponse.userEmail,
-                        name: authResponse.name,
-                        serverURL: serverURL
-                    )
-                    
-                    if let userData = try? JSONEncoder().encode(savedUser) {
-                        UserDefaults.standard.set(userData, forKey: "\(UserDefaultsKeys.userPrefix)\(userId)")
-                        print("SignInView: Saved user data for \(authResponse.userEmail)")
-                    }
-                    
-                    // Save token directly: "user@server" : token
-                    UserDefaults.standard.set(authResponse.accessToken, forKey: "\(UserDefaultsKeys.tokenPrefix)\(userId)")
-                    print("SignInView: Saved token for \(authResponse.userEmail) - starts with: \(String(authResponse.accessToken.prefix(20)))...")
-                    
-                    onUserAdded?()
-                    dismiss()
-                    
-                } catch {
-                    showError = true
-                    // Show the actual error and raw response for debugging
-                    let responseString = String(data: data, encoding: .utf8) ?? "Unable to decode response"
-                    errorMessage = "JSON decode error: \(error.localizedDescription)\n\nRaw server response: \(responseString)"
-                    print("SignInView: JSON decode error - \(error)")
-                    print("SignInView: Raw response - \(responseString)")
-                }
-            }
-        }.resume()
-    }
 }
 
 #Preview {
     let networkService = NetworkService()
-    let authService = AuthenticationService(networkService: networkService)
-    SignInView(authService: authService, mode: .signIn)
+    let userManager = UserManager()
+    let authService = AuthenticationService(networkService: networkService, userManager: userManager)
+    SignInView(authService: authService, userManager: userManager, mode: .signIn)
 }
 

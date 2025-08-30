@@ -13,6 +13,7 @@ class AuthenticationService: ObservableObject {
     @Published var currentUser: Owner?
     
     private let networkService: NetworkService
+    private let userManager: UserManager
     
     // Public access to network service properties
     var baseURL: String {
@@ -23,8 +24,9 @@ class AuthenticationService: ObservableObject {
         return networkService.accessToken
     }
     
-    init(networkService: NetworkService) {
+    init(networkService: NetworkService, userManager: UserManager) {
         self.networkService = networkService
+        self.userManager = userManager
         self.isAuthenticated = networkService.accessToken != nil && !networkService.baseURL.isEmpty
         print("AuthenticationService: Initialized with isAuthenticated: \(isAuthenticated), baseURL: \(networkService.baseURL)")
         validateTokenIfNeeded()
@@ -32,91 +34,57 @@ class AuthenticationService: ObservableObject {
     
     // MARK: - Authentication
     func signIn(serverURL: String, email: String, password: String, completion: @escaping (Bool, String?) -> Void) {
-        let loginURL = URL(string: "\(serverURL)/api/auth/login")!
-        var request = URLRequest(url: loginURL)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        
-        let loginData = [
-            "email": email,
-            "password": password
-        ]
-        
-        do {
-            request.httpBody = try JSONSerialization.data(withJSONObject: loginData)
-        } catch {
-            completion(false, "Error creating login request: \(error.localizedDescription)")
-            return
-        }
-        
-        URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
-            DispatchQueue.main.async {
-                if let error = error {
-                    completion(false, "Network error: \(error.localizedDescription)")
-                    return
+        Task {
+            do {
+                let token = try await userManager.authenticateWithCredentials(
+                    serverURL: serverURL,
+                    email: email,
+                    password: password
+                )
+                
+                // Update network service with new credentials
+                networkService.saveCredentials(serverURL: serverURL, token: token)
+                
+                // Save email to UserDefaults for backward compatibility
+                UserDefaults.standard.set(email, forKey: UserDefaultsKeys.userEmail)
+                if let sharedDefaults = UserDefaults(suiteName: AppConstants.appGroupIdentifier) {
+                    sharedDefaults.set(email, forKey: UserDefaultsKeys.userEmail)
                 }
                 
-                guard let httpResponse = response as? HTTPURLResponse else {
-                    completion(false, "Invalid response from server")
-                    return
-                }
-                
-                guard let data = data else {
-                    completion(false, "No data received from server")
-                    return
-                }
-                
-                if httpResponse.statusCode != 200 && httpResponse.statusCode != 201 {
-                    if let errorResponse = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                       let message = errorResponse["message"] as? String {
-                        completion(false, message)
-                    } else {
-                        completion(false, "Authentication failed (Status: \(httpResponse.statusCode))")
-                    }
-                    return
-                }
-                
-                do {
-                    let authResponse = try JSONDecoder().decode(AuthResponse.self, from: data)
-                    self?.networkService.saveCredentials(serverURL: serverURL, token: authResponse.accessToken)
-                    
-                    // Save email to both standard and shared UserDefaults
-                    UserDefaults.standard.set(email, forKey: UserDefaultsKeys.userEmail)
-                    if let sharedDefaults = UserDefaults(suiteName: AppConstants.appGroupIdentifier) {
-                        sharedDefaults.set(email, forKey: UserDefaultsKeys.userEmail)
-                    }
-                    
-                    self?.isAuthenticated = true
+                await MainActor.run {
+                    self.isAuthenticated = true
                     print("AuthenticationService: Successfully authenticated user: \(email)")
-                    
-                    // Fetch user details
-                    Task {
-                        do {
-                            try await self?.fetchUserInfo()
-                        } catch {
-                            // Create fallback user object
-                            self?.currentUser = Owner(
-                                id: authResponse.userId,
-                                email: authResponse.userEmail,
-                                name: authResponse.name,
-                                profileImagePath: authResponse.profileImagePath,
+                }
+                
+                // Fetch user details
+                do {
+                    try await self.fetchUserInfo()
+                } catch {
+                    // Create fallback user object from saved user
+                    if let savedUser = userManager.findUser(email: email, serverURL: serverURL) {
+                        await MainActor.run {
+                            self.currentUser = Owner(
+                                id: savedUser.id,
+                                email: savedUser.email,
+                                name: savedUser.name,
+                                profileImagePath: "",
                                 profileChangedAt: "",
                                 avatarColor: "primary"
                             )
                         }
                     }
-                    
+                }
+                
+                await MainActor.run {
                     completion(true, nil)
-                } catch {
-                    // Show the actual error and raw response for debugging
-                    let responseString = String(data: data, encoding: .utf8) ?? "Unable to decode response"
-                    let errorMessage = "JSON decode error: \(error.localizedDescription)\n\nRaw server response: \(responseString)"
-                    print("AuthenticationService: JSON decode error - \(error)")
-                    print("AuthenticationService: Raw response - \(responseString)")
-                    completion(false, errorMessage)
+                }
+                
+            } catch {
+                await MainActor.run {
+                    completion(false, error.localizedDescription)
                 }
             }
-        }.resume()
+        }
     }
     
     func signOut() {
@@ -126,19 +94,39 @@ class AuthenticationService: ObservableObject {
         currentUser = nil
     }
     
-    func switchUser(serverURL: String, accessToken: String, email: String, name: String) {
-        print("AuthenticationService: Switching to user \(email)")
-        networkService.saveCredentials(serverURL: serverURL, token: accessToken)
-        isAuthenticated = true
+    func switchUser(_ user: SavedUser) async throws {
+        let token = try await userManager.switchToUser(user)
         
-        currentUser = Owner(
-            id: "",
-            email: email,
-            name: name,
-            profileImagePath: "",
-            profileChangedAt: "",
-            avatarColor: "primary"
-        )
+        // Update network service with new credentials
+        networkService.saveCredentials(serverURL: user.serverURL, token: token)
+        
+        // Update email in UserDefaults for backward compatibility
+        UserDefaults.standard.set(user.email, forKey: UserDefaultsKeys.userEmail)
+        if let sharedDefaults = UserDefaults(suiteName: AppConstants.appGroupIdentifier) {
+            sharedDefaults.set(user.email, forKey: UserDefaultsKeys.userEmail)
+        }
+        
+        await MainActor.run {
+            self.isAuthenticated = true
+            print("AuthenticationService: Switched to user \(user.email)")
+        }
+        
+        // Fetch user details from server
+        do {
+            try await fetchUserInfo()
+        } catch {
+            // Create fallback user object from saved user
+            await MainActor.run {
+                self.currentUser = Owner(
+                    id: user.id,
+                    email: user.email,
+                    name: user.name,
+                    profileImagePath: "",
+                    profileChangedAt: "",
+                    avatarColor: "primary"
+                )
+            }
+        }
     }
 
     

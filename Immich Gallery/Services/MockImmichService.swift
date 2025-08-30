@@ -20,8 +20,8 @@ class MockNetworkService: NetworkService {
 
 // MARK: - Mock Authentication Service
 class MockAuthenticationService: AuthenticationService {
-    override init(networkService: NetworkService) {
-        super.init(networkService: networkService)
+    override init(networkService: NetworkService, userManager: UserManager) {
+        super.init(networkService: networkService, userManager: userManager)
         // Set up mock authentication state
         self.isAuthenticated = true
         self.currentUser = Owner(
@@ -276,14 +276,15 @@ class MockPeopleService: PeopleService {
 
 // MARK: - Convenience Factory
 class MockServiceFactory {
-    static func createMockServices() -> (NetworkService, AuthenticationService, AssetService, AlbumService, PeopleService, TagService) {
+    static func createMockServices() -> (NetworkService, UserManager, AuthenticationService, AssetService, AlbumService, PeopleService, TagService) {
         let networkService = MockNetworkService()
-        let authService = MockAuthenticationService(networkService: networkService)
+        let userManager = UserManager()
+        let authService = MockAuthenticationService(networkService: networkService, userManager: userManager)
         let assetService = MockAssetService(networkService: networkService)
         let albumService = MockAlbumService(networkService: networkService)
         let peopleService = MockPeopleService(networkService: networkService)
         let tagService = MockTagService(networkService: networkService)
         
-        return (networkService, authService, assetService, albumService, peopleService, tagService)
+        return (networkService, userManager, authService, assetService, albumService, peopleService, tagService)
     }
 } 
