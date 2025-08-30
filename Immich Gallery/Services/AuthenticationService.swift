@@ -45,12 +45,6 @@ class AuthenticationService: ObservableObject {
                 // Update network service with new credentials
                 networkService.saveCredentials(serverURL: serverURL, token: token)
                 
-                // Save email to UserDefaults for backward compatibility
-                UserDefaults.standard.set(email, forKey: UserDefaultsKeys.userEmail)
-                if let sharedDefaults = UserDefaults(suiteName: AppConstants.appGroupIdentifier) {
-                    sharedDefaults.set(email, forKey: UserDefaultsKeys.userEmail)
-                }
-                
                 await MainActor.run {
                     self.isAuthenticated = true
                     print("AuthenticationService: Successfully authenticated user: \(email)")
@@ -90,8 +84,10 @@ class AuthenticationService: ObservableObject {
     func signOut() {
         print("AuthenticationService: Signing out user")
         networkService.clearCredentials()
-        isAuthenticated = false
-        currentUser = nil
+        DispatchQueue.main.async {
+            self.isAuthenticated = false
+            self.currentUser = nil
+        }
     }
     
     func switchUser(_ user: SavedUser) async throws {
@@ -99,12 +95,6 @@ class AuthenticationService: ObservableObject {
         
         // Update network service with new credentials
         networkService.saveCredentials(serverURL: user.serverURL, token: token)
-        
-        // Update email in UserDefaults for backward compatibility
-        UserDefaults.standard.set(user.email, forKey: UserDefaultsKeys.userEmail)
-        if let sharedDefaults = UserDefaults(suiteName: AppConstants.appGroupIdentifier) {
-            sharedDefaults.set(user.email, forKey: UserDefaultsKeys.userEmail)
-        }
         
         await MainActor.run {
             self.isAuthenticated = true
@@ -170,6 +160,14 @@ class AuthenticationService: ObservableObject {
                     print("AuthenticationService: Logging out user due to authentication error: \(error)")
                     DispatchQueue.main.async {
                         self.signOut()
+                           Task {
+            if let bundleID = Bundle.main.bundleIdentifier {
+                print("removing all shared data")
+                UserDefaults.standard.removePersistentDomain(forName: bundleID)
+                UserDefaults.standard.removePersistentDomain(forName: AppConstants.appGroupIdentifier)
+                UserDefaults.standard.synchronize()
+            }
+          }
                     }
                 } else {
                     print("AuthenticationService: Preserving authentication state despite error: \(error)")
