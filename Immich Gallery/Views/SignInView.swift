@@ -13,7 +13,7 @@ struct SignInView: View {
     let mode: Mode
     let onUserAdded: (() -> Void)?
     @Environment(\.dismiss) private var dismiss
-    @State private var serverURL = "http://100.109.169.100:8080"
+    @State private var serverURL = "http://localhost:2283"
     @State private var email = ""
     @State private var password = ""
     @State private var apiKey = ""
