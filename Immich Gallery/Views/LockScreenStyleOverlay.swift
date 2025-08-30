@@ -188,7 +188,7 @@ struct LockScreenStyleOverlay: View {
 
 
 #Preview {
-    let (_, _, assetService, _, _, _) = MockServiceFactory.createMockServices()
+    let (_, _, _, assetService, _, _, _) = MockServiceFactory.createMockServices()
     
     // Create mock assets for preview
     let mockAssets = [

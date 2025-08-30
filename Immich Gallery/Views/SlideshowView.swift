@@ -29,7 +29,8 @@ struct SlideshowView: View {
         self.startingIndex = startingIndex
 
         // Create services internally
-        let networkService = NetworkService()
+        let userManager = UserManager()
+        let networkService = NetworkService(userManager: userManager)
         self.assetService = AssetService(networkService: networkService)
         self.albumService = albumId != nil ? AlbumService(networkService: networkService) : nil
 
@@ -780,7 +781,7 @@ struct SlideshowView: View {
     UserDefaults.standard.set(true, forKey: "hideImageOverlay")
     UserDefaults.standard.set(true, forKey: "enableReflectionsInSlideshow")
     UserDefaults.standard.set(true, forKey: "enableKenBurnsEffect")
-    let (_, _, assetService, _, _, _) = MockServiceFactory.createMockServices()
+    let (_, _, _, assetService, _, _, _) = MockServiceFactory.createMockServices()
 
     // Create mock assets for preview
     let mockAssets = [

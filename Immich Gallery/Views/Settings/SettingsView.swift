@@ -47,11 +47,11 @@ struct SettingsRow: View {
 struct SettingsView: View {
     @ObservedObject private var thumbnailCache = ThumbnailCache.shared
     @ObservedObject var authService: AuthenticationService
+    @ObservedObject var userManager: UserManager
     @State private var showingClearCacheAlert = false
     @State private var showingSignOutAlert = false
     @State private var showingSignIn = false
     @State private var showingWhatsNew = false
-    @State private var savedUsers: [SavedUser] = []
     @AppStorage("hideImageOverlay") private var hideImageOverlay = true
     @AppStorage("slideshowInterval") private var slideshowInterval: Double = 6.0
     @AppStorage("slideshowBackgroundColor") private var slideshowBackgroundColor = "white"
@@ -81,42 +81,63 @@ struct SettingsView: View {
                     LazyVStack(spacing: 30) {
                         
                         // Current User Section
-                        if let user = authService.currentUser {
+                        if let savedUser = userManager.currentUser {
                             VStack(alignment: .leading, spacing: 16) {
                                 HStack {
-                                    Image(systemName: "person.circle.fill")
-                                        .foregroundColor(.blue)
+                                    Image(systemName: savedUser.authType == .apiKey ? "key.fill" : "person.circle.fill")
+                                        .foregroundColor(savedUser.authType == .apiKey ? .orange : .blue)
                                         .font(.title)
                                     
                                     VStack(alignment: .leading, spacing: 4) {
-                                        Text(user.name)
-                                            .font(.title2)
-                                            .fontWeight(.bold)
-                                        Text(user.email)
+                                        HStack(spacing: 8) {
+                                            Text(savedUser.name)
+                                                .font(.title2)
+                                                .fontWeight(.bold)
+                                            
+                                            // Authentication Type Badge
+                                            Text(savedUser.authType == .apiKey ? "API Key" : "Password")
+                                                .font(.caption2)
+                                                .fontWeight(.semibold)
+                                                .foregroundColor(.white)
+                                                .padding(.horizontal, 8)
+                                                .padding(.vertical, 3)
+                                                .background(savedUser.authType == .apiKey ? Color.orange : Color.blue)
+                                                .cornerRadius(6)
+                                        }
+                                        
+                                        Text(savedUser.email)
                                             .font(.subheadline)
                                             .foregroundColor(.secondary)
+                                        
+                                        Text(savedUser.serverURL)
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                            .lineLimit(1)
                                     }
                                     
                                     Spacer()
                                     
-                                    Text("Active")
-                                        .font(.caption)
-                                        .fontWeight(.semibold)
-                                        .foregroundColor(.white)
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 6)
-                                        .background(Color.green)
-                                        .cornerRadius(12)
+                                    VStack(spacing: 4) {
+                                        Text("Active")
+                                            .font(.caption)
+                                            .fontWeight(.semibold)
+                                            .foregroundColor(.white)
+                                            .padding(.horizontal, 10)
+                                            .padding(.vertical, 4)
+                                            .background(Color.green)
+                                            .cornerRadius(8)
+                                    }
                                 }
                                 .padding(20)
-                                .background(
+                                .background {
+                                    let accentColor = savedUser.authType == .apiKey ? Color.orange : Color.blue
                                     RoundedRectangle(cornerRadius: 16)
-                                        .fill(Color.blue.opacity(0.1))
+                                        .fill(accentColor.opacity(0.1))
                                         .overlay(
                                             RoundedRectangle(cornerRadius: 16)
-                                                .stroke(Color.blue.opacity(0.3), lineWidth: 1)
+                                                .stroke(accentColor.opacity(0.3), lineWidth: 1)
                                         )
-                                )
+                                }
                             }
                         }
                         
@@ -194,36 +215,57 @@ struct SettingsView: View {
                             }
                             .buttonStyle(.plain)
                             
-                            // User Switcher
-                            if savedUsers.count > 1 {
-                                ForEach(savedUsers.filter { $0.email != authService.currentUser?.email }, id: \.id) { user in
+                            // User Switcher (Total: \(userManager.savedUsers.count))
+                            if userManager.savedUsers.count > 1 {
+                                ForEach(userManager.savedUsers.filter { $0.id != userManager.currentUser?.id }, id: \.id) { user in
                                     HStack {
                                         Button(action: {
                                             switchToUser(user)
                                         }) {
                                             HStack {
-                                                Image(systemName: "person.circle")
-                                                    .foregroundColor(.blue)
+                                                Image(systemName: user.authType == .apiKey ? "key.fill" : "person.circle")
+                                                    .foregroundColor(user.authType == .apiKey ? .orange : .blue)
                                                     .font(.title3)
                                                 
-                                                VStack(alignment: .leading, spacing: 2) {
-                                                    Text(user.name)
-                                                        .font(.subheadline)
-                                                        .foregroundColor(.primary)
+                                                VStack(alignment: .leading, spacing: 4) {
+                                                    HStack(spacing: 8) {
+                                                        Text(user.authType == .apiKey ? "API Key" : "Password")
+                                                            .font(.caption2)
+                                                            .fontWeight(.semibold)
+                                                            .foregroundColor(.white)
+                                                            .padding(.horizontal, 8)
+                                                            .padding(.vertical, 3)
+                                                            .background(user.authType == .apiKey ? Color.orange : Color.blue)
+                                                            .cornerRadius(6)
+                                                        
+                                                        Text(user.name)
+                                                            .font(.subheadline)
+                                                            .fontWeight(.medium)
+                                                            .foregroundColor(.primary)
+                                                    }
+                                                    
                                                     Text(user.email)
                                                         .font(.caption)
                                                         .foregroundColor(.secondary)
+                                                    
+                                                    Text(user.serverURL)
+                                                        .font(.caption2)
+                                                        .foregroundColor(.secondary)
+                                                        .lineLimit(1)
                                                 }
                                                 
                                                 Spacer()
                                                 
                                                 Image(systemName: "arrow.right.circle")
-                                                    .foregroundColor(.blue)
+                                                    .foregroundColor(user.authType == .apiKey ? .orange : .blue)
                                                     .font(.title3)
                                             }
                                             .padding()
-                                            .background(Color.gray.opacity(0.1))
-                                            .cornerRadius(12)
+                                            .background {
+                                                let accentColor = user.authType == .apiKey ? Color.orange : Color.blue
+                                                RoundedRectangle(cornerRadius: 12)
+                                                    .fill(accentColor.opacity(0.05))
+                                            }
                                         }
                                         .buttonStyle(.plain)
                                         
@@ -459,7 +501,7 @@ struct SettingsView: View {
                 }
             }
             .sheet(isPresented: $showingSignIn) {
-                SignInView(authService: authService, mode: .addUser, onUserAdded: loadSavedUsers)
+                SignInView(authService: authService, userManager: userManager, mode: .addUser, onUserAdded: { userManager.loadUsers() })
             }
             .sheet(isPresented: $showingWhatsNew) {
                 WhatsNewView(onDismiss: {
@@ -483,143 +525,42 @@ struct SettingsView: View {
                 Text("Are you sure you want to sign out? You'll need to sign in again to access your photos.")
             }
             .onAppear {
-                loadSavedUsers()
+                userManager.loadUsers()
                 thumbnailCache.refreshCacheStatistics()
             }
         }
     }
     
-    private func loadSavedUsers() {
-        print("SettingsView: Loading saved users")
-        savedUsers = []
-        
-        // Load current user if authenticated
-        if let currentUser = authService.currentUser {
-            let currentUserId = getCurrentUserId()
-            let currentSavedUser = SavedUser(
-                id: currentUserId,
-                email: currentUser.email,
-                name: currentUser.name,
-                serverURL: authService.baseURL
-            )
-            savedUsers.append(currentSavedUser)
-            print("SettingsView: Added current user \(currentUser.email) with ID \(currentUserId)")
-        } else {
-            print("SettingsView: No current user found in authService")
-        }
-        
-        // Load other saved users
-        let userDefaults = UserDefaults.standard
-        let savedUserKeys = userDefaults.dictionaryRepresentation().keys.filter { $0.hasPrefix(UserDefaultsKeys.userPrefix) }
-        
-        for key in savedUserKeys {
-            if let userData = userDefaults.data(forKey: key),
-               let user = try? JSONDecoder().decode(SavedUser.self, from: userData) {
-                // Don't add if it's the current user
-                if user.email != authService.currentUser?.email {
-                    savedUsers.append(user)
-                    print("SettingsView: Added saved user \(user.email) with ID \(user.id)")
-                }
-            }
-        }
-        
-        print("SettingsView: Total saved users: \(savedUsers.count)")
-    }
     
     private func switchToUser(_ user: SavedUser) {
-        print("SettingsView: Switching to user \(user.email) with ID \(user.id)")
-        
-        // Save current user if authenticated
-        if let currentUser = authService.currentUser {
-            print("SettingsView: Saving current user \(currentUser.email)")
-            saveCurrentUser()
-        }
-        
-        // Get the token for the selected user directly from UserDefaults
-        if let token = UserDefaults.standard.string(forKey: "\(UserDefaultsKeys.tokenPrefix)\(user.id)") {
-            print("SettingsView: Found token for user \(user.email), switching...")
-            print("SettingsView: Token starts with: \(String(token.prefix(20)))...")
-            
-            // Switch to the selected user
-            authService.switchUser(
-                serverURL: user.serverURL,
-                accessToken: token,
-                email: user.email,
-                name: user.name
-            )
-            
-            // Fetch user details
-            Task {
-                do {
-                    print("SettingsView: Fetching user info for \(user.email)")
-                    try await authService.fetchUserInfo()
-                    DispatchQueue.main.async {
-                        print("SettingsView: Successfully switched to \(user.email), refreshing UI")
-                        // Small delay to ensure the switch is complete
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                            self.loadSavedUsers()
-                            // Refresh the app by posting a notification
-                            NotificationCenter.default.post(name: NSNotification.Name(NotificationNames.refreshAllTabs), object: nil)
-                        }
-                    }
-                } catch {
-                    print("SettingsView: Failed to fetch user info: \(error)")
-                    // Even if fetch fails, we should still refresh the UI
-                    DispatchQueue.main.async {
-                        self.loadSavedUsers()
-                    }
+        Task {
+            do {
+                try await authService.switchUser(user)
+                
+                await MainActor.run {
+                    // Refresh the app by posting a notification
+                    NotificationCenter.default.post(name: NSNotification.Name(NotificationNames.refreshAllTabs), object: nil)
                 }
+                
+            } catch {
+                print("SettingsView: Failed to switch user: \(error)")
+                // Handle error - could show alert to user
             }
-        } else {
-            print("SettingsView: No token found for user \(user.email) with ID \(user.id)")
         }
     }
     
-    private func saveCurrentUser() {
-        guard let currentUser = authService.currentUser,
-              let accessToken = authService.accessToken else {
-            print("SettingsView: Cannot save current user - missing user or token")
-            return
-        }
-        
-        let userId = getCurrentUserId()
-        let user = SavedUser(
-            id: userId,
-            email: currentUser.email,
-            name: currentUser.name,
-            serverURL: authService.baseURL
-        )
-        
-        // Save user data
-        if let userData = try? JSONEncoder().encode(user) {
-            UserDefaults.standard.set(userData, forKey: "\(UserDefaultsKeys.userPrefix)\(userId)")
-            print("SettingsView: Saved user data for \(currentUser.email)")
-        }
-        
-        // Save token directly: "user@server" : token
-        UserDefaults.standard.set(accessToken, forKey: "\(UserDefaultsKeys.tokenPrefix)\(userId)")
-        print("SettingsView: Saved token for user \(currentUser.email)")
-        print("SettingsView: Token starts with: \(String(accessToken.prefix(20)))...")
-    }
     
     private func removeUser(_ user: SavedUser) {
-        print("SettingsView: Removing user \(user.email)")
-        
-        // Remove user data
-        UserDefaults.standard.removeObject(forKey: "\(UserDefaultsKeys.userPrefix)\(user.id)")
-        
-        // Remove token directly
-        UserDefaults.standard.removeObject(forKey: "\(UserDefaultsKeys.tokenPrefix)\(user.id)")
-        
-        // Reload the saved users list
-        loadSavedUsers()
+        Task {
+            do {
+                try await userManager.removeUser(user)
+            } catch {
+                print("SettingsView: Failed to remove user: \(error)")
+                // Handle error - could show alert to user
+            }
+        }
     }
     
-    private func getCurrentUserId() -> String {
-        // Generate a unique user ID based on email and server URL
-        guard let currentUser = authService.currentUser else { return "unknown" }
-        return generateUserIdForUser(email: currentUser.email, serverURL: authService.baseURL)
-    }
     
     
     
@@ -649,26 +590,14 @@ struct SettingsView: View {
     }
 }
 
-struct SavedUser: Codable, Identifiable {
-    let id: String
-    let email: String
-    let name: String
-    let serverURL: String
-}
-
-// Helper function to generate unique user IDs
-func generateUserIdForUser(email: String, serverURL: String) -> String {
-    // Create a unique ID based on email and server URL to handle same email across different servers
-    let combined = "\(email)@\(serverURL)"
-    return combined.data(using: .utf8)?.base64EncodedString() ?? email
-}
 
 
 
 #Preview {
-    let networkService = NetworkService()
-    let authService = AuthenticationService(networkService: networkService)
-    SettingsView(authService: authService)
+    let userManager = UserManager()
+    let networkService = NetworkService(userManager: userManager)
+    let authService = AuthenticationService(networkService: networkService, userManager: userManager)
+    SettingsView(authService: authService, userManager: userManager)
 }
 
 

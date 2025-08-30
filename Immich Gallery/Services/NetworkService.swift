@@ -10,76 +10,59 @@ import Foundation
 /// Base networking service that handles HTTP requests and authentication
 class NetworkService: ObservableObject {
     // MARK: - Configuration
-    @Published var baseURL: String = "http://localhost:2283"
+    @Published var baseURL: String = ""
     @Published var accessToken: String?
+    @Published var currentAuthType: SavedUser.AuthType = .jwt
     
     private let session = URLSession.shared
+    private weak var userManager: UserManager?
     
-    init() {
-        migrateCredentialsToSharedContainer()
-        loadSavedCredentials()
+    init(userManager: UserManager) {
+        self.userManager = userManager
+        loadCurrentUserCredentials()
     }
     
-    // MARK: - Credential Management
-    private var sharedDefaults: UserDefaults {
-        return UserDefaults(suiteName: AppConstants.appGroupIdentifier) ?? UserDefaults.standard
-    }
-    
-    private func migrateCredentialsToSharedContainer() {
-        // Check if we already have credentials in shared container
-        if sharedDefaults.string(forKey: UserDefaultsKeys.serverURL) != nil {
-            return // Already migrated
+    // MARK: - Current User Credential Loading
+    private func loadCurrentUserCredentials() {
+        guard let userManager = userManager else {
+            print("NetworkService: No UserManager available")
+            return
         }
         
-        // Check if we have credentials in standard UserDefaults to migrate
-        if let serverURL = UserDefaults.standard.string(forKey: UserDefaultsKeys.serverURL),
-           let accessToken = UserDefaults.standard.string(forKey: UserDefaultsKeys.accessToken) {
-            print("NetworkService: Migrating credentials to shared container")
-            sharedDefaults.set(serverURL, forKey: UserDefaultsKeys.serverURL)
-            sharedDefaults.set(accessToken, forKey: UserDefaultsKeys.accessToken)
+        if let serverURL = userManager.currentUserServerURL,
+           let token = userManager.currentUserToken,
+           let authType = userManager.currentUserAuthType {
             
-            if let email = UserDefaults.standard.string(forKey: UserDefaultsKeys.userEmail) {
-                sharedDefaults.set(email, forKey: UserDefaultsKeys.userEmail)
+            DispatchQueue.main.async {
+                self.baseURL = serverURL
+                self.accessToken = token
+                self.currentAuthType = authType
+            }
+            
+            print("NetworkService: Loaded current user credentials - baseURL: \(serverURL), authType: \(authType)")
+        } else {
+            print("NetworkService: No current user credentials found")
+            DispatchQueue.main.async {
+                self.baseURL = ""
+                self.accessToken = nil
+                self.currentAuthType = .jwt
             }
         }
     }
     
-    private func loadSavedCredentials() {
-        if let savedURL = sharedDefaults.string(forKey: UserDefaultsKeys.serverURL),
-           let savedToken = sharedDefaults.string(forKey: UserDefaultsKeys.accessToken) {
-            baseURL = savedURL
-            accessToken = savedToken
-            print("NetworkService: Loaded saved credentials - baseURL: \(baseURL)")
-        } else {
-            print("NetworkService: No saved credentials found")
-        }
+    /// Updates the network service with the current user's credentials
+    func updateCredentialsFromCurrentUser() {
+        loadCurrentUserCredentials()
     }
     
-    func saveCredentials(serverURL: String, token: String) {
-        print("NetworkService: Saving credentials - serverURL: \(serverURL)")
-        sharedDefaults.set(serverURL, forKey: UserDefaultsKeys.serverURL)
-        sharedDefaults.set(token, forKey: UserDefaultsKeys.accessToken)
-        
-        // Also save to standard UserDefaults for backward compatibility
-        UserDefaults.standard.set(serverURL, forKey: UserDefaultsKeys.serverURL)
-        UserDefaults.standard.set(token, forKey: UserDefaultsKeys.accessToken)
-        
-        baseURL = serverURL
-        accessToken = token
-    }
-    
+    /// Clears all credentials when user logs out
     func clearCredentials() {
-        sharedDefaults.removeObject(forKey: UserDefaultsKeys.serverURL)
-        sharedDefaults.removeObject(forKey: UserDefaultsKeys.accessToken)
-        sharedDefaults.removeObject(forKey: UserDefaultsKeys.userEmail)
-        
-        // Also clear from standard UserDefaults
-        UserDefaults.standard.removeObject(forKey: UserDefaultsKeys.serverURL)
-        UserDefaults.standard.removeObject(forKey: UserDefaultsKeys.accessToken)
-        UserDefaults.standard.removeObject(forKey: UserDefaultsKeys.userEmail)
-        
-        baseURL = ""
-        accessToken = nil
+        DispatchQueue.main.async {
+            self.baseURL = ""
+            self.accessToken = nil
+            self.currentAuthType = .jwt
+        }
+        print("NetworkService: Cleared all credentials")
     }
     
     // MARK: - Network Requests
@@ -89,8 +72,8 @@ class NetworkService: ObservableObject {
         body: [String: Any]? = nil,
         responseType: T.Type
     ) async throws -> T {
-        guard let accessToken = accessToken else {
-            print("NetworkService: No access token available")
+        guard let accessToken = accessToken, !baseURL.isEmpty else {
+            print("NetworkService: No access token or server URL available")
             throw ImmichError.notAuthenticated
         }
         
@@ -103,7 +86,14 @@ class NetworkService: ObservableObject {
         
         var request = URLRequest(url: url)
         request.httpMethod = method.rawValue
-        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        
+        // Set authentication header based on auth type
+        if currentAuthType == .apiKey {
+            request.setValue(accessToken, forHTTPHeaderField: "x-api-key")
+        } else {
+            request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        }
+        
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
         if let body = body {
@@ -166,7 +156,8 @@ class NetworkService: ObservableObject {
     }
     
     func makeDataRequest(endpoint: String) async throws -> Data {
-        guard let accessToken = accessToken else {
+        guard let accessToken = accessToken, !baseURL.isEmpty else {
+            print("NetworkService: No access token or server URL available for data request")
             throw ImmichError.notAuthenticated
         }
         
@@ -176,7 +167,13 @@ class NetworkService: ObservableObject {
         }
         
         var request = URLRequest(url: url)
-        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        
+        // Set authentication header based on auth type
+        if currentAuthType == .apiKey {
+            request.setValue(accessToken, forHTTPHeaderField: "x-api-key")
+        } else {
+            request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        }
         
         let (data, response): (Data, URLResponse)
         do {

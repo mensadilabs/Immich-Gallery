@@ -47,7 +47,8 @@ struct ContentView: View {
     @AppStorage(UserDefaultsKeys.autoSlideshowTimeout) private var autoSlideshowTimeout: Int = 0
     @State private var inactivityTimer: Timer? = nil
     @State private var lastInteractionDate = Date()
-    @StateObject private var networkService = NetworkService()
+    @StateObject private var userManager = UserManager()
+    @StateObject private var networkService: NetworkService
     @StateObject private var authService: AuthenticationService
     @StateObject private var assetService: AssetService
     @StateObject private var albumService: AlbumService
@@ -64,9 +65,11 @@ struct ContentView: View {
     @State private var deepLinkAssetId: String?
     
     init() {
-        let networkService = NetworkService()
+        let userManager = UserManager()
+        let networkService = NetworkService(userManager: userManager)
+        _userManager = StateObject(wrappedValue: userManager)
         _networkService = StateObject(wrappedValue: networkService)
-        _authService = StateObject(wrappedValue: AuthenticationService(networkService: networkService))
+        _authService = StateObject(wrappedValue: AuthenticationService(networkService: networkService, userManager: userManager))
         _assetService = StateObject(wrappedValue: AssetService(networkService: networkService))
         _albumService = StateObject(wrappedValue: AlbumService(networkService: networkService))
         _peopleService = StateObject(wrappedValue: PeopleService(networkService: networkService))
@@ -79,7 +82,7 @@ struct ContentView: View {
             ZStack {
                 if !authService.isAuthenticated {
                     // Show sign-in view
-                    SignInView(authService: authService, mode: .signIn)
+                    SignInView(authService: authService, userManager: userManager, mode: .signIn)
                         .errorBoundary(context: "Authentication")
                 } else {
                     // Main app interface
@@ -102,7 +105,7 @@ struct ContentView: View {
                         }
                         .tag(TabName.photos.rawValue)
                         
-                        AlbumListView(albumService: albumService, authService: authService, assetService: assetService)
+                        AlbumListView(albumService: albumService, authService: authService, assetService: assetService, userManager: userManager)
                             .errorBoundary(context: "Albums Tab")
                             .tabItem {
                                 Image(systemName: TabName.albums.iconName)
@@ -136,7 +139,7 @@ struct ContentView: View {
                             }
                             .tag(TabName.search.rawValue)
                         
-                        SettingsView(authService: authService)
+                        SettingsView(authService: authService, userManager: userManager)
                             .errorBoundary(context: "Settings Tab")
                             .tabItem {
                                 Image(systemName: TabName.settings.iconName)
