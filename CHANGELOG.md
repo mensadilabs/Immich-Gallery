@@ -1,3 +1,12 @@
+# VERSION|1.1.0
+
+NEW_FEATURE| Sign In With API key
+- All of the SSO users can now use API keys to sign in. Not sure what will break if the API does not have needed scopes. Eventually maybe I'll list them out but for now, take a guess based on the available features.
+
+IMPROVEMENT| Cleanups
+- Bug fixes and performance improvements.
+- Album view now shows "shared by you" for the albums shared by you.
+
 # VERSION|1.0.14
 
 IMPROVEMENT| Slideshow optimizations
