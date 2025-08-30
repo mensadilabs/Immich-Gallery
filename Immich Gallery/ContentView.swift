@@ -47,8 +47,8 @@ struct ContentView: View {
     @AppStorage(UserDefaultsKeys.autoSlideshowTimeout) private var autoSlideshowTimeout: Int = 0
     @State private var inactivityTimer: Timer? = nil
     @State private var lastInteractionDate = Date()
-    @StateObject private var networkService = NetworkService()
     @StateObject private var userManager = UserManager()
+    @StateObject private var networkService: NetworkService
     @StateObject private var authService: AuthenticationService
     @StateObject private var assetService: AssetService
     @StateObject private var albumService: AlbumService
@@ -65,10 +65,10 @@ struct ContentView: View {
     @State private var deepLinkAssetId: String?
     
     init() {
-        let networkService = NetworkService()
         let userManager = UserManager()
-        _networkService = StateObject(wrappedValue: networkService)
+        let networkService = NetworkService(userManager: userManager)
         _userManager = StateObject(wrappedValue: userManager)
+        _networkService = StateObject(wrappedValue: networkService)
         _authService = StateObject(wrappedValue: AuthenticationService(networkService: networkService, userManager: userManager))
         _assetService = StateObject(wrappedValue: AssetService(networkService: networkService))
         _albumService = StateObject(wrappedValue: AlbumService(networkService: networkService))
@@ -105,7 +105,7 @@ struct ContentView: View {
                         }
                         .tag(TabName.photos.rawValue)
                         
-                        AlbumListView(albumService: albumService, authService: authService, assetService: assetService)
+                        AlbumListView(albumService: albumService, authService: authService, assetService: assetService, userManager: userManager)
                             .errorBoundary(context: "Albums Tab")
                             .tabItem {
                                 Image(systemName: TabName.albums.iconName)

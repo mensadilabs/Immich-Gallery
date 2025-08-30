@@ -11,6 +11,7 @@ struct AlbumListView: View {
     @ObservedObject var albumService: AlbumService
     @ObservedObject var authService: AuthenticationService
     @ObservedObject var assetService: AssetService
+    @ObservedObject var userManager: UserManager
     @State private var albums: [ImmichAlbum] = []
     @State private var isLoading = false
     @State private var errorMessage: String?
@@ -78,6 +79,7 @@ struct AlbumListView: View {
                                     album: album,
                                     albumService: albumService,
                                     assetService: assetService,
+                                    userManager: userManager,
                                     isFocused: focusedAlbumId == album.id,
                                     animationTrigger: animationTrigger
                                 )
@@ -152,6 +154,7 @@ struct AlbumRowView: View {
     let album: ImmichAlbum
     @ObservedObject var albumService: AlbumService
     @ObservedObject var assetService: AssetService
+    @ObservedObject var userManager: UserManager
     @ObservedObject private var thumbnailCache = ThumbnailCache.shared
     @State private var thumbnailImage: UIImage?
     @State private var thumbnails: [UIImage] = []
@@ -160,6 +163,11 @@ struct AlbumRowView: View {
     @State private var enableThumbnailAnimation: Bool = UserDefaults.standard.enableThumbnailAnimation
     let isFocused: Bool
     let animationTrigger: Int
+    
+    private func sharingText(for album: ImmichAlbum) -> String {
+        let isCurrentUser = album.owner.email == userManager.currentUser?.email
+        return isCurrentUser ? "shared by you" : "\(album.owner.name)"
+    }
     
     var body: some View {
         VStack(spacing: 0) {
@@ -223,7 +231,8 @@ struct AlbumRowView: View {
                                                     Image(systemName: "person.2.fill")
                                                         .font(.caption)
                                                         .foregroundColor(.blue)
-                                                    Text(album.owner.name)
+                                                    
+                                                    Text(sharingText(for: album))
                                                         .font(.caption)
                                                         .foregroundColor(.blue)
                                                 }
@@ -417,7 +426,7 @@ struct AlbumDetailView: View {
 }
 
 #Preview {
-    let (_, _, authService, assetService, albumService, peopleService, _) =
+    let (_, userManager, authService, assetService, albumService, peopleService, _) =
          MockServiceFactory.createMockServices()
-    AlbumListView(albumService: albumService, authService: authService, assetService: assetService)
+    AlbumListView(albumService: albumService, authService: authService, assetService: assetService, userManager: userManager)
 }

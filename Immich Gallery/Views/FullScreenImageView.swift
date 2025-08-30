@@ -527,8 +527,8 @@ struct VideoThumbnailView: View {
     ]
     
     // Use the shared mock service
-    let networkService = NetworkService()
     let userManager = UserManager()
+    let networkService = NetworkService(userManager: userManager)
     let authenticationService = AuthenticationService(networkService: networkService, userManager: userManager)
     let assetService = AssetService(networkService: networkService)
     

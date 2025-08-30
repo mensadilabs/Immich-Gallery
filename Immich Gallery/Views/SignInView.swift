@@ -13,12 +13,19 @@ struct SignInView: View {
     let mode: Mode
     let onUserAdded: (() -> Void)?
     @Environment(\.dismiss) private var dismiss
-    @State private var serverURL = ""
+    @State private var serverURL = "http://100.109.169.100:8080"
     @State private var email = ""
     @State private var password = ""
+    @State private var apiKey = ""
+    @State private var authType: AuthType = .password
     @State private var isLoading = false
     @State private var showError = false
     @State private var errorMessage = ""
+    
+    enum AuthType {
+        case password
+        case apiKey
+    }
     
     enum Mode {
         case signIn
@@ -54,6 +61,19 @@ struct SignInView: View {
                 
                 // Form
                 VStack(spacing: 20) {
+                    // Authentication Type Picker
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Authentication")
+                            .font(.headline)
+                            .foregroundColor(.primary)
+                        
+                        Picker("Authentication Type", selection: $authType) {
+                            Text("Password").tag(AuthType.password)
+                            Text("API Key").tag(AuthType.apiKey)
+                        }
+                        .pickerStyle(SegmentedPickerStyle())
+                    }
+                    
                     // Server URL
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Server URL")
@@ -84,13 +104,17 @@ struct SignInView: View {
                             .keyboardType(.emailAddress)
                     }
                     
-                    // Password
+                    // Password/API Key Field
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Password")
+                        Text(authType == .password ? "Password" : "API Key")
                             .font(.headline)
                             .foregroundColor(.primary)
                         
-                        SecureField("Enter your password", text: $password)
+                        if authType == .password {
+                            SecureField("Enter your password", text: $password)
+                        } else {
+                            SecureField("Enter your API key", text: $apiKey)
+                        }
                     }
                 }
                 
@@ -115,8 +139,8 @@ struct SignInView: View {
                     .cornerRadius(12)
                 }
                 .buttonStyle(.plain)
-                .disabled(isLoading || serverURL.isEmpty || email.isEmpty || password.isEmpty)
-                .opacity((isLoading || serverURL.isEmpty || email.isEmpty || password.isEmpty) ? 0.6 : 1.0)
+                .disabled(isLoading || serverURL.isEmpty || email.isEmpty || (authType == .password ? password.isEmpty : apiKey.isEmpty))
+                .opacity((isLoading || serverURL.isEmpty || email.isEmpty || (authType == .password ? password.isEmpty : apiKey.isEmpty)) ? 0.6 : 1.0)
                 
             
                 VStack(spacing: 8) {
@@ -143,7 +167,7 @@ struct SignInView: View {
     }
     
     private func signIn() {
-        guard !serverURL.isEmpty && !email.isEmpty && !password.isEmpty else {
+        guard !serverURL.isEmpty && !email.isEmpty && (authType == .password ? !password.isEmpty : !apiKey.isEmpty) else {
             return
         }
         
@@ -172,11 +196,20 @@ struct SignInView: View {
             do {
                 if mode == .addUser {
                     // Add user mode: authenticate, save user, and switch to them
-                    let token = try await userManager.authenticateWithCredentials(
-                        serverURL: cleanURL,
-                        email: email,
-                        password: password
-                    )
+                    let token: String
+                    if authType == .password {
+                        token = try await userManager.authenticateWithCredentials(
+                            serverURL: cleanURL,
+                            email: email,
+                            password: password
+                        )
+                    } else {
+                        token = try await userManager.authenticateWithApiKey(
+                            serverURL: cleanURL,
+                            email: email,
+                            apiKey: apiKey
+                        )
+                    }
                     
                     // Find the newly added user
                     let newUser = userManager.findUser(email: email, serverURL: cleanURL)
@@ -198,13 +231,26 @@ struct SignInView: View {
                     }
                 } else {
                     // Regular sign in mode: use the existing auth service
-                    authService.signIn(serverURL: cleanURL, email: email, password: password) { success, error in
-                        DispatchQueue.main.async {
-                            isLoading = false
-                            
-                            if !success {
-                                showError = true
-                                errorMessage = error ?? "Failed to sign in. Please check your credentials and try again."
+                    if authType == .password {
+                        authService.signIn(serverURL: cleanURL, email: email, password: password) { success, error in
+                            DispatchQueue.main.async {
+                                isLoading = false
+                                
+                                if !success {
+                                    showError = true
+                                    errorMessage = error ?? "Failed to sign in. Please check your credentials and try again."
+                                }
+                            }
+                        }
+                    } else {
+                        authService.signInWithApiKey(serverURL: cleanURL, email: email, apiKey: apiKey) { success, error in
+                            DispatchQueue.main.async {
+                                isLoading = false
+                                
+                                if !success {
+                                    showError = true
+                                    errorMessage = error ?? "Failed to sign in. Please check your API key and try again."
+                                }
                             }
                         }
                     }
@@ -222,8 +268,8 @@ struct SignInView: View {
 }
 
 #Preview {
-    let networkService = NetworkService()
     let userManager = UserManager()
+    let networkService = NetworkService(userManager: userManager)
     let authService = AuthenticationService(networkService: networkService, userManager: userManager)
     SignInView(authService: authService, userManager: userManager, mode: .signIn)
 }

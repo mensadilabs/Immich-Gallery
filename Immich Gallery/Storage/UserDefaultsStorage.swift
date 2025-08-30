@@ -9,7 +9,16 @@ import Foundation
 
 /// UserDefaults-based implementation of UserStorage protocol
 class UserDefaultsStorage: UserStorage {
-    private let userDefaults = UserDefaults.standard
+    private let userDefaults: UserDefaults
+    
+    init() {
+        // Use shared UserDefaults so TopShelf extension can access the data
+        self.userDefaults = UserDefaults(suiteName: AppConstants.appGroupIdentifier) ?? UserDefaults.standard
+        print("UserDefaultsStorage: Using UserDefaults suite: \(AppConstants.appGroupIdentifier)")
+        
+        // Migrate data from standard UserDefaults if needed
+        migrateFromStandardUserDefaultsIfNeeded()
+    }
     
     // MARK: - User Management
     
@@ -90,6 +99,64 @@ class UserDefaultsStorage: UserStorage {
         tokenKeys.forEach { userDefaults.removeObject(forKey: $0) }
         
         print("UserDefaultsStorage: Removed all user data")
+    }
+    
+    // MARK: - Migration
+    
+    private func migrateFromStandardUserDefaultsIfNeeded() {
+        let migrationKey = "userDefaults_migrated_to_shared_v1"
+        
+        // Check if migration already completed
+        if userDefaults.bool(forKey: migrationKey) {
+            print("UserDefaultsStorage: Migration already completed")
+            return
+        }
+        
+        print("UserDefaultsStorage: Starting migration from standard UserDefaults...")
+        
+        let standardDefaults = UserDefaults.standard
+        let standardDict = standardDefaults.dictionaryRepresentation()
+        
+        // Find all user and token keys in standard UserDefaults
+        let userKeys = standardDict.keys.filter { $0.hasPrefix(UserDefaultsKeys.userPrefix) }
+        let tokenKeys = standardDict.keys.filter { $0.hasPrefix(UserDefaultsKeys.tokenPrefix) }
+        
+        var migratedUsers = 0
+        var migratedTokens = 0
+        
+        // Migrate user data
+        for userKey in userKeys {
+            if let userData = standardDefaults.data(forKey: userKey) {
+                userDefaults.set(userData, forKey: userKey)
+                standardDefaults.removeObject(forKey: userKey)
+                migratedUsers += 1
+                print("UserDefaultsStorage: Migrated user key: \(userKey)")
+            }
+        }
+        
+        // Migrate tokens
+        for tokenKey in tokenKeys {
+            if let tokenData = standardDefaults.string(forKey: tokenKey) {
+                userDefaults.set(tokenData, forKey: tokenKey)
+                standardDefaults.removeObject(forKey: tokenKey)
+                migratedTokens += 1
+                print("UserDefaultsStorage: Migrated token key: \(tokenKey)")
+            }
+        }
+        
+        // Clean up any other legacy keys that might exist
+        let legacyKeys = ["immich_server_url", "immich_access_token", "immich_user_email"]
+        for legacyKey in legacyKeys {
+            if standardDefaults.object(forKey: legacyKey) != nil {
+                standardDefaults.removeObject(forKey: legacyKey)
+                print("UserDefaultsStorage: Removed legacy key: \(legacyKey)")
+            }
+        }
+        
+        // Mark migration as completed
+        userDefaults.set(true, forKey: migrationKey)
+        
+        print("UserDefaultsStorage: Migration completed - migrated \(migratedUsers) users and \(migratedTokens) tokens")
     }
 }
 

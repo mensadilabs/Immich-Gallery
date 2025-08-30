@@ -27,8 +27,12 @@ class AuthenticationService: ObservableObject {
     init(networkService: NetworkService, userManager: UserManager) {
         self.networkService = networkService
         self.userManager = userManager
-        self.isAuthenticated = networkService.accessToken != nil && !networkService.baseURL.isEmpty
-        print("AuthenticationService: Initialized with isAuthenticated: \(isAuthenticated), baseURL: \(networkService.baseURL)")
+        self.isAuthenticated = userManager.hasCurrentUser
+        print("AuthenticationService: Initialized with isAuthenticated: \(isAuthenticated), hasCurrentUser: \(userManager.hasCurrentUser)")
+        
+        // Update network service with current user credentials if available
+        networkService.updateCredentialsFromCurrentUser()
+        
         validateTokenIfNeeded()
     }
     
@@ -42,12 +46,60 @@ class AuthenticationService: ObservableObject {
                     password: password
                 )
                 
-                // Update network service with new credentials
-                networkService.saveCredentials(serverURL: serverURL, token: token)
+                // Update network service with current user credentials
+                networkService.updateCredentialsFromCurrentUser()
                 
                 await MainActor.run {
                     self.isAuthenticated = true
                     print("AuthenticationService: Successfully authenticated user: \(email)")
+                }
+                
+                // Fetch user details
+                do {
+                    try await self.fetchUserInfo()
+                } catch {
+                    // Create fallback user object from saved user
+                    if let savedUser = userManager.findUser(email: email, serverURL: serverURL) {
+                        await MainActor.run {
+                            self.currentUser = Owner(
+                                id: savedUser.id,
+                                email: savedUser.email,
+                                name: savedUser.name,
+                                profileImagePath: "",
+                                profileChangedAt: "",
+                                avatarColor: "primary"
+                            )
+                        }
+                    }
+                }
+                
+                await MainActor.run {
+                    completion(true, nil)
+                }
+                
+            } catch {
+                await MainActor.run {
+                    completion(false, error.localizedDescription)
+                }
+            }
+        }
+    }
+    
+    func signInWithApiKey(serverURL: String, email: String, apiKey: String, completion: @escaping (Bool, String?) -> Void) {
+        Task {
+            do {
+                let token = try await userManager.authenticateWithApiKey(
+                    serverURL: serverURL,
+                    email: email,
+                    apiKey: apiKey
+                )
+                
+                // Update network service with current user credentials
+                networkService.updateCredentialsFromCurrentUser()
+                
+                await MainActor.run {
+                    self.isAuthenticated = true
+                    print("AuthenticationService: Successfully authenticated user with API key: \(email)")
                 }
                 
                 // Fetch user details
@@ -93,8 +145,8 @@ class AuthenticationService: ObservableObject {
     func switchUser(_ user: SavedUser) async throws {
         let token = try await userManager.switchToUser(user)
         
-        // Update network service with new credentials
-        networkService.saveCredentials(serverURL: user.serverURL, token: token)
+        // Update network service with current user credentials
+        networkService.updateCredentialsFromCurrentUser()
         
         await MainActor.run {
             self.isAuthenticated = true

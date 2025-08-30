@@ -58,6 +58,13 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		2F0443162E639D0C00BFB354 /* Exceptions for "Immich Gallery" folder in "TopShelfExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Models/UserModels.swift,
+			);
+			target = 2F2862FC2E4971C90032B966 /* TopShelfExtension */;
+		};
 		2F28630C2E4971C90032B966 /* Exceptions for "TopShelfExtension" folder in "TopShelfExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -86,6 +93,7 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				2F766F112E3AEC6400AEF3B2 /* Exceptions for "Immich Gallery" folder in "Immich Gallery" target */,
+				2F0443162E639D0C00BFB354 /* Exceptions for "Immich Gallery" folder in "TopShelfExtension" target */,
 			);
 			path = "Immich Gallery";
 			sourceTree = "<group>";

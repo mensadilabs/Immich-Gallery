@@ -81,42 +81,63 @@ struct SettingsView: View {
                     LazyVStack(spacing: 30) {
                         
                         // Current User Section
-                        if let user = authService.currentUser {
+                        if let savedUser = userManager.currentUser {
                             VStack(alignment: .leading, spacing: 16) {
                                 HStack {
-                                    Image(systemName: "person.circle.fill")
-                                        .foregroundColor(.blue)
+                                    Image(systemName: savedUser.authType == .apiKey ? "key.fill" : "person.circle.fill")
+                                        .foregroundColor(savedUser.authType == .apiKey ? .orange : .blue)
                                         .font(.title)
                                     
                                     VStack(alignment: .leading, spacing: 4) {
-                                        Text(user.name)
-                                            .font(.title2)
-                                            .fontWeight(.bold)
-                                        Text(user.email)
+                                        HStack(spacing: 8) {
+                                            Text(savedUser.name)
+                                                .font(.title2)
+                                                .fontWeight(.bold)
+                                            
+                                            // Authentication Type Badge
+                                            Text(savedUser.authType == .apiKey ? "API Key" : "Password")
+                                                .font(.caption2)
+                                                .fontWeight(.semibold)
+                                                .foregroundColor(.white)
+                                                .padding(.horizontal, 8)
+                                                .padding(.vertical, 3)
+                                                .background(savedUser.authType == .apiKey ? Color.orange : Color.blue)
+                                                .cornerRadius(6)
+                                        }
+                                        
+                                        Text(savedUser.email)
                                             .font(.subheadline)
                                             .foregroundColor(.secondary)
+                                        
+                                        Text(savedUser.serverURL)
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                            .lineLimit(1)
                                     }
                                     
                                     Spacer()
                                     
-                                    Text("Active")
-                                        .font(.caption)
-                                        .fontWeight(.semibold)
-                                        .foregroundColor(.white)
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 6)
-                                        .background(Color.green)
-                                        .cornerRadius(12)
+                                    VStack(spacing: 4) {
+                                        Text("Active")
+                                            .font(.caption)
+                                            .fontWeight(.semibold)
+                                            .foregroundColor(.white)
+                                            .padding(.horizontal, 10)
+                                            .padding(.vertical, 4)
+                                            .background(Color.green)
+                                            .cornerRadius(8)
+                                    }
                                 }
                                 .padding(20)
-                                .background(
+                                .background {
+                                    let accentColor = savedUser.authType == .apiKey ? Color.orange : Color.blue
                                     RoundedRectangle(cornerRadius: 16)
-                                        .fill(Color.blue.opacity(0.1))
+                                        .fill(accentColor.opacity(0.1))
                                         .overlay(
                                             RoundedRectangle(cornerRadius: 16)
-                                                .stroke(Color.blue.opacity(0.3), lineWidth: 1)
+                                                .stroke(accentColor.opacity(0.3), lineWidth: 1)
                                         )
-                                )
+                                }
                             }
                         }
                         
@@ -196,26 +217,26 @@ struct SettingsView: View {
                             
                             // User Switcher (Total: \(userManager.savedUsers.count))
                             if userManager.savedUsers.count > 1 {
-                                ForEach(userManager.savedUsers.filter { $0.email != authService.currentUser?.email }, id: \.id) { user in
+                                ForEach(userManager.savedUsers.filter { $0.id != userManager.currentUser?.id }, id: \.id) { user in
                                     HStack {
                                         Button(action: {
                                             switchToUser(user)
                                         }) {
                                             HStack {
-                                                Image(systemName: "person.circle")
-                                                    .foregroundColor(.blue)
+                                                Image(systemName: user.authType == .apiKey ? "key.fill" : "person.circle")
+                                                    .foregroundColor(user.authType == .apiKey ? .orange : .blue)
                                                     .font(.title3)
                                                 
                                                 VStack(alignment: .leading, spacing: 4) {
                                                     HStack(spacing: 8) {
-                                                        Text(user.authType.rawValue.uppercased())
+                                                        Text(user.authType == .apiKey ? "API Key" : "Password")
                                                             .font(.caption2)
-                                                            .fontWeight(.medium)
-                                                            .foregroundColor(.blue)
-                                                            .padding(.horizontal, 6)
-                                                            .padding(.vertical, 2)
-                                                            .background(Color.blue.opacity(0.1))
-                                                            .cornerRadius(4)
+                                                            .fontWeight(.semibold)
+                                                            .foregroundColor(.white)
+                                                            .padding(.horizontal, 8)
+                                                            .padding(.vertical, 3)
+                                                            .background(user.authType == .apiKey ? Color.orange : Color.blue)
+                                                            .cornerRadius(6)
                                                         
                                                         Text(user.name)
                                                             .font(.subheadline)
@@ -236,12 +257,15 @@ struct SettingsView: View {
                                                 Spacer()
                                                 
                                                 Image(systemName: "arrow.right.circle")
-                                                    .foregroundColor(.blue)
+                                                    .foregroundColor(user.authType == .apiKey ? .orange : .blue)
                                                     .font(.title3)
                                             }
                                             .padding()
-                                            .background(Color.gray.opacity(0.1))
-                                            .cornerRadius(12)
+                                            .background {
+                                                let accentColor = user.authType == .apiKey ? Color.orange : Color.blue
+                                                RoundedRectangle(cornerRadius: 12)
+                                                    .fill(accentColor.opacity(0.05))
+                                            }
                                         }
                                         .buttonStyle(.plain)
                                         
@@ -570,8 +594,8 @@ struct SettingsView: View {
 
 
 #Preview {
-    let networkService = NetworkService()
     let userManager = UserManager()
+    let networkService = NetworkService(userManager: userManager)
     let authService = AuthenticationService(networkService: networkService, userManager: userManager)
     SettingsView(authService: authService, userManager: userManager)
 }

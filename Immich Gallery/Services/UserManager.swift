@@ -45,9 +45,22 @@ class UserManager: ObservableObject {
     func loadUsers() {
         let users = storage.loadUsers()
         
-        DispatchQueue.main.async { [weak self] in
-            self?.savedUsers = users
-            print("UserManager: Loaded \(users.count) saved users")
+        // Set users synchronously during initialization to ensure proper startup order
+        savedUsers = users
+        print("UserManager: Loaded \(users.count) saved users")
+        
+        // Load current user immediately after savedUsers is populated
+        loadCurrentUser()
+    }
+    
+    /// Loads the current active user from storage
+    private func loadCurrentUser() {
+        if let currentUserId = getCurrentUserId(),
+           let user = savedUsers.first(where: { $0.id == currentUserId }) {
+            currentUser = user
+            print("UserManager: Loaded current user: \(user.email)")
+        } else {
+            print("UserManager: No current user found")
         }
     }
     
@@ -58,8 +71,12 @@ class UserManager: ObservableObject {
             throw UserStorageError.tokenNotFound
         }
         
+        // Clear cookies for the server when switching users to ensure clean authentication state
+        clearHTTPCookies(for: user.serverURL)
+        
         await MainActor.run {
             currentUser = user
+            setCurrentUserId(user.id)
         }
         
         print("UserManager: Switched to user \(user.email)")
@@ -76,6 +93,7 @@ class UserManager: ObservableObject {
             // Clear current user if it was the removed user
             if currentUser?.id == user.id {
                 currentUser = nil
+                clearCurrentUserId()
             }
         }
         
@@ -91,6 +109,9 @@ class UserManager: ObservableObject {
     
     /// Authenticates with username/password and saves the user
     func authenticateWithCredentials(serverURL: String, email: String, password: String) async throws -> String {
+        // Clear any existing cookies for this server to ensure clean password authentication
+        clearHTTPCookies(for: serverURL)
+        
         // Perform login request
         let authResponse = try await performLogin(serverURL: serverURL, email: email, password: password)
         
@@ -107,14 +128,43 @@ class UserManager: ObservableObject {
         // Save user and token
         try await saveUser(savedUser, token: authResponse.accessToken)
         
+        // Set as current user
+        await MainActor.run {
+            currentUser = savedUser
+            setCurrentUserId(savedUser.id)
+        }
+        
         return authResponse.accessToken
     }
     
-    /// Authenticates with API key (future implementation)
-    func authenticateWithApiKey(serverURL: String, apiKey: String) async throws -> SavedUser {
-        // TODO: Implement API key authentication
-        // This will validate the API key against the server and return user info
-        throw NSError(domain: "UserManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "API key authentication not yet implemented"])
+    /// Authenticates with API key and saves the user
+    func authenticateWithApiKey(serverURL: String, email: String, apiKey: String) async throws -> String {
+        // Clear any existing cookies for this server to ensure clean API key authentication
+        clearHTTPCookies(for: serverURL)
+        
+        // Validate API key by fetching user info
+        let userInfo = try await validateApiKey(serverURL: serverURL, apiKey: apiKey)
+        
+        // Create user object
+        let userId = generateUserIdForUser(email: email, serverURL: serverURL)
+        let savedUser = SavedUser(
+            id: userId,
+            email: email,
+            name: userInfo.name,
+            serverURL: serverURL,
+            authType: .apiKey
+        )
+        
+        // Save user and API key as token
+        try await saveUser(savedUser, token: apiKey)
+        
+        // Set as current user
+        await MainActor.run {
+            currentUser = savedUser
+            setCurrentUserId(savedUser.id)
+        }
+        
+        return apiKey
     }
     
     // MARK: - Utility Methods
@@ -141,6 +191,7 @@ class UserManager: ObservableObject {
         await MainActor.run {
             savedUsers.removeAll()
             currentUser = nil
+            clearCurrentUserId()
         }
         
         print("UserManager: Cleared all user data")
@@ -177,5 +228,101 @@ class UserManager: ObservableObject {
         }
         
         return try JSONDecoder().decode(AuthResponse.self, from: data)
+    }
+    
+    private func validateApiKey(serverURL: String, apiKey: String) async throws -> User {
+        let userURL = URL(string: "\(serverURL)/api/users/me")!
+        var request = URLRequest(url: userURL)
+        request.httpMethod = "GET"
+        request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NSError(domain: "UserManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response"])
+        }
+        
+        guard httpResponse.statusCode == 200 else {
+            if let errorResponse = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let message = errorResponse["message"] as? String {
+                throw NSError(domain: "UserManager", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: message])
+            } else {
+                throw NSError(domain: "UserManager", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "API key validation failed"])
+            }
+        }
+        
+        return try JSONDecoder().decode(User.self, from: data)
+    }
+    
+    // MARK: - Current User Persistence
+    
+    private var sharedDefaults: UserDefaults {
+        return UserDefaults(suiteName: AppConstants.appGroupIdentifier) ?? UserDefaults.standard
+    }
+    
+    private func setCurrentUserId(_ userId: String) {
+        sharedDefaults.set(userId, forKey: "currentActiveUserId")
+        print("UserManager: Set current user ID: \(userId)")
+    }
+    
+    private func getCurrentUserId() -> String? {
+        return sharedDefaults.string(forKey: "currentActiveUserId")
+    }
+    
+    private func clearCurrentUserId() {
+        sharedDefaults.removeObject(forKey: "currentActiveUserId")
+        print("UserManager: Cleared current user ID")
+    }
+    
+    // MARK: - Public Current User Methods
+    
+    /// Gets the current user's authentication token
+    var currentUserToken: String? {
+        guard let currentUser = currentUser else { return nil }
+        return getUserToken(currentUser)
+    }
+    
+    /// Gets the current user's server URL
+    var currentUserServerURL: String? {
+        return currentUser?.serverURL
+    }
+    
+    /// Gets the current user's authentication type
+    var currentUserAuthType: SavedUser.AuthType? {
+        return currentUser?.authType
+    }
+    
+    /// Checks if there's a currently authenticated user
+    var hasCurrentUser: Bool {
+        return currentUser != nil && currentUserToken != nil
+    }
+    
+    // MARK: - HTTP Cookie Management
+    
+    /// Clears HTTP cookies for a specific server URL
+    private func clearHTTPCookies(for serverURL: String) {
+        guard let url = URL(string: serverURL) else { return }
+        
+        let cookieStorage = HTTPCookieStorage.shared
+        if let cookies = cookieStorage.cookies(for: url) {
+            for cookie in cookies {
+                cookieStorage.deleteCookie(cookie)
+                print("UserManager: Deleted cookie: \(cookie.name) for \(cookie.domain)")
+            }
+            print("UserManager: Cleared \(cookies.count) cookies for \(serverURL)")
+        } else {
+            print("UserManager: No cookies found for \(serverURL)")
+        }
+    }
+    
+    /// Clears all HTTP cookies (use with caution)
+    private func clearAllHTTPCookies() {
+        let cookieStorage = HTTPCookieStorage.shared
+        if let cookies = cookieStorage.cookies {
+            for cookie in cookies {
+                cookieStorage.deleteCookie(cookie)
+            }
+            print("UserManager: Cleared all \(cookies.count) HTTP cookies")
+        }
     }
 }

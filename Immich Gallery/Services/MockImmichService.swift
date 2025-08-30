@@ -10,8 +10,8 @@ import UIKit
 
 // MARK: - Mock Network Service
 class MockNetworkService: NetworkService {
-    override init() {
-        super.init()
+    override init(userManager: UserManager) {
+        super.init(userManager: userManager)
         // Set up mock authentication state
         self.baseURL = "https://mock-immich-server.com"
         self.accessToken = "mock-access-token"
@@ -277,8 +277,8 @@ class MockPeopleService: PeopleService {
 // MARK: - Convenience Factory
 class MockServiceFactory {
     static func createMockServices() -> (NetworkService, UserManager, AuthenticationService, AssetService, AlbumService, PeopleService, TagService) {
-        let networkService = MockNetworkService()
         let userManager = UserManager()
+        let networkService = MockNetworkService(userManager: userManager)
         let authService = MockAuthenticationService(networkService: networkService, userManager: userManager)
         let assetService = MockAssetService(networkService: networkService)
         let albumService = MockAlbumService(networkService: networkService)
