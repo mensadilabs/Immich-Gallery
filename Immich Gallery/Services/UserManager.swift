@@ -60,7 +60,16 @@ class UserManager: ObservableObject {
             currentUser = user
             print("UserManager: Loaded current user: \(user.email)")
         } else {
-            print("UserManager: No current user found")
+            // If no previously saved user ID is found, or the user is not in the list,
+            // set the first saved user as the current one.
+            if let firstUser = savedUsers.first {
+                currentUser = firstUser
+                setCurrentUserId(firstUser.id)
+                print("UserManager: No current user found. Defaulted to first saved user: \(firstUser.email)")
+            } else {
+                currentUser = nil
+                print("UserManager: No users found in saved list.")
+            }
         }
     }
     
@@ -92,8 +101,19 @@ class UserManager: ObservableObject {
             
             // Clear current user if it was the removed user
             if currentUser?.id == user.id {
-                currentUser = nil
-                clearCurrentUserId()
+                clearHTTPCookies(for: user.serverURL)
+                
+                // If there are other users, switch to the first one
+                if let nextUser = savedUsers.first {
+                    currentUser = nextUser
+                    setCurrentUserId(nextUser.id)
+                    print("UserManager: Switched to next available user: \(nextUser.email)")
+                } else {
+                    // No other users available, clear current user
+                    currentUser = nil
+                    clearCurrentUserId()
+                    print("UserManager: No other users available, cleared current user")
+                }
             }
         }
         
@@ -195,6 +215,17 @@ class UserManager: ObservableObject {
         }
         
         print("UserManager: Cleared all user data")
+    }
+    
+    /// Logs out only the current user (removes them from saved users)
+    func logoutCurrentUser() async throws {
+        guard let currentUser = currentUser else {
+            print("UserManager: No current user to logout")
+            return
+        }
+        
+        print("UserManager: Logging out current user: \(currentUser.email)")
+        try await removeUser(currentUser)
     }
     
     // MARK: - Private Methods

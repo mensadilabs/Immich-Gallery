@@ -49,7 +49,8 @@ struct SettingsView: View {
     @ObservedObject var authService: AuthenticationService
     @ObservedObject var userManager: UserManager
     @State private var showingClearCacheAlert = false
-    @State private var showingSignOutAlert = false
+    @State private var showingDeleteUserAlert = false
+    @State private var userToDelete: SavedUser?
     @State private var showingSignIn = false
     @State private var showingWhatsNew = false
     @AppStorage("hideImageOverlay") private var hideImageOverlay = true
@@ -80,66 +81,6 @@ struct SettingsView: View {
                 ScrollView {
                     LazyVStack(spacing: 30) {
                         
-                        // Current User Section
-                        if let savedUser = userManager.currentUser {
-                            VStack(alignment: .leading, spacing: 16) {
-                                HStack {
-                                    Image(systemName: savedUser.authType == .apiKey ? "key.fill" : "person.circle.fill")
-                                        .foregroundColor(savedUser.authType == .apiKey ? .orange : .blue)
-                                        .font(.title)
-                                    
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        HStack(spacing: 8) {
-                                            Text(savedUser.name)
-                                                .font(.title2)
-                                                .fontWeight(.bold)
-                                            
-                                            // Authentication Type Badge
-                                            Text(savedUser.authType == .apiKey ? "API Key" : "Password")
-                                                .font(.caption2)
-                                                .fontWeight(.semibold)
-                                                .foregroundColor(.white)
-                                                .padding(.horizontal, 8)
-                                                .padding(.vertical, 3)
-                                                .background(savedUser.authType == .apiKey ? Color.orange : Color.blue)
-                                                .cornerRadius(6)
-                                        }
-                                        
-                                        Text(savedUser.email)
-                                            .font(.subheadline)
-                                            .foregroundColor(.secondary)
-                                        
-                                        Text(savedUser.serverURL)
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
-                                            .lineLimit(1)
-                                    }
-                                    
-                                    Spacer()
-                                    
-                                    VStack(spacing: 4) {
-                                        Text("Active")
-                                            .font(.caption)
-                                            .fontWeight(.semibold)
-                                            .foregroundColor(.white)
-                                            .padding(.horizontal, 10)
-                                            .padding(.vertical, 4)
-                                            .background(Color.green)
-                                            .cornerRadius(8)
-                                    }
-                                }
-                                .padding(20)
-                                .background {
-                                    let accentColor = savedUser.authType == .apiKey ? Color.orange : Color.blue
-                                    RoundedRectangle(cornerRadius: 16)
-                                        .fill(accentColor.opacity(0.1))
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 16)
-                                                .stroke(accentColor.opacity(0.3), lineWidth: 1)
-                                        )
-                                }
-                            }
-                        }
                         
                         // Server Info Section
                         Button(action: {
@@ -180,44 +121,9 @@ struct SettingsView: View {
                         .buttonStyle(.plain)
                         // User Actions Section
                         VStack(spacing: 16) {
-                            Button(action: {
-                                showingSignIn = true
-                            }) {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "person.badge.plus")
-                                        .font(.title2)
-                                        .foregroundColor(.blue)
-                                    Text("Add User")
-                                        .font(.caption)
-                                }
-                                .frame(maxWidth: .infinity)
-                                .padding(16)
-                                .background(Color.blue.opacity(0.1))
-                                .cornerRadius(12)
-                            }
-                            .buttonStyle(.plain)
-                            
-                            Button(action: {
-                                showingSignOutAlert = true
-                            }) {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "rectangle.portrait.and.arrow.right")
-                                        .font(.title2)
-                                        .foregroundColor(.red)
-                                    Text("Sign Out")
-                                        .font(.caption)
-                                        .foregroundColor(.primary)
-                                }
-                                .frame(maxWidth: .infinity)
-                                .padding(16)
-                                .background(Color.red.opacity(0.1))
-                                .cornerRadius(12)
-                            }
-                            .buttonStyle(.plain)
-                            
                             // User Switcher (Total: \(userManager.savedUsers.count))
-                            if userManager.savedUsers.count > 1 {
-                                ForEach(userManager.savedUsers.filter { $0.id != userManager.currentUser?.id }, id: \.id) { user in
+                            if userManager.savedUsers.count > 0 {
+                                ForEach(userManager.savedUsers, id: \.id) { user in
                                     HStack {
                                         Button(action: {
                                             switchToUser(user)
@@ -256,9 +162,20 @@ struct SettingsView: View {
                                                 
                                                 Spacer()
                                                 
-                                                Image(systemName: "arrow.right.circle")
-                                                    .foregroundColor(user.authType == .apiKey ? .orange : .blue)
-                                                    .font(.title3)
+                                                if userManager.currentUser?.id == user.id {
+                                                    Text("Active")
+                                                        .font(.caption)
+                                                        .fontWeight(.semibold)
+                                                        .foregroundColor(.white)
+                                                        .padding(.horizontal, 10)
+                                                        .padding(.vertical, 4)
+                                                        .background(Color.green)
+                                                        .cornerRadius(8)
+                                                } else {
+                                                    Image(systemName: "arrow.right.circle")
+                                                        .foregroundColor(user.authType == .apiKey ? .orange : .blue)
+                                                        .font(.title3)
+                                                }
                                             }
                                             .padding()
                                             .background {
@@ -270,7 +187,8 @@ struct SettingsView: View {
                                         .buttonStyle(.plain)
                                         
                                         Button(action: {
-                                            removeUser(user)
+                                            userToDelete = user
+                                            showingDeleteUserAlert = true
                                         }) {
                                             Image(systemName: "trash")
                                                 .foregroundColor(.red)
@@ -283,6 +201,23 @@ struct SettingsView: View {
                                     }
                                 }
                             }
+                            
+                            Button(action: {
+                                showingSignIn = true
+                            }) {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "person.badge.plus")
+                                        .font(.title2)
+                                        .foregroundColor(.blue)
+                                    Text("Add User")
+                                        .font(.caption)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(16)
+                                .background(Color.blue.opacity(0.1))
+                                .cornerRadius(12)
+                            }
+                            .buttonStyle(.plain)
                         }
                         
                         // Interface Settings Section
@@ -516,13 +451,31 @@ struct SettingsView: View {
             } message: {
                 Text("This will remove all cached thumbnails from both memory and disk. Images will be re-downloaded when needed.")
             }
-            .alert("Sign Out", isPresented: $showingSignOutAlert) {
-                Button("Cancel", role: .cancel) { }
-                Button("Sign Out", role: .destructive) {
-                    authService.signOut()
+            .alert("Delete User", isPresented: $showingDeleteUserAlert) {
+                Button("Cancel", role: .cancel) { 
+                    userToDelete = nil
+                }
+                Button("Delete", role: .destructive) {
+                    if let user = userToDelete {
+                        removeUser(user)
+                    }
+                    userToDelete = nil
                 }
             } message: {
-                Text("Are you sure you want to sign out? You'll need to sign in again to access your photos.")
+                if let user = userToDelete {
+                    let isCurrentUser = userManager.currentUser?.id == user.id
+                    let isLastUser = userManager.savedUsers.count == 1
+                    
+                    if isCurrentUser && isLastUser {
+                        Text("Are you sure you want to delete this user? This will sign you out and you'll need to sign in again to access your photos.")
+                    } else if isCurrentUser {
+                        Text("Are you sure you want to delete the current user? You will be switched to another saved user.")
+                    } else {
+                        Text("Are you sure you want to delete this user account?")
+                    }
+                } else {
+                    Text("Are you sure you want to delete this user?")
+                }
             }
             .onAppear {
                 userManager.loadUsers()
@@ -553,7 +506,36 @@ struct SettingsView: View {
     private func removeUser(_ user: SavedUser) {
         Task {
             do {
+                let wasCurrentUser = userManager.currentUser?.id == user.id
+                
                 try await userManager.removeUser(user)
+                
+                // If we removed the current user, update the authentication service
+                if wasCurrentUser {
+                    if userManager.hasCurrentUser {
+                        // Switch to the new current user
+                        print("SettingsView: Switching to next available user after removal")
+                        authService.updateCredentialsFromCurrentUser()
+                        
+                        await MainActor.run {
+                            authService.isAuthenticated = true
+                        }
+                        
+                        // Fetch the new current user info
+                        try await authService.fetchUserInfo()
+                        
+                        // Refresh the app UI
+                        NotificationCenter.default.post(name: NSNotification.Name(NotificationNames.refreshAllTabs), object: nil)
+                    } else {
+                        // No users left, sign out completely
+                        print("SettingsView: No users left, signing out completely")
+                        await MainActor.run {
+                            authService.isAuthenticated = false
+                            authService.currentUser = nil
+                        }
+                        authService.clearCredentials()
+                    }
+                }
             } catch {
                 print("SettingsView: Failed to remove user: \(error)")
                 // Handle error - could show alert to user

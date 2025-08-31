@@ -133,12 +133,50 @@ class AuthenticationService: ObservableObject {
         }
     }
     
+    /// Internal sign out method - logs out current user and switches to next available user if any exist
+    /// For UI-initiated logout, use UserManager.logoutCurrentUser() directly
     func signOut() {
         print("AuthenticationService: Signing out user")
-        networkService.clearCredentials()
-        DispatchQueue.main.async {
-            self.isAuthenticated = false
-            self.currentUser = nil
+        
+        Task {
+            do {
+                // Logout current user from UserManager (this will switch to another user if available)
+                try await userManager.logoutCurrentUser()
+                
+                // Check if we still have a current user after logout
+                if userManager.hasCurrentUser {
+                    // Switch to the new current user
+                    print("AuthenticationService: Switching to next available user after logout")
+                    networkService.updateCredentialsFromCurrentUser()
+                    
+                    await MainActor.run {
+                        self.isAuthenticated = true
+                    }
+                    
+                    // Fetch the new current user info
+                    try await fetchUserInfo()
+                } else {
+                    // No users left, fully sign out
+                    print("AuthenticationService: No users left, fully signing out")
+                    networkService.clearCredentials()
+                    
+                    await MainActor.run {
+                        self.isAuthenticated = false
+                        self.currentUser = nil
+                    }
+                }
+                
+                print("AuthenticationService: Successfully completed signout process")
+            } catch {
+                print("AuthenticationService: Error during signout: \(error)")
+                
+                // Even if logout fails, still clear the auth state
+                networkService.clearCredentials()
+                await MainActor.run {
+                    self.isAuthenticated = false
+                    self.currentUser = nil
+                }
+            }
         }
     }
     
@@ -173,6 +211,17 @@ class AuthenticationService: ObservableObject {
 
     
     // MARK: - User Management
+    
+    /// Updates network credentials from current user
+    func updateCredentialsFromCurrentUser() {
+        networkService.updateCredentialsFromCurrentUser()
+    }
+    
+    /// Clears network credentials
+    func clearCredentials() {
+        networkService.clearCredentials()
+    }
+    
     func fetchUserInfo() async throws {
         print("AuthenticationService: Fetching user info from server")
         let user: User = try await networkService.makeRequest(
