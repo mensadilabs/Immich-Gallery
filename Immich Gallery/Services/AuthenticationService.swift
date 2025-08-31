@@ -24,6 +24,22 @@ class AuthenticationService: ObservableObject {
         return networkService.accessToken
     }
     
+    /// Returns the appropriate authentication headers based on current user's auth type
+    func getAuthHeaders() -> [String: String] {
+        guard let accessToken = networkService.accessToken else {
+            return [:]
+        }
+        
+        // Check current user's auth type through userManager
+        let isApiKey = userManager.currentUser?.authType == .apiKey
+        
+        if isApiKey {
+            return ["x-api-key": accessToken]
+        } else {
+            return ["Authorization": "Bearer \(accessToken)"]
+        }
+    }
+    
     init(networkService: NetworkService, userManager: UserManager) {
         self.networkService = networkService
         self.userManager = userManager

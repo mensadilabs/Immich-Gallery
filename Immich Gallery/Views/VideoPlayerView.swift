@@ -61,13 +61,13 @@ class PlayerManager: NSObject, ObservableObject, AVAssetResourceLoaderDelegate {
         // Determine MIME type based on asset properties
         let mimeType = determineVideoMimeType()
         
-        // Create AVURLAsset with custom options
+        // Create AVURLAsset with custom options including auth headers
         let asset = AVURLAsset(url: url, options: [
             "AVURLAssetOutOfBandMIMETypeKey": mimeType,
             "AVURLAssetHTTPHeaderFieldsKey": getVideoAuthHeaders()
         ])
         
-        // Set up authentication delegate
+        // Set up authentication delegate for streaming requests
         asset.resourceLoader.setDelegate(self, queue: DispatchQueue.main)
         
         // Create player item with the asset
@@ -202,10 +202,19 @@ class PlayerManager: NSObject, ObservableObject, AVAssetResourceLoaderDelegate {
     }
     
     private func getVideoAuthHeaders() -> [String: String] {
-        guard let accessToken = authenticationService.accessToken else {
-            return [:]
+        let headers = authenticationService.getAuthHeaders()
+        
+        if headers.isEmpty {
+            print("❌ Video auth: No access token available")
+            print("🔍 Auth service isAuthenticated: \(authenticationService.isAuthenticated)")
+            print("🔍 Current user: \(authenticationService.currentUser?.email ?? "nil")")
+        } else {
+            let authType = headers.keys.contains("x-api-key") ? "API key" : "JWT token"
+            let token = headers.values.first ?? ""
+            print("✅ Video auth: Using \(authType): \(String(token.prefix(20)))...")
         }
-        return ["Authorization": "Bearer \(accessToken)"]
+        
+        return headers
     }
     
     // MARK: - AVAssetResourceLoaderDelegate
