@@ -62,6 +62,10 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Models/UserModels.swift,
+				Protocols/UserStorage.swift,
+				Storage/HybridUserStorage.swift,
+				Storage/KeychainTokenStorage.swift,
+				Storage/UserDefaultsStorage.swift,
 			);
 			target = 2F2862FC2E4971C90032B966 /* TopShelfExtension */;
 		};
