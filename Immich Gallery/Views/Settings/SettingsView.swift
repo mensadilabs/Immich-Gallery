@@ -22,6 +22,7 @@ struct SettingsRow: View {
                 .foregroundColor(.blue)
                 .font(.title3)
                 .frame(width: 24)
+                .padding()
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
@@ -81,23 +82,31 @@ struct SettingsView: View {
                 ScrollView {
                     LazyVStack(spacing: 30) {
                         
-                        
                         // Server Info Section
                         Button(action: {
                             refreshServerConnection()
                         }) {
-                            HStack {
-                                Image(systemName: authService.baseURL.lowercased().hasPrefix("https") ? "lock.fill" : "lock.open.fill")
-                                    .foregroundColor(authService.baseURL.lowercased().hasPrefix("https") ? .green : .red)
-                                    .frame(width: 100, height: 100)
-                                    .clipShape(Circle())
-                                    .padding()
-                                
-                                Text(authService.baseURL)
-                                    .font(.headline)
-                                    .foregroundColor(.primary)
+                            HStack(spacing: 16) {
+                                ZStack {
+                                    Circle()
+                                        .fill(Color.gray.opacity(0.1)) // consistent background
+                                        .frame(width: 100, height: 100)
+                                        
+
+                                    Image(systemName: authService.baseURL.lowercased().hasPrefix("https") ? "lock.fill" : "lock.open.fill")
+                                        .foregroundColor(authService.baseURL.lowercased().hasPrefix("https") ? .green : .red)
+                                        .font(.system(size: 100 * 0.4)) // scale relative to size
+                                }
+                                .padding(.trailing, 10)
+
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(authService.baseURL)
+                                        .font(.headline)
+                                        .foregroundColor(.primary)
+                                }
+
                                 Spacer()
-                                
+
                                 HStack(spacing: 8) {
                                     Image(systemName: "arrow.clockwise")
                                         .foregroundColor(.blue)
@@ -110,16 +119,16 @@ struct SettingsView: View {
                                 .padding(.vertical, 6)
                                 .background(Color.blue.opacity(0.1))
                                 .cornerRadius(8)
-                                
+
                                 Image(systemName: "checkmark.circle.fill")
                                     .foregroundColor(.green)
                                     .font(.title3)
                             }
-                            .padding(16)
-                            .background(Color.green.opacity(0.1))
+                            .padding()
+                            .background(Color.green.opacity(0.05))
                             .cornerRadius(12)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(CardButtonStyle())
                         // User Actions Section
                         VStack(spacing: 16) {
                             // User Switcher (Total: \(userManager.savedUsers.count))
@@ -130,13 +139,13 @@ struct SettingsView: View {
                                             switchToUser(user)
                                         }) {
                                             HStack {
+                                                HStack(spacing: 16){
                                                 ProfileImageView(
                                                     userId: user.id,
                                                     authType: user.authType,
                                                     size: 100,
                                                     profileImageData: user.profileImageData
                                                 )
-                                                .padding()
                                                 
                                                 VStack(alignment: .leading, spacing: 4) {
                                                     HStack(spacing: 4) {
@@ -165,6 +174,7 @@ struct SettingsView: View {
                                                         .foregroundColor(.secondary)
                                                         .lineLimit(1)
                                                 }
+                                            }
                                                 
                                                 Spacer()
                                                 
@@ -190,7 +200,7 @@ struct SettingsView: View {
                                                     .fill(accentColor.opacity(0.05))
                                             }
                                         }
-                                        .buttonStyle(.plain)
+                                          .buttonStyle(CardButtonStyle())
                                         
                                         Button(action: {
                                             userToDelete = user
@@ -203,7 +213,7 @@ struct SettingsView: View {
                                                 .background(Color.red.opacity(0.1))
                                                 .cornerRadius(8)
                                         }
-                                        .buttonStyle(.plain)
+                                         .buttonStyle(CardButtonStyle())
                                     }
                                 }
                             }
@@ -223,7 +233,7 @@ struct SettingsView: View {
                                 .background(Color.blue.opacity(0.1))
                                 .cornerRadius(12)
                             }
-                            .buttonStyle(.plain)
+                             .buttonStyle(CardButtonStyle())
                         }
                         
                         // Interface Settings Section
@@ -406,7 +416,7 @@ struct SettingsView: View {
                                         )
                                     )
                                 }
-                                .buttonStyle(.plain)
+                                 .buttonStyle(CardButtonStyle())
                                 
                                 Button(action: {
                                     requestAppStoreReview()
@@ -428,7 +438,7 @@ struct SettingsView: View {
                                         )
                                     )
                                 }
-                                .buttonStyle(.plain)
+                                 .buttonStyle(CardButtonStyle())
                             })
                         }
                         

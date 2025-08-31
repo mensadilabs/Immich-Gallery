@@ -23,7 +23,11 @@ struct ProfileImageView: View {
     }
     
     var body: some View {
-        Group {
+        ZStack {
+            Circle()
+                .fill(Color.gray.opacity(0.1)) // consistent background
+                .frame(width: size, height: size)
+
             if let profileImage = profileImage {
                 Image(uiImage: profileImage)
                     .resizable()
@@ -31,13 +35,12 @@ struct ProfileImageView: View {
                     .frame(width: size, height: size)
                     .clipShape(Circle())
             } else {
-                // Fallback to SF Symbol
                 Image(systemName: authType == .apiKey ? "key.fill" : "person.fill")
                     .foregroundColor(authType == .apiKey ? .orange : .blue)
-                    .font(.title3)
-                    .frame(width: size, height: size)
+                    .font(.system(size: size * 0.4)) // scale relative to size
             }
         }
+        .frame(width: size, height: size) // enforce fixed dimensions
         .onAppear {
             loadProfileImage()
         }
