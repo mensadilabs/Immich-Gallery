@@ -62,7 +62,7 @@ struct SettingsView: View {
     @AppStorage("use24HourClock") private var use24HourClock = true
     @AppStorage("enableReflectionsInSlideshow") private var enableReflectionsInSlideshow = true
     @AppStorage("enableKenBurnsEffect") private var enableKenBurnsEffect = false
-    @AppStorage("enableThumbnailAnimation") private var enableThumbnailAnimation = true
+    @AppStorage("enableThumbnailAnimation") private var enableThumbnailAnimation = false
     @AppStorage("enableSlideshowShuffle") private var enableSlideshowShuffle = false
     @AppStorage("allPhotosSortOrder") private var allPhotosSortOrder = "desc"
     @AppStorage("enableTopShelf", store: UserDefaults(suiteName: AppConstants.appGroupIdentifier)) private var enableTopShelf = false
@@ -257,7 +257,7 @@ struct SettingsView: View {
                                 SettingsRow(
                                     icon: "play.rectangle.on.rectangle",
                                     title: "Enable Thumbnail Animation",
-                                    subtitle: "Animate thumbnails in Albums, People, and Tags views.",
+                                    subtitle: "Animate thumbnails in Albums, People, and Tags views(I recommend disabling this for larger libraries for significantly better performance).",
                                     content: AnyView(Toggle("", isOn: $enableThumbnailAnimation).labelsHidden())
                                 )
                                 
