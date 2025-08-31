@@ -71,7 +71,7 @@ class AssetService: ObservableObject {
         // Optionally: check HEAD request for video availability
         return url
     }
-
+    
     func fetchRandomAssets(albumIds: [String]? = nil, personIds: [String]? = nil, tagIds: [String]? = nil, limit: Int = 50) async throws -> SearchResult {
         var searchRequest: [String: Any] = [
             "size": limit,

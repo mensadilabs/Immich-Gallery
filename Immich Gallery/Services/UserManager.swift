@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import UIKit
 
 /// Manages multiple user accounts and their authentication data
 class UserManager: ObservableObject {
@@ -135,6 +136,9 @@ class UserManager: ObservableObject {
         // Perform login request
         let authResponse = try await performLogin(serverURL: serverURL, email: email, password: password)
         
+        // Fetch profile image using the correct user ID
+        let profileImageData = await fetchUserProfileImageData(serverURL: serverURL, token: authResponse.accessToken, authType: .jwt, userId: authResponse.userId)
+        
         // Create user object
         let userId = generateUserIdForUser(email: email, serverURL: serverURL)
         let savedUser = SavedUser(
@@ -142,9 +146,10 @@ class UserManager: ObservableObject {
             email: authResponse.userEmail,
             name: authResponse.name,
             serverURL: serverURL,
-            authType: .jwt
+            authType: .jwt,
+            profileImageData: profileImageData
         )
-        
+        print("saving user \(authResponse.userEmail)")
         // Save user and token
         try await saveUser(savedUser, token: authResponse.accessToken)
         
@@ -165,6 +170,9 @@ class UserManager: ObservableObject {
         // Validate API key by fetching user info
         let userInfo = try await validateApiKey(serverURL: serverURL, apiKey: apiKey)
         
+        // Fetch profile image using the correct user ID
+        let profileImageData = await fetchUserProfileImageData(serverURL: serverURL, token: apiKey, authType: .apiKey, userId: userInfo.id)
+        
         // Create user object
         let userId = generateUserIdForUser(email: email, serverURL: serverURL)
         let savedUser = SavedUser(
@@ -172,9 +180,11 @@ class UserManager: ObservableObject {
             email: email,
             name: userInfo.name,
             serverURL: serverURL,
-            authType: .apiKey
+            authType: .apiKey,
+            profileImageData: profileImageData
         )
         
+        print("saving user \(email)")
         // Save user and API key as token
         try await saveUser(savedUser, token: apiKey)
         
@@ -185,6 +195,43 @@ class UserManager: ObservableObject {
         }
         
         return apiKey
+    }
+    
+    /// Loads user profile image for the current user
+    func loadUserProfileImage(userId: String) async throws -> UIImage {
+        guard let networkService = createNetworkServiceForCurrentUser() else {
+            throw ImmichError.notAuthenticated
+        }
+        
+        let user: User = try await networkService.makeRequest(
+            endpoint: "/api/users/me",
+            responseType: User.self
+        )
+        
+        let endpoint = "/api/users/\(user.id)/profile-image"
+        let imageData = try await networkService.makeDataRequest(endpoint: endpoint)
+        
+        guard let image = UIImage(data: imageData) else {
+            throw ImmichError.clientError(404)
+        }
+        
+        return image
+    }
+    
+    
+    /// Creates a NetworkService configured for the current user
+    private func createNetworkServiceForCurrentUser() -> NetworkService? {
+        guard let currentUser = currentUser,
+              let token = getUserToken(currentUser) else {
+            return nil
+        }
+        
+        let networkService = NetworkService(userManager: self)
+        networkService.baseURL = currentUser.serverURL
+        networkService.accessToken = token
+        networkService.currentAuthType = currentUser.authType
+        
+        return networkService
     }
     
     // MARK: - Utility Methods
@@ -229,6 +276,27 @@ class UserManager: ObservableObject {
     }
     
     // MARK: - Private Methods
+    
+    /// Fetches user profile image data during authentication
+    private func fetchUserProfileImageData(serverURL: String, token: String, authType: SavedUser.AuthType, userId: String) async -> Data? {
+        do {
+            // Create a temporary NetworkService configured for this request
+            let tempNetworkService = NetworkService(userManager: self)
+            tempNetworkService.baseURL = serverURL
+            tempNetworkService.accessToken = token
+            tempNetworkService.currentAuthType = authType
+            
+            // Fetch profile image using the specific user ID
+            let imageData = try await tempNetworkService.makeDataRequest(
+                endpoint: "/api/users/\(userId)/profile-image"
+            )
+            
+            return imageData
+        } catch {
+            print("UserManager: Failed to fetch profile image for user \(userId): \(error)")
+            return nil
+        }
+    }
     
     private func performLogin(serverURL: String, email: String, password: String) async throws -> AuthResponse {
         let loginURL = URL(string: "\(serverURL)/api/auth/login")!

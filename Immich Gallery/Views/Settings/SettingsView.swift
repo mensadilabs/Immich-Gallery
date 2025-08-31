@@ -89,7 +89,8 @@ struct SettingsView: View {
                             HStack {
                                 Image(systemName: authService.baseURL.lowercased().hasPrefix("https") ? "lock.fill" : "lock.open.fill")
                                     .foregroundColor(authService.baseURL.lowercased().hasPrefix("https") ? .green : .red)
-                                    .font(.headline)
+                                    .frame(width: 100, height: 100)
+                                    .clipShape(Circle())
                                     .padding()
                                 
                                 Text(authService.baseURL)
@@ -129,11 +130,13 @@ struct SettingsView: View {
                                             switchToUser(user)
                                         }) {
                                             HStack {
-                                                Image(systemName: user.authType == .apiKey ? "key.fill" : "person.fill")
-                                                    .foregroundColor(user.authType == .apiKey ? .orange : .blue)
-                                                    .font(.title3)
-                                                    .frame(width: 20, height: 20)
-                                                    .padding()
+                                                ProfileImageView(
+                                                    userId: user.id,
+                                                    authType: user.authType,
+                                                    size: 100,
+                                                    profileImageData: user.profileImageData
+                                                )
+                                                .padding()
                                                 
                                                 VStack(alignment: .leading, spacing: 4) {
                                                     HStack(spacing: 4) {
@@ -602,7 +605,7 @@ struct SettingsView: View {
         id: "3", 
         email: "service@automation.net", 
         name: "Service Account", 
-        serverURL: "https://immich.local:2283", 
+        serverURL: "https://immich.local:2283s",
         authType: .apiKey
     )
     
@@ -614,6 +617,7 @@ struct SettingsView: View {
     
     let networkService = NetworkService(userManager: userManager)
     let authService = AuthenticationService(networkService: networkService, userManager: userManager)
+    let assetService = AssetService(networkService: networkService)
     
     return SettingsView(authService: authService, userManager: userManager)
 }

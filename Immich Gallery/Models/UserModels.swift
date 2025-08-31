@@ -15,19 +15,21 @@ struct SavedUser: Codable, Identifiable {
     let serverURL: String
     let authType: AuthType
     let createdAt: Date
+    let profileImageData: Data?
     
     enum AuthType: String, Codable {
         case jwt = "jwt"
         case apiKey = "api_key"
     }
     
-    init(id: String, email: String, name: String, serverURL: String, authType: AuthType = .jwt) {
+    init(id: String, email: String, name: String, serverURL: String, authType: AuthType = .jwt, profileImageData: Data? = nil) {
         self.id = id
         self.email = email
         self.name = name
         self.serverURL = serverURL
         self.authType = authType
         self.createdAt = Date()
+        self.profileImageData = profileImageData
     }
     
     // Custom decoder for backward compatibility
@@ -44,6 +46,9 @@ struct SavedUser: Codable, Identifiable {
         
         // Default to current date if createdAt is missing (backward compatibility)
         createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt) ?? Date()
+        
+        // Default to nil if profileImageData is missing (backward compatibility)
+        profileImageData = try container.decodeIfPresent(Data.self, forKey: .profileImageData)
     }
 }
 
