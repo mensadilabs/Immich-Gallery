@@ -129,18 +129,21 @@ struct SettingsView: View {
                                             switchToUser(user)
                                         }) {
                                             HStack {
-                                                Image(systemName: user.authType == .apiKey ? "key.fill" : "person.circle")
+                                                Image(systemName: user.authType == .apiKey ? "key.fill" : "person.fill")
                                                     .foregroundColor(user.authType == .apiKey ? .orange : .blue)
                                                     .font(.title3)
+                                                    .frame(width: 20, height: 20)
+                                                    .padding()
                                                 
                                                 VStack(alignment: .leading, spacing: 4) {
-                                                    HStack(spacing: 8) {
+                                                    HStack(spacing: 4) {
                                                         Text(user.authType == .apiKey ? "API Key" : "Password")
                                                             .font(.caption2)
                                                             .fontWeight(.semibold)
                                                             .foregroundColor(.white)
                                                             .padding(.horizontal, 8)
                                                             .padding(.vertical, 3)
+                                                            .frame(minWidth: 70)
                                                             .background(user.authType == .apiKey ? Color.orange : Color.blue)
                                                             .cornerRadius(6)
                                                         
@@ -577,9 +580,42 @@ struct SettingsView: View {
 
 #Preview {
     let userManager = UserManager()
+    
+    // Create fake users for preview
+    let apiKeyUser = SavedUser(
+        id: "1", 
+        email: "admin@example.com", 
+        name: "Admin User", 
+        serverURL: "https://demo.immich.app", 
+        authType: .apiKey
+    )
+    
+    let passwordUser = SavedUser(
+        id: "2", 
+        email: "john.doe@company.com", 
+        name: "John Doe", 
+        serverURL: "https://photos.myserver.com", 
+        authType: .jwt
+    )
+    
+    let anotherApiKeyUser = SavedUser(
+        id: "3", 
+        email: "service@automation.net", 
+        name: "Service Account", 
+        serverURL: "https://immich.local:2283", 
+        authType: .apiKey
+    )
+    
+    // Set fake data after initialization
+    DispatchQueue.main.async {
+        userManager.savedUsers = [apiKeyUser, passwordUser, anotherApiKeyUser]
+        userManager.currentUser = passwordUser
+    }
+    
     let networkService = NetworkService(userManager: userManager)
     let authService = AuthenticationService(networkService: networkService, userManager: userManager)
-    SettingsView(authService: authService, userManager: userManager)
+    
+    return SettingsView(authService: authService, userManager: userManager)
 }
 
 
