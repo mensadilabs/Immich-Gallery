@@ -55,7 +55,7 @@ struct SettingsView: View {
     @State private var showingSignIn = false
     @State private var showingWhatsNew = false
     @AppStorage("hideImageOverlay") private var hideImageOverlay = true
-    @AppStorage("slideshowInterval") private var slideshowInterval: Double = 6.0
+    @State private var slideshowInterval: Double = UserDefaults.standard.object(forKey: "slideshowInterval") as? Double ?? 8.0
     @AppStorage("slideshowBackgroundColor") private var slideshowBackgroundColor = "white"
     @AppStorage("showTagsTab") private var showTagsTab = false
     @AppStorage("defaultStartupTab") private var defaultStartupTab = "photos"
@@ -346,6 +346,9 @@ struct SettingsView: View {
                                     isPlusFocused: $isPlusFocused,
                                     focusedColor: $focusedColor
                                 )
+                                .onChange(of: slideshowInterval) { _, newValue in
+                                    UserDefaults.standard.set(newValue, forKey: "slideshowInterval")
+                                }
                             })
                         }
                         

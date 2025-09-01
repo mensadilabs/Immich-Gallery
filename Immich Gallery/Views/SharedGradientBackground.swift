@@ -45,9 +45,17 @@ func getBackgroundColor(_ colorString: String) -> Color {
 
 // Custom button style to remove default tvOS focus ring
 struct CustomFocusButtonStyle: ButtonStyle {
+    @Environment(\.isFocused) var isFocused
+    
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? 0.95 : 1.0)
+            .scaleEffect(configuration.isPressed ? 0.95 : (isFocused ? 1.2 : 1.0))
+            .background(
+                Circle()
+                    .fill(isFocused ? Color.white.opacity(0.2) : Color.clear)
+                    .frame(width: 44, height: 44)
+            )
+            .animation(.easeInOut(duration: 0.2), value: isFocused)
             .animation(.easeInOut(duration: 0.1), value: configuration.isPressed)
     }
 }

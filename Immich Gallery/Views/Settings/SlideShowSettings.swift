@@ -35,7 +35,9 @@ struct SlideshowSettings: View {
                 content: AnyView(
                     HStack(spacing: 40) {
                         Button(action: {
-                            if slideshowInterval > 2 {
+                            print("clicked -")
+                            print(slideshowInterval)
+                            if slideshowInterval > 8 {
                                 slideshowInterval -= 1
                             }
                         }) {
@@ -44,7 +46,6 @@ struct SlideshowSettings: View {
                                 .font(.title2)
                         }
                         .buttonStyle(CustomFocusButtonStyle())
-                        .disabled(slideshowInterval <= 6)
                         .focused($isMinusFocused)
                         
                         Text("\(Int(slideshowInterval))s")
@@ -52,8 +53,11 @@ struct SlideshowSettings: View {
                             .fontWeight(.semibold)
                             .foregroundColor(.primary)
                             .frame(minWidth: 50)
+                            .id("slideshow-interval-\(Int(slideshowInterval))")
                         
                         Button(action: {
+                            print("clicked +")
+                            print(slideshowInterval)
                             if slideshowInterval < 15 {
                                 slideshowInterval += 1
                             }
@@ -63,7 +67,6 @@ struct SlideshowSettings: View {
                                 .font(.title2)
                         }
                         .buttonStyle(CustomFocusButtonStyle())
-                        .disabled(slideshowInterval >= 15)
                         .focused($isPlusFocused)
                     }
                 )
@@ -225,7 +228,7 @@ struct SlideshowSettings: View {
 
 
 #Preview {
-    @State var slideshowInterval: Double = 6.0
+    @State var slideshowInterval: Double = 8.0
     @State var slideshowBackgroundColor = "white"
     @State var use24HourClock = true
     @State var hideOverlay = true
