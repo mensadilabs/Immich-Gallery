@@ -113,7 +113,8 @@ struct AssetThumbnailView: View {
 }
 
 #Preview {
-    let networkService = NetworkService()
+    let userManager = UserManager()
+    let networkService = NetworkService(userManager: userManager)
     let assetService = AssetService(networkService: networkService)
     
     // Create a mock asset for preview

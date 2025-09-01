@@ -188,7 +188,7 @@ struct LockScreenStyleOverlay: View {
 
 
 #Preview {
-    let (_, _, assetService, _, _, _) = MockServiceFactory.createMockServices()
+    let (_, _, _, assetService, _, _, _) = MockServiceFactory.createMockServices()
     
     // Create mock assets for preview
     let mockAssets = [
@@ -223,5 +223,5 @@ struct LockScreenStyleOverlay: View {
         )
     ]
     
-    SlideshowView(assets: mockAssets, assetService: assetService, startingIndex: 0)
+    SlideshowView(albumId: nil, personId: nil, tagId: nil, startingIndex: 0)
 }

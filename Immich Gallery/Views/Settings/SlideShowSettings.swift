@@ -2,7 +2,7 @@
 //  SlideShowSettings.swift
 //  Immich Gallery
 //
-//  Created by Sanket Kumar on 2025-07-28.
+//  Created by mensadi labs on 2025-07-28.
 //
 
 import Foundation
@@ -35,7 +35,9 @@ struct SlideshowSettings: View {
                 content: AnyView(
                     HStack(spacing: 40) {
                         Button(action: {
-                            if slideshowInterval > 2 {
+                            print("clicked -")
+                            print(slideshowInterval)
+                            if slideshowInterval > 8 {
                                 slideshowInterval -= 1
                             }
                         }) {
@@ -44,7 +46,6 @@ struct SlideshowSettings: View {
                                 .font(.title2)
                         }
                         .buttonStyle(CustomFocusButtonStyle())
-                        .disabled(slideshowInterval <= 6)
                         .focused($isMinusFocused)
                         
                         Text("\(Int(slideshowInterval))s")
@@ -52,8 +53,11 @@ struct SlideshowSettings: View {
                             .fontWeight(.semibold)
                             .foregroundColor(.primary)
                             .frame(minWidth: 50)
+                            .id("slideshow-interval-\(Int(slideshowInterval))")
                         
                         Button(action: {
+                            print("clicked +")
+                            print(slideshowInterval)
                             if slideshowInterval < 15 {
                                 slideshowInterval += 1
                             }
@@ -63,7 +67,6 @@ struct SlideshowSettings: View {
                                 .font(.title2)
                         }
                         .buttonStyle(CustomFocusButtonStyle())
-                        .disabled(slideshowInterval >= 15)
                         .focused($isPlusFocused)
                     }
                 )
@@ -130,7 +133,7 @@ struct SlideshowSettings: View {
             SettingsRow(
                 icon: "shuffle",
                 title: "Shuffle Images (beta)",
-                subtitle: "Randomly shuffle image order during slideshow",
+                subtitle: "Randomly shuffle image order during slideshow (This uses `/search/random` endpoint. Does not work when viewing an album that is shared-in. To my knowledge, this is a limitation of Immich random endpoint. If you disagree, open a GH issue with details.) ",
                 content: AnyView(
                     Picker("Shuffle Images", selection: $enableShuffle) {
                         Text("Off").tag(false)
@@ -193,10 +196,10 @@ struct SlideshowSettings: View {
                      )) {
                          Text("None").tag("none")
                          Text("Reflections").tag("reflections")
-                         Text("Ken Burns").tag("kenBurns")
+                         Text("Pan and Zoom").tag("kenBurns")
                      }
                      .pickerStyle(.menu)
-                     .frame(width: 300, alignment: .trailing)
+                     .frame(width: 400, alignment: .trailing)
                  )
              )
         }
@@ -225,7 +228,7 @@ struct SlideshowSettings: View {
 
 
 #Preview {
-    @State var slideshowInterval: Double = 6.0
+    @State var slideshowInterval: Double = 8.0
     @State var slideshowBackgroundColor = "white"
     @State var use24HourClock = true
     @State var hideOverlay = true

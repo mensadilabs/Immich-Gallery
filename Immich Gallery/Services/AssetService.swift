@@ -71,4 +71,35 @@ class AssetService: ObservableObject {
         // Optionally: check HEAD request for video availability
         return url
     }
+    
+    func fetchRandomAssets(albumIds: [String]? = nil, personIds: [String]? = nil, tagIds: [String]? = nil, limit: Int = 50) async throws -> SearchResult {
+        var searchRequest: [String: Any] = [
+            "size": limit,
+            "withPeople": true,
+            "withExif": true,
+        ]
+        
+        if let albumIds = albumIds {
+            searchRequest["albumIds"] = albumIds
+        }
+        if let personIds = personIds {
+            searchRequest["personIds"] = personIds
+        }
+        if let tagIds = tagIds {
+            searchRequest["tagIds"] = tagIds
+        }
+        
+        let assets: [ImmichAsset] = try await networkService.makeRequest(
+            endpoint: "/api/search/random",
+            method: .POST,
+            body: searchRequest,
+            responseType: [ImmichAsset].self
+        )
+        
+        return SearchResult(
+            assets: assets,
+            total: assets.count,
+            nextPage: nil // Random endpoint doesn't have pagination
+        )
+    }
 } 

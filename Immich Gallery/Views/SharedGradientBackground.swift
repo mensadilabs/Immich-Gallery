@@ -12,8 +12,8 @@ struct SharedGradientBackground: View {
     var body: some View {
         LinearGradient(
             gradient: Gradient(colors: [
-                Color(red: 15/255, green: 32/255, blue: 39/255),
-                Color(red: 32/255, green: 58/255, blue: 67/255),
+                Color(red: 44/255, green: 83/255, blue: 100/255),
+                Color(red: 44/255, green: 83/255, blue: 100/255),
                 Color(red: 44/255, green: 83/255, blue: 100/255)
             ]),
             startPoint: .topLeading,
@@ -45,9 +45,17 @@ func getBackgroundColor(_ colorString: String) -> Color {
 
 // Custom button style to remove default tvOS focus ring
 struct CustomFocusButtonStyle: ButtonStyle {
+    @Environment(\.isFocused) var isFocused
+    
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? 0.95 : 1.0)
+            .scaleEffect(configuration.isPressed ? 0.95 : (isFocused ? 1.2 : 1.0))
+            .background(
+                Circle()
+                    .fill(isFocused ? Color.white.opacity(0.2) : Color.clear)
+                    .frame(width: 44, height: 44)
+            )
+            .animation(.easeInOut(duration: 0.2), value: isFocused)
             .animation(.easeInOut(duration: 0.1), value: configuration.isPressed)
     }
 }
@@ -65,9 +73,9 @@ struct SharedOpaqueBackground: View {
     var body: some View {
         LinearGradient(
             gradient: Gradient(colors: [
-                Color(red: 0.1, green: 0.1, blue: 0.2),
-                Color(red: 0.15, green: 0.1, blue: 0.25),
-                Color(red: 0.2, green: 0.15, blue: 0.3)
+                Color(red: 44/255, green: 83/255, blue: 100/255),
+                Color(red: 44/255, green: 83/255, blue: 100/255),
+                Color(red: 44/255, green: 83/255, blue: 100/255)
             ]),
             startPoint: .topLeading,
             endPoint: .bottomTrailing

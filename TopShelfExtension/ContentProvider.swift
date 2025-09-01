@@ -11,6 +11,7 @@ import Foundation
 class ContentProvider: TVTopShelfContentProvider {
     
     let TOTAL_ITEMS_COUNT = 10
+    private let storage = HybridUserStorage()
            
     override func loadTopShelfContent() async -> (any TVTopShelfContent)? {
         print("TopShelf: loadTopShelfContent() called")
@@ -209,25 +210,24 @@ class ContentProvider: TVTopShelfContentProvider {
     private func fetchPhotos() async throws -> [SimpleAsset] {
         print("TopShelf: Starting to fetch first \(TOTAL_ITEMS_COUNT) photos")
         
-        let serverURL = sharedDefaults.string(forKey: UserDefaultsKeys.serverURL)
-        let accessToken = sharedDefaults.string(forKey: UserDefaultsKeys.accessToken)
+        let (serverURL, accessToken, authType) = getCurrentUserCredentials()
         let isTopShelfEnabledFromDefaults = sharedDefaults.bool(forKey: UserDefaultsKeys.enableTopShelf)
         
         print("top shelf \(isTopShelfEnabledFromDefaults)")
         
-        print("TopShelf: Credentials check - serverURL: \(serverURL), accessToken: \(accessToken != nil ? "✓" : "✗")")
+        print("TopShelf: Credentials check - serverURL: \(serverURL), accessToken: \(accessToken != nil ? "✓" : "✗"), authType: \(authType?.rawValue ?? "nil")")
         if let url = serverURL { print("TopShelf: Server URL: \(url)") }
         if let token = accessToken { 
             print("TopShelf: Access token: \(String(token.prefix(20)))... (length: \(token.count))")
         }
         
-        guard let serverURL = serverURL, let accessToken = accessToken else {
+        guard let serverURL = serverURL, let accessToken = accessToken, let authType = authType else {
             print("TopShelf: Missing credentials!")
             throw TopShelfError.missingCredentials
         }
         
         // Test token validity first
-        try await testTokenValidity(serverURL: serverURL, accessToken: accessToken)
+        try await testTokenValidity(serverURL: serverURL, accessToken: accessToken, authType: authType)
         
         let urlString = "\(serverURL)/api/search/metadata"
         print("TopShelf: Making request to: \(urlString)")
@@ -247,7 +247,14 @@ class ContentProvider: TVTopShelfContentProvider {
         
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        
+        // Set authentication header based on auth type
+        if authType == .apiKey {
+            request.setValue(accessToken, forHTTPHeaderField: "x-api-key")
+        } else {
+            request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        }
+        
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONSerialization.data(withJSONObject: searchRequest)
         
@@ -279,8 +286,9 @@ class ContentProvider: TVTopShelfContentProvider {
 
     private func downloadImageWithoutCaching(for asset: SimpleAsset) async -> URL? {
         print("TopShelf: Starting image download (no caching) for asset: \(asset.id)")
-        guard let serverURL = sharedDefaults.string(forKey: UserDefaultsKeys.serverURL),
-              let accessToken = sharedDefaults.string(forKey: UserDefaultsKeys.accessToken) else {
+        let (serverURL, accessToken, authType) = getCurrentUserCredentials()
+        
+        guard let serverURL = serverURL, let accessToken = accessToken, let authType = authType else {
             print("TopShelf: Missing credentials for image download")
             return nil
         }
@@ -312,7 +320,13 @@ class ContentProvider: TVTopShelfContentProvider {
         }
         
         var request = URLRequest(url: url)
-        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        
+        // Set authentication header based on auth type
+        if authType == .apiKey {
+            request.setValue(accessToken, forHTTPHeaderField: "x-api-key")
+        } else {
+            request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        }
         
         do {
             print("TopShelf: Starting image download request...")
@@ -345,7 +359,7 @@ class ContentProvider: TVTopShelfContentProvider {
         }
     }
     
-    private func testTokenValidity(serverURL: String, accessToken: String) async throws {
+    private func testTokenValidity(serverURL: String, accessToken: String, authType: SavedUser.AuthType = .jwt) async throws {
         print("TopShelf: Testing token validity...")
         let testURL = "\(serverURL)/api/users/me"
         guard let url = URL(string: testURL) else {
@@ -354,7 +368,13 @@ class ContentProvider: TVTopShelfContentProvider {
         }
         
         var request = URLRequest(url: url)
-        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        
+        // Set authentication header based on auth type
+        if authType == .apiKey {
+            request.setValue(accessToken, forHTTPHeaderField: "x-api-key")
+        } else {
+            request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        }
         
         let (data, response) = try await URLSession.shared.data(for: request)
         
@@ -376,6 +396,36 @@ class ContentProvider: TVTopShelfContentProvider {
         } else {
             print("TopShelf: Unexpected token test response: \(httpResponse.statusCode)")
         }
+    }
+    
+    // MARK: - Current User Credential Access
+    
+    private func getCurrentUserCredentials() -> (serverURL: String?, accessToken: String?, authType: SavedUser.AuthType?) {
+        // Debug: Show what's in shared defaults
+        
+        // Get current user ID
+        guard let currentUserId = sharedDefaults.string(forKey: "currentActiveUserId") else {
+            print("TopShelf: No current user ID found")
+            return (nil, nil, nil)
+        }
+        
+        print("TopShelf: Found current user ID: \(currentUserId)")
+        
+        // Load user data
+        guard let userData = sharedDefaults.data(forKey: "\(UserDefaultsKeys.userPrefix)\(currentUserId)"),
+              let user = try? JSONDecoder().decode(SavedUser.self, from: userData) else {
+            print("TopShelf: Failed to load user data for ID: \(currentUserId)")
+            return (nil, nil, nil)
+        }
+        
+        // Load token from keychain via HybridUserStorage
+        guard let token = storage.getToken(forUserId: currentUserId) else {
+            print("TopShelf: Failed to load token from keychain for user ID: \(currentUserId)")
+            return (nil, nil, nil)
+        }
+        
+        print("TopShelf: Loaded current user credentials - \(user.email) on \(user.serverURL) with \(user.authType)")
+        return (user.serverURL, token, user.authType)
     }
 }
 

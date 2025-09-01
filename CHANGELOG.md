@@ -1,6 +1,30 @@
+# VERSION|1.1.0
+
+NEW_FEATURE| Sign In With API key
+- All of the SSO users can now use API keys to sign in. Not sure what will break if the API does not have needed scopes. Eventually maybe I'll list them out but for now, take a guess based on the available features.
+
+IMPROVEMENT| Cleanups
+- Bug fixes and performance improvements.
+- Album view now shows "shared by you" for the albums shared by you.
+
+# VERSION|1.0.14
+
+IMPROVEMENT| Slideshow optimizations
+  - Rewrite SlideshowView for loading assets dynamically
+  - Fix shared albums are duplicated
+  - Fix slideshow does not work for shared-in albums
+  - Bug fixes and performance improvements
+
+# VERSION|1.0.12
+
+BUGFIX| Fix more bugs
+  - Make slideshow truly random, just like life. Outsourced this to the server. - #43 
+  - Fix inactivity timer - Browse fast or the automatic slideshow will catch up to you - #43 
+  - Remove date of birth from people tab - WAF+10 - #44
+
 # VERSION|1.0.11
 
-BUFFIX| Fix bugs
+BUGFIX| Fix bugs
   - Top shef portraits no longer do unexpected headstands or cartwheels. I Hope. 
   - Hopefully it also won't crash. But you may see reduced image quality in top shelf. 
   - Better error handling.

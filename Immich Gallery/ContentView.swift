@@ -47,7 +47,8 @@ struct ContentView: View {
     @AppStorage(UserDefaultsKeys.autoSlideshowTimeout) private var autoSlideshowTimeout: Int = 0
     @State private var inactivityTimer: Timer? = nil
     @State private var lastInteractionDate = Date()
-    @StateObject private var networkService = NetworkService()
+    @StateObject private var userManager = UserManager()
+    @StateObject private var networkService: NetworkService
     @StateObject private var authService: AuthenticationService
     @StateObject private var assetService: AssetService
     @StateObject private var albumService: AlbumService
@@ -64,9 +65,11 @@ struct ContentView: View {
     @State private var deepLinkAssetId: String?
     
     init() {
-        let networkService = NetworkService()
+        let userManager = UserManager()
+        let networkService = NetworkService(userManager: userManager)
+        _userManager = StateObject(wrappedValue: userManager)
         _networkService = StateObject(wrappedValue: networkService)
-        _authService = StateObject(wrappedValue: AuthenticationService(networkService: networkService))
+        _authService = StateObject(wrappedValue: AuthenticationService(networkService: networkService, userManager: userManager))
         _assetService = StateObject(wrappedValue: AssetService(networkService: networkService))
         _albumService = StateObject(wrappedValue: AlbumService(networkService: networkService))
         _peopleService = StateObject(wrappedValue: PeopleService(networkService: networkService))
@@ -75,24 +78,34 @@ struct ContentView: View {
     }
     
     var body: some View {
-    NavigationView {
+        NavigationView {
             ZStack {
                 if !authService.isAuthenticated {
                     // Show sign-in view
-                    SignInView(authService: authService, mode: .signIn)
+                    SignInView(authService: authService, userManager: userManager, mode: .signIn)
                         .errorBoundary(context: "Authentication")
                 } else {
                     // Main app interface
                     TabView(selection: $selectedTab) {
-                        AssetGridView(assetService: assetService, authService: authService, albumId: nil, personId: nil, tagId: nil, isAllPhotos: true, onAssetsLoaded: nil, deepLinkAssetId: deepLinkAssetId)
-                            .errorBoundary(context: "Photos Tab")
-                            .tabItem {
-                                Image(systemName: TabName.photos.iconName)
-                                Text(TabName.photos.title)
-                            }
-                            .tag(TabName.photos.rawValue)
+                        AssetGridView(
+                            assetService: assetService, 
+                            authService: authService, 
+                            assetProvider: AssetProviderFactory.createProvider(
+                                isAllPhotos: true,
+                                assetService: assetService
+                            ),
+                            albumId: nil, personId: nil, tagId: nil, isAllPhotos: true, 
+                            onAssetsLoaded: nil, 
+                            deepLinkAssetId: deepLinkAssetId
+                        )
+                        .errorBoundary(context: "Photos Tab")
+                        .tabItem {
+                            Image(systemName: TabName.photos.iconName)
+                            Text(TabName.photos.title)
+                        }
+                        .tag(TabName.photos.rawValue)
                         
-                        AlbumListView(albumService: albumService, authService: authService, assetService: assetService)
+                        AlbumListView(albumService: albumService, authService: authService, assetService: assetService, userManager: userManager)
                             .errorBoundary(context: "Albums Tab")
                             .tabItem {
                                 Image(systemName: TabName.albums.iconName)
@@ -126,7 +139,7 @@ struct ContentView: View {
                             }
                             .tag(TabName.search.rawValue)
                         
-                        SettingsView(authService: authService)
+                        SettingsView(authService: authService, userManager: userManager)
                             .errorBoundary(context: "Settings Tab")
                             .tabItem {
                                 Image(systemName: TabName.settings.iconName)
@@ -176,12 +189,21 @@ struct ContentView: View {
         .simultaneousGesture(
             TapGesture().onEnded { resetInactivityTimer() }
         )
-       .sheet(isPresented: $showWhatsNew) {
-           WhatsNewView(onDismiss: {
-               showWhatsNew = false
-               lastSeenVersion = getCurrentAppVersion()
-           })
-       }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("stopAutoSlideshowTimer"))) { _ in
+            print("ContentView: Stopping auto-slideshow timer")
+            inactivityTimer?.invalidate()
+            inactivityTimer = nil
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("restartAutoSlideshowTimer"))) { _ in
+            print("ContentView: Restarting auto-slideshow timer")
+            resetInactivityTimer()
+        }
+        .sheet(isPresented: $showWhatsNew) {
+            WhatsNewView(onDismiss: {
+                showWhatsNew = false
+                lastSeenVersion = getCurrentAppVersion()
+            })
+        }
     }
     
     // MARK: - Inactivity Timer Logic
@@ -189,22 +211,32 @@ struct ContentView: View {
         inactivityTimer?.invalidate()
         inactivityTimer = nil
         if autoSlideshowTimeout > 0 {
+            print("ContentView: Starting inactivity timer with timeout: \(autoSlideshowTimeout) minutes")
             inactivityTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
                 let elapsed = Date().timeIntervalSince(lastInteractionDate)
                 if elapsed > Double(autoSlideshowTimeout * 60) {
+                    print("ContentView: Auto-slideshow timeout reached! Elapsed: \(elapsed) seconds")
                     inactivityTimer?.invalidate()
                     inactivityTimer = nil
-                    // Post notification to start auto slideshow
-                    NotificationCenter.default.post(name: NSNotification.Name(NotificationNames.startAutoSlideshow), object: nil)
+                    // Switch to Photos tab and start auto slideshow
+                    selectedTab = TabName.photos.rawValue
+                    // Wait 5 seconds for tab switch to complete, then start slideshow
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
+                        NotificationCenter.default.post(name: NSNotification.Name(NotificationNames.startAutoSlideshow), object: nil)
+                    }
                 }
             }
+        } else {
+            print("ContentView: Auto-slideshow disabled (timeout = 0)")
         }
     }
-
+    
     private func resetInactivityTimer() {
+        print("ContentView: Resetting inactivity timer")
         lastInteractionDate = Date()
+        startInactivityTimer() // Restart the timer
     }
-
+    
     private func setDefaultTab() {
         switch defaultStartupTab {
         case "albums":

@@ -11,12 +11,18 @@ struct AlbumListView: View {
     @ObservedObject var albumService: AlbumService
     @ObservedObject var authService: AuthenticationService
     @ObservedObject var assetService: AssetService
+    @ObservedObject var userManager: UserManager
     @State private var albums: [ImmichAlbum] = []
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var selectedAlbum: ImmichAlbum?
     @State private var showingAlbumDetail = false
     @FocusState private var focusedAlbumId: String?
+    
+    // Global animation control
+    @State private var globalAnimationTimer: Timer?
+    @State private var animationTrigger: Int = 0
+    @AppStorage("enableThumbnailAnimation") private var enableThumbnailAnimation = true
     
     private let columns = [
         GridItem(.fixed(500), spacing: 20),
@@ -73,7 +79,9 @@ struct AlbumListView: View {
                                     album: album,
                                     albumService: albumService,
                                     assetService: assetService,
-                                    isFocused: focusedAlbumId == album.id
+                                    userManager: userManager,
+                                    isFocused: focusedAlbumId == album.id,
+                                    animationTrigger: animationTrigger
                                 )
                             }
                             .frame(width: 490, height: 400)
@@ -95,7 +103,25 @@ struct AlbumListView: View {
             if albums.isEmpty {
                 loadAlbums()
             }
+            startGlobalAnimation()
         }
+        .onDisappear {
+            stopGlobalAnimation()
+        }
+    }
+    
+    private func startGlobalAnimation() {
+        guard enableThumbnailAnimation else { return }
+        stopGlobalAnimation()
+        
+        globalAnimationTimer = Timer.scheduledTimer(withTimeInterval: 4.0, repeats: true) { _ in
+            animationTrigger += 1
+        }
+    }
+    
+    private func stopGlobalAnimation() {
+        globalAnimationTimer?.invalidate()
+        globalAnimationTimer = nil
     }
     
     private func loadAlbums() {
@@ -128,14 +154,20 @@ struct AlbumRowView: View {
     let album: ImmichAlbum
     @ObservedObject var albumService: AlbumService
     @ObservedObject var assetService: AssetService
+    @ObservedObject var userManager: UserManager
     @ObservedObject private var thumbnailCache = ThumbnailCache.shared
     @State private var thumbnailImage: UIImage?
     @State private var thumbnails: [UIImage] = []
     @State private var currentThumbnailIndex = 0
-    @State private var animationTimer: Timer?
     @State private var isLoadingThumbnails = false
     @State private var enableThumbnailAnimation: Bool = UserDefaults.standard.enableThumbnailAnimation
     let isFocused: Bool
+    let animationTrigger: Int
+    
+    private func sharingText(for album: ImmichAlbum) -> String {
+        let isCurrentUser = album.owner.email == userManager.currentUser?.email
+        return isCurrentUser ? "shared by you" : "\(album.owner.name)"
+    }
     
     var body: some View {
         VStack(spacing: 0) {
@@ -199,7 +231,8 @@ struct AlbumRowView: View {
                                                     Image(systemName: "person.2.fill")
                                                         .font(.caption)
                                                         .foregroundColor(.blue)
-                                                    Text(album.owner.name)
+                                                    
+                                                    Text(sharingText(for: album))
                                                         .font(.caption)
                                                         .foregroundColor(.blue)
                                                 }
@@ -236,26 +269,16 @@ struct AlbumRowView: View {
             loadThumbnail()
             loadAlbumThumbnails()
         }
-        .onDisappear {
-            stopAnimation()
-        }
-        .onChange(of: isFocused) { _, focused in
-            if focused {
-                stopAnimation()
-            } else if !thumbnails.isEmpty && thumbnails.count > 1 && enableThumbnailAnimation {
-                startAnimation()
+        .onChange(of: animationTrigger) { _, _ in
+            // Only animate if conditions are met
+            if enableThumbnailAnimation && !isFocused && thumbnails.count > 1 {
+                withAnimation(.easeInOut(duration: 1.5)) {
+                    currentThumbnailIndex = (currentThumbnailIndex + 1) % thumbnails.count
+                }
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
-            let newSetting = UserDefaults.standard.enableThumbnailAnimation
-            if newSetting != enableThumbnailAnimation {
-                enableThumbnailAnimation = newSetting
-                if enableThumbnailAnimation && !thumbnails.isEmpty && thumbnails.count > 1 && !isFocused {
-                    startAnimation()
-                } else {
-                    stopAnimation()
-                }
-            }
+            enableThumbnailAnimation = UserDefaults.standard.enableThumbnailAnimation
         }
     }
     
@@ -304,7 +327,8 @@ struct AlbumRowView: View {
         
         Task {
             do {
-                let searchResult = try await assetService.fetchAssets(page: 1, limit: 10, albumId: album.id)
+                let albumProvider = AlbumAssetProvider(albumService: albumService, assetService: assetService, albumId: album.id)
+                let searchResult = try await albumProvider.fetchAssets(page: 1, limit: 10)
                 let imageAssets = searchResult.assets.filter { $0.type == .image }
                 
                 var loadedThumbnails: [UIImage] = []
@@ -325,9 +349,7 @@ struct AlbumRowView: View {
                 await MainActor.run {
                     self.thumbnails = loadedThumbnails
                     self.isLoadingThumbnails = false
-                    if !loadedThumbnails.isEmpty && enableThumbnailAnimation {
-                        self.startAnimation()
-                    }
+                    // Thumbnails loaded - animation will be handled by global trigger
                 }
             } catch {
                 print("Failed to fetch assets for album \(album.id): \(error)")
@@ -338,21 +360,6 @@ struct AlbumRowView: View {
         }
     }
     
-    private func startAnimation() {
-        guard thumbnails.count > 1 && enableThumbnailAnimation else { return }
-        stopAnimation()
-        
-        animationTimer = Timer.scheduledTimer(withTimeInterval: 4.0, repeats: true) { _ in
-            withAnimation(.easeInOut(duration: 1.5)) {
-                currentThumbnailIndex = (currentThumbnailIndex + 1) % thumbnails.count
-            }
-        }
-    }
-    
-    private func stopAnimation() {
-        animationTimer?.invalidate()
-        animationTimer = nil
-    }
 }
 
 struct AlbumDetailView: View {
@@ -373,6 +380,11 @@ struct AlbumDetailView: View {
                 AssetGridView(
                     assetService: assetService,
                     authService: authService,
+                    assetProvider: AssetProviderFactory.createProvider(
+                        albumId: album.id,
+                        assetService: assetService,
+                        albumService: albumService
+                    ),
                     albumId: album.id,
                     personId: nil,
                     tagId: nil,
@@ -402,23 +414,19 @@ struct AlbumDetailView: View {
             }
         }
         .fullScreenCover(isPresented: $showingSlideshow) {
-            let imageAssets = albumAssets.filter { $0.type == .image }
-            if !imageAssets.isEmpty {
-                SlideshowView(assets: imageAssets, assetService: assetService, startingIndex: 0)
-            }
+            SlideshowView(albumId: album.id, personId: nil, tagId: nil, startingIndex: 0)
         }
     }
     
     private func startSlideshow() {
-        let imageAssets = albumAssets.filter { $0.type == .image }
-        if !imageAssets.isEmpty {
-            showingSlideshow = true
-        }
+        // Stop auto-slideshow timer before starting slideshow
+        NotificationCenter.default.post(name: NSNotification.Name("stopAutoSlideshowTimer"), object: nil)
+        showingSlideshow = true
     }
 }
 
 #Preview {
-    let (_, authService, assetService, albumService, peopleService, _) =
+    let (_, userManager, authService, assetService, albumService, peopleService, _) =
          MockServiceFactory.createMockServices()
-    AlbumListView(albumService: albumService, authService: authService, assetService: assetService)
+    AlbumListView(albumService: albumService, authService: authService, assetService: assetService, userManager: userManager)
 }

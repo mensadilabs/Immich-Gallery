@@ -2,7 +2,7 @@
 //  UserDefaults.swift
 //  Immich Gallery
 //
-//  Created by Sanket Kumar on 2025-07-28.
+//  Created by mensadi labs on 2025-07-28.
 //
 
 import Foundation
