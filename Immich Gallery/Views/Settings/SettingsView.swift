@@ -15,11 +15,21 @@ struct SettingsRow: View {
     let title: String
     let subtitle: String
     let content: AnyView
+    let isOn: Bool
+    
+    init(icon: String, title: String, subtitle: String, content: AnyView, isOn: Bool = false) {
+            self.icon = icon
+            self.title = title
+            self.subtitle = subtitle
+            self.content = content
+            self.isOn = isOn
+        }
+
     
     var body: some View {
         HStack {
             Image(systemName: icon)
-                .foregroundColor(.blue)
+                .foregroundColor(isOn ? .green : .blue)
                 .font(.title3)
                 .frame(width: 24)
                 .padding()
@@ -38,7 +48,7 @@ struct SettingsRow: View {
             content
         }
         .padding(16)
-        .background(Color.gray.opacity(0.05))
+        .background(isOn ? Color.green.opacity(0.05): Color.gray.opacity(0.05))
         .cornerRadius(12)
     }
 }
@@ -66,235 +76,252 @@ struct SettingsView: View {
     @AppStorage("enableThumbnailAnimation") private var enableThumbnailAnimation = false
     @AppStorage("enableSlideshowShuffle") private var enableSlideshowShuffle = false
     @AppStorage("allPhotosSortOrder") private var allPhotosSortOrder = "desc"
-    @AppStorage("enableTopShelf", store: UserDefaults(suiteName: AppConstants.appGroupIdentifier)) private var enableTopShelf = false
+    @AppStorage("enableTopShelf", store: UserDefaults(suiteName: AppConstants.appGroupIdentifier)) private var enableTopShelf = true
     @AppStorage("topShelfStyle", store: UserDefaults(suiteName: AppConstants.appGroupIdentifier)) private var topShelfStyle = "carousel"
     @AppStorage(UserDefaultsKeys.autoSlideshowTimeout) private var autoSlideshowTimeout: Int = 0 // 0 = off
     @FocusState private var isMinusFocused: Bool
     @FocusState private var isPlusFocused: Bool
     @FocusState private var focusedColor: String?
     
+    
+    private var serverInfoSection: some View {
+        Button(action: {
+            refreshServerConnection()
+        }) {
+            HStack(spacing: 16) {
+                ZStack {
+                    Circle()
+                        .fill(Color.gray.opacity(0.1))
+                        .frame(width: 100, height: 100)
+                    
+                    Image(systemName: authService.baseURL.lowercased().hasPrefix("https") ? "lock.fill" : "lock.open.fill")
+                        .foregroundColor(authService.baseURL.lowercased().hasPrefix("https") ? .green : .red)
+                        .font(.system(size: 100 * 0.4))
+                }
+                .padding(.trailing, 10)
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(authService.baseURL)
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                }
+                
+                Spacer()
+                
+                HStack(spacing: 8) {
+                    Image(systemName: "arrow.clockwise")
+                        .foregroundColor(.blue)
+                        .font(.title3)
+                    Text("Refresh")
+                        .font(.caption)
+                        .foregroundColor(.blue)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(Color.blue.opacity(0.1))
+                .cornerRadius(8)
+                
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundColor(.green)
+                    .font(.title3)
+            }
+            .padding()
+            .background(Color.green.opacity(0.05))
+            .cornerRadius(12)
+        }
+        .buttonStyle(CardButtonStyle())
+    }
+    
+    private var userActionsSection: some View {
+        VStack(spacing: 16) {
+            if userManager.savedUsers.count > 0 {
+                ForEach(userManager.savedUsers, id: \.id) { user in
+                    userRow(user: user)
+                }
+            }
+            
+            Button(action: {
+                showingSignIn = true
+            }) {
+                HStack(spacing: 8) {
+                    Image(systemName: "person.badge.plus")
+                        .font(.title2)
+                        .foregroundColor(.blue)
+                    Text("Add User")
+                        .font(.caption)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(16)
+                .background(Color.blue.opacity(0.1))
+                .cornerRadius(12)
+            }
+            .buttonStyle(CardButtonStyle())
+        }
+    }
+    
+    private func userRow(user: SavedUser) -> some View {
+        HStack {
+            Button(action: {
+                switchToUser(user)
+            }) {
+                HStack {
+                    HStack(spacing: 16) {
+                        ProfileImageView(
+                            userId: user.id,
+                            authType: user.authType,
+                            size: 100,
+                            profileImageData: user.profileImageData
+                        )
+                        
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack(spacing: 4) {
+                                Badge(
+                                    user.authType == .apiKey ? "API Key" : "Password",
+                                    color: user.authType == .apiKey ? Color.orange : Color.blue
+                                )
+                                
+                                Text(user.name)
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.primary)
+                            }
+                            
+                            Text(user.email)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            
+                            Text(user.serverURL)
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                                .lineLimit(1)
+                        }
+                    }
+                    
+                    Spacer()
+                    
+                    if userManager.currentUser?.id == user.id {
+                        Badge("Active", color: Color.green)
+                    } else {
+                        Image(systemName: "arrow.right.circle")
+                            .foregroundColor(user.authType == .apiKey ? .orange : .blue)
+                            .font(.title3)
+                    }
+                }
+                .padding()
+                .background {
+                    let accentColor = user.authType == .apiKey ? Color.orange : Color.blue
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(accentColor.opacity(0.05))
+                }
+            }
+            .buttonStyle(CardButtonStyle())
+            
+            Button(action: {
+                userToDelete = user
+                showingDeleteUserAlert = true
+            }) {
+                Image(systemName: "trash")
+                    .foregroundColor(.red)
+                    .font(.title3)
+                    .padding(8)
+                    .background(Color.red.opacity(0.1))
+                    .cornerRadius(8)
+            }
+            .buttonStyle(CardButtonStyle())
+        }
+    }
+    
+    private var footerSection: some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 4) {
+                Text("Powered by")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                
+                Text("Maple Syrup")
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundColor(.primary)
+                
+                Text("🍁")
+                    .font(.caption)
+            }
+        }
+        .padding(.vertical, 20)
+    }
+    
     var body: some View {
         NavigationView {
             ZStack {
                 SharedGradientBackground()
-                .ignoresSafeArea()
+                    .ignoresSafeArea()
                 
                 ScrollView {
                     LazyVStack(spacing: 30) {
                         
-                        // Server Info Section
-                        Button(action: {
-                            refreshServerConnection()
-                        }) {
-                            HStack(spacing: 16) {
-                                ZStack {
-                                    Circle()
-                                        .fill(Color.gray.opacity(0.1)) // consistent background
-                                        .frame(width: 100, height: 100)
-                                        
-
-                                    Image(systemName: authService.baseURL.lowercased().hasPrefix("https") ? "lock.fill" : "lock.open.fill")
-                                        .foregroundColor(authService.baseURL.lowercased().hasPrefix("https") ? .green : .red)
-                                        .font(.system(size: 100 * 0.4)) // scale relative to size
-                                }
-                                .padding(.trailing, 10)
-
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(authService.baseURL)
-                                        .font(.headline)
-                                        .foregroundColor(.primary)
-                                }
-
-                                Spacer()
-
-                                HStack(spacing: 8) {
-                                    Image(systemName: "arrow.clockwise")
-                                        .foregroundColor(.blue)
-                                        .font(.title3)
-                                    Text("Refresh")
-                                        .font(.caption)
-                                        .foregroundColor(.blue)
-                                }
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
-                                .background(Color.blue.opacity(0.1))
-                                .cornerRadius(8)
-
-                                Image(systemName: "checkmark.circle.fill")
-                                    .foregroundColor(.green)
-                                    .font(.title3)
-                            }
-                            .padding()
-                            .background(Color.green.opacity(0.05))
-                            .cornerRadius(12)
-                        }
-                        .buttonStyle(CardButtonStyle())
-                        // User Actions Section
-                        VStack(spacing: 16) {
-                            // User Switcher (Total: \(userManager.savedUsers.count))
-                            if userManager.savedUsers.count > 0 {
-                                ForEach(userManager.savedUsers, id: \.id) { user in
-                                    HStack {
-                                        Button(action: {
-                                            switchToUser(user)
-                                        }) {
-                                            HStack {
-                                                HStack(spacing: 16){
-                                                ProfileImageView(
-                                                    userId: user.id,
-                                                    authType: user.authType,
-                                                    size: 100,
-                                                    profileImageData: user.profileImageData
-                                                )
-                                                
-                                                VStack(alignment: .leading, spacing: 4) {
-                                                    HStack(spacing: 4) {
-                                                        Text(user.authType == .apiKey ? "API Key" : "Password")
-                                                            .font(.caption2)
-                                                            .fontWeight(.semibold)
-                                                            .foregroundColor(.white)
-                                                            .padding(.horizontal, 8)
-                                                            .padding(.vertical, 3)
-                                                            .frame(minWidth: 70)
-                                                            .background(user.authType == .apiKey ? Color.orange : Color.blue)
-                                                            .cornerRadius(6)
-                                                        
-                                                        Text(user.name)
-                                                            .font(.subheadline)
-                                                            .fontWeight(.medium)
-                                                            .foregroundColor(.primary)
-                                                    }
-                                                    
-                                                    Text(user.email)
-                                                        .font(.caption)
-                                                        .foregroundColor(.secondary)
-                                                    
-                                                    Text(user.serverURL)
-                                                        .font(.caption2)
-                                                        .foregroundColor(.secondary)
-                                                        .lineLimit(1)
-                                                }
-                                            }
-                                                
-                                                Spacer()
-                                                
-                                                if userManager.currentUser?.id == user.id {
-                                                    Text("Active")
-                                                        .font(.caption)
-                                                        .fontWeight(.semibold)
-                                                        .foregroundColor(.white)
-                                                        .padding(.horizontal, 10)
-                                                        .padding(.vertical, 4)
-                                                        .background(Color.green)
-                                                        .cornerRadius(8)
-                                                } else {
-                                                    Image(systemName: "arrow.right.circle")
-                                                        .foregroundColor(user.authType == .apiKey ? .orange : .blue)
-                                                        .font(.title3)
-                                                }
-                                            }
-                                            .padding()
-                                            .background {
-                                                let accentColor = user.authType == .apiKey ? Color.orange : Color.blue
-                                                RoundedRectangle(cornerRadius: 12)
-                                                    .fill(accentColor.opacity(0.05))
-                                            }
-                                        }
-                                          .buttonStyle(CardButtonStyle())
-                                        
-                                        Button(action: {
-                                            userToDelete = user
-                                            showingDeleteUserAlert = true
-                                        }) {
-                                            Image(systemName: "trash")
-                                                .foregroundColor(.red)
-                                                .font(.title3)
-                                                .padding(8)
-                                                .background(Color.red.opacity(0.1))
-                                                .cornerRadius(8)
-                                        }
-                                         .buttonStyle(CardButtonStyle())
-                                    }
-                                }
-                            }
-                            
-                            Button(action: {
-                                showingSignIn = true
-                            }) {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "person.badge.plus")
-                                        .font(.title2)
-                                        .foregroundColor(.blue)
-                                    Text("Add User")
-                                        .font(.caption)
-                                }
-                                .frame(maxWidth: .infinity)
-                                .padding(16)
-                                .background(Color.blue.opacity(0.1))
-                                .cornerRadius(12)
-                            }
-                             .buttonStyle(CardButtonStyle())
-                        }
+                        serverInfoSection
+                        userActionsSection
                         
                         // Interface Settings Section
                         SettingsSection(title: "Interface") {
                             AnyView(VStack(spacing: 12) {
-                                SettingsRow(
-                                    icon: "tag",
-                                    title: "Show Tags Tab",
-                                    subtitle: "Enable the tags tab in the main navigation",
-                                    content: AnyView(Toggle("", isOn: $showTagsTab).labelsHidden())
-                                )
-                                
-                                SettingsRow(
-                                    icon: "house",
-                                    title: "Default Startup Tab",
-                                    subtitle: "Choose which tab opens when the app starts",
-                                    content: AnyView(
-                                        Picker("Default Tab", selection: $defaultStartupTab) {
-                                            Text("All Photos").tag("photos")
-                                            Text("Albums").tag("albums")
-                                            Text("People").tag("people")
-                                            if showTagsTab {
-                                                Text("Tags").tag("tags")
-                                            }
-                                        }
-                                            .pickerStyle(.menu)
-                                            .frame(width: 300, alignment: .trailing)
-                                    )
-                                )
-                                
-                                SettingsRow(
-                                    icon: "play.rectangle.on.rectangle",
-                                    title: "Enable Thumbnail Animation",
-                                    subtitle: "Animate thumbnails in Albums, People, and Tags views(I recommend disabling this for larger libraries for significantly better performance).",
-                                    content: AnyView(Toggle("", isOn: $enableThumbnailAnimation).labelsHidden())
-                                )
-                                
-                                
-                                SettingsRow(
-                                    icon: "tv",
-                                    title: "Top Shelf Extension",
-                                    subtitle: "Show recent photos on Apple TV home screen",
-                                    content: AnyView(Toggle("", isOn: $enableTopShelf).labelsHidden())
-                                )
-                                
-                                if enableTopShelf {
                                     SettingsRow(
-                                        icon: "rectangle.grid.1x2",
-                                        title: "Top Shelf Style",
-                                        subtitle: "Choose between compact sectioned or wide carousel display",
+                                        icon: "tag",
+                                        title: "Show Tags Tab",
+                                        subtitle: "Enable the tags tab in the main navigation",
+                                        content: AnyView(Toggle("", isOn: $showTagsTab).labelsHidden()),
+                                        isOn: showTagsTab
+                                    )
+                                    SettingsRow(
+                                        icon: "play.rectangle.on.rectangle",
+                                        title: "Enable Thumbnail Animation",
+                                        subtitle: "Animate thumbnails in Albums, People, and Tags views(I recommend disabling this for larger libraries for significantly better performance).",
+                                        content: AnyView(Toggle("", isOn: $enableThumbnailAnimation).labelsHidden()),
+                                        isOn: enableThumbnailAnimation
+                                    )
+                                    SettingsRow(
+                                        icon: "tv",
+                                        title: "Top Shelf Extension",
+                                        subtitle: "Show recent photos on Apple TV home screen",
+                                        content: AnyView(Toggle("", isOn: $enableTopShelf).labelsHidden()),
+                                        isOn:enableTopShelf
+                                    )
+                                    
+                                    if enableTopShelf {
+                                        SettingsRow(
+                                            icon: "rectangle.grid.1x2",
+                                            title: "Top Shelf Style",
+                                            subtitle: "Choose between compact sectioned or wide carousel display",
+                                            content: AnyView(
+                                                Picker("Top Shelf Style", selection: $topShelfStyle) {
+                                                    Text("Compact").tag("sectioned")
+                                                    Text("Fullscreen").tag("carousel")
+                                                }
+                                                    .pickerStyle(.menu)
+                                                    .frame(width: 300, alignment: .trailing)
+                                            )
+                                        )
+                                    }
+                                    
+                                    SettingsRow(
+                                        icon: "house",
+                                        title: "Default Startup Tab",
+                                        subtitle: "Choose which tab opens when the app starts",
                                         content: AnyView(
-                                            Picker("Top Shelf Style", selection: $topShelfStyle) {
-                                                Text("Compact").tag("sectioned")
-                                                Text("Fullscreen").tag("carousel")
+                                            Picker("Default Tab", selection: $defaultStartupTab) {
+                                                Text("All Photos").tag("photos")
+                                                Text("Albums").tag("albums")
+                                                Text("People").tag("people")
+                                                if showTagsTab {
+                                                    Text("Tags").tag("tags")
+                                                }
                                             }
                                                 .pickerStyle(.menu)
                                                 .frame(width: 300, alignment: .trailing)
                                         )
                                     )
                                 }
-                            })
+                            )
                         }
                         
                         // Sorting Settings Section
@@ -419,7 +446,7 @@ struct SettingsView: View {
                                         )
                                     )
                                 }
-                                 .buttonStyle(CardButtonStyle())
+                                .buttonStyle(CardButtonStyle())
                                 
                                 Button(action: {
                                     requestAppStoreReview()
@@ -441,15 +468,20 @@ struct SettingsView: View {
                                         )
                                     )
                                 }
-                                 .buttonStyle(CardButtonStyle())
+                                .buttonStyle(CardButtonStyle())
                             })
                         }
                         
-                        // Cache Section
+                        // Cache Section (Debug only)
+                        
+#if DEBUG
                         CacheSection(
                             thumbnailCache: thumbnailCache,
                             showingClearCacheAlert: $showingClearCacheAlert
                         )
+#endif
+                        
+                        footerSection
                     }
                     .padding()
                 }
@@ -471,7 +503,7 @@ struct SettingsView: View {
                 Text("This will remove all cached thumbnails from both memory and disk. Images will be re-downloaded when needed.")
             }
             .alert("Delete User", isPresented: $showingDeleteUserAlert) {
-                Button("Cancel", role: .cancel) { 
+                Button("Cancel", role: .cancel) {
                     userToDelete = nil
                 }
                 Button("Delete", role: .destructive) {
@@ -599,26 +631,26 @@ struct SettingsView: View {
     
     // Create fake users for preview
     let apiKeyUser = SavedUser(
-        id: "1", 
-        email: "admin@example.com", 
-        name: "Admin User", 
-        serverURL: "https://demo.immich.app", 
+        id: "1",
+        email: "admin@example.com",
+        name: "Admin User",
+        serverURL: "https://demo.immich.app",
         authType: .apiKey
     )
     
     let passwordUser = SavedUser(
-        id: "2", 
-        email: "john.doe@company.com", 
-        name: "John Doe", 
-        serverURL: "https://photos.myserver.com", 
+        id: "2",
+        email: "john.doe@company.com",
+        name: "John Doe",
+        serverURL: "https://photos.myserver.com",
         authType: .jwt
     )
     
     let anotherApiKeyUser = SavedUser(
-        id: "3", 
-        email: "service@automation.net", 
-        name: "Service Account", 
-        serverURL: "https://immich.local:2283s",
+        id: "3",
+        email: "service@automation.net",
+        name: "Service Account",
+        serverURL: "https://immich.local:2283",
         authType: .apiKey
     )
     

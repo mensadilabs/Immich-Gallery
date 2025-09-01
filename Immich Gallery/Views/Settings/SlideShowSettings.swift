@@ -131,6 +131,44 @@ struct SlideshowSettings: View {
              )
             
             SettingsRow(
+                icon: "camera.macro.circle",
+                title: "Image Effects",
+                subtitle: "Choose visual effects for slideshow images",
+                content: AnyView(
+                    Picker("Image Effects", selection: Binding(
+                        get: {
+                            if enableKenBurns {
+                                return "kenBurns"
+                            } else if enableReflections {
+                                return "reflections"
+                            } else {
+                                return "none"
+                            }
+                        },
+                        set: { newValue in
+                            switch newValue {
+                            case "kenBurns":
+                                enableKenBurns = true
+                                enableReflections = false
+                            case "reflections":
+                                enableKenBurns = false
+                                enableReflections = true
+                            default: // "none"
+                                enableKenBurns = false
+                                enableReflections = false
+                            }
+                        }
+                    )) {
+                        Text("None").tag("none")
+                        Text("Reflections").tag("reflections")
+                        Text("Pan and Zoom").tag("kenBurns")
+                    }
+                    .pickerStyle(.menu)
+                    .frame(width: 400, alignment: .trailing)
+                )
+            )
+            
+            SettingsRow(
                 icon: "shuffle",
                 title: "Shuffle Images (beta)",
                 subtitle: "Randomly shuffle image order during slideshow (This uses `/search/random` endpoint. Does not work when viewing an album that is shared-in. To my knowledge, this is a limitation of Immich random endpoint. If you disagree, open a GH issue with details.) ",
@@ -141,7 +179,8 @@ struct SlideshowSettings: View {
                     }
                     .pickerStyle(.menu)
                     .frame(width: 300, alignment: .trailing)
-                )
+                ),
+                isOn: enableShuffle
             )
             
             SettingsRow(
@@ -155,53 +194,20 @@ struct SlideshowSettings: View {
                     }
                     .pickerStyle(.menu)
                     .frame(width: 300, alignment: .trailing)
-                )
+                ),
+                isOn: hideOverlay
+                
             )
             
              SettingsRow(
                  icon: "clock.arrow.circlepath",
                  title: "Auto-Start Slideshow",
                  subtitle: "Start slideshow after inactivity",
-                 content: AnyView(AutoSlideshowTimeoutPicker(timeout: $autoSlideshowTimeout))
+                 content: AnyView(AutoSlideshowTimeoutPicker(timeout: $autoSlideshowTimeout)),
+                 isOn: autoSlideshowTimeout > 0
              )
             
-             SettingsRow(
-                 icon: "camera.macro.circle",
-                 title: "Image Effects",
-                 subtitle: "Choose visual effects for slideshow images",
-                 content: AnyView(
-                     Picker("Image Effects", selection: Binding(
-                         get: {
-                             if enableKenBurns {
-                                 return "kenBurns"
-                             } else if enableReflections {
-                                 return "reflections"
-                             } else {
-                                 return "none"
-                             }
-                         },
-                         set: { newValue in
-                             switch newValue {
-                             case "kenBurns":
-                                 enableKenBurns = true
-                                 enableReflections = false
-                             case "reflections":
-                                 enableKenBurns = false
-                                 enableReflections = true
-                             default: // "none"
-                                 enableKenBurns = false
-                                 enableReflections = false
-                             }
-                         }
-                     )) {
-                         Text("None").tag("none")
-                         Text("Reflections").tag("reflections")
-                         Text("Pan and Zoom").tag("kenBurns")
-                     }
-                     .pickerStyle(.menu)
-                     .frame(width: 400, alignment: .trailing)
-                 )
-             )
+             
         }
         .alert("Performance Warning", isPresented: $showPerformanceAlert) {
             Button("Cancel", role: .cancel) { }
