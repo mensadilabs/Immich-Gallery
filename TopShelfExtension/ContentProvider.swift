@@ -11,6 +11,7 @@ import Foundation
 class ContentProvider: TVTopShelfContentProvider {
     
     let TOTAL_ITEMS_COUNT = 10
+    private let storage = HybridUserStorage()
            
     override func loadTopShelfContent() async -> (any TVTopShelfContent)? {
         print("TopShelf: loadTopShelfContent() called")
@@ -417,9 +418,9 @@ class ContentProvider: TVTopShelfContentProvider {
             return (nil, nil, nil)
         }
         
-        // Load token
-        guard let token = sharedDefaults.string(forKey: "\(UserDefaultsKeys.tokenPrefix)\(currentUserId)") else {
-            print("TopShelf: Failed to load token for user ID: \(currentUserId)")
+        // Load token from keychain via HybridUserStorage
+        guard let token = storage.getToken(forUserId: currentUserId) else {
+            print("TopShelf: Failed to load token from keychain for user ID: \(currentUserId)")
             return (nil, nil, nil)
         }
         

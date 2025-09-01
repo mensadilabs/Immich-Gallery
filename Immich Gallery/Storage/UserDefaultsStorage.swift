@@ -60,29 +60,15 @@ class UserDefaultsStorage: UserStorage {
         let userKey = "\(UserDefaultsKeys.userPrefix)\(id)"
         userDefaults.removeObject(forKey: userKey)
         
-        // Also remove associated token
-        try removeToken(forUserId: id)
-        
         print("UserDefaultsStorage: Removed user with ID \(id)")
     }
     
-    // MARK: - Token Management
+    // MARK: - Deprecated Token Methods (Migration Only)
     
-    func saveToken(_ token: String, forUserId id: String) throws {
-        let key = "\(UserDefaultsKeys.tokenPrefix)\(id)"
-        userDefaults.set(token, forKey: key)
-        print("UserDefaultsStorage: Saved token for user ID \(id)")
-    }
-    
+    @available(*, deprecated, message: "Token storage moved to Keychain. This method is only for migration.")
     func getToken(forUserId id: String) -> String? {
-        let key = "\(UserDefaultsKeys.tokenPrefix)\(id)"
+        let key = "immich_token_\(id)"
         return userDefaults.string(forKey: key)
-    }
-    
-    func removeToken(forUserId id: String) throws {
-        let key = "\(UserDefaultsKeys.tokenPrefix)\(id)"
-        userDefaults.removeObject(forKey: key)
-        print("UserDefaultsStorage: Removed token for user ID \(id)")
     }
     
     // MARK: - Cleanup
@@ -93,10 +79,6 @@ class UserDefaultsStorage: UserStorage {
         // Remove all user data
         let userKeys = allKeys.filter { $0.hasPrefix(UserDefaultsKeys.userPrefix) }
         userKeys.forEach { userDefaults.removeObject(forKey: $0) }
-        
-        // Remove all tokens
-        let tokenKeys = allKeys.filter { $0.hasPrefix(UserDefaultsKeys.tokenPrefix) }
-        tokenKeys.forEach { userDefaults.removeObject(forKey: $0) }
         
         print("UserDefaultsStorage: Removed all user data")
     }
@@ -117,12 +99,10 @@ class UserDefaultsStorage: UserStorage {
         let standardDefaults = UserDefaults.standard
         let standardDict = standardDefaults.dictionaryRepresentation()
         
-        // Find all user and token keys in standard UserDefaults
+        // Find all user keys in standard UserDefaults
         let userKeys = standardDict.keys.filter { $0.hasPrefix(UserDefaultsKeys.userPrefix) }
-        let tokenKeys = standardDict.keys.filter { $0.hasPrefix(UserDefaultsKeys.tokenPrefix) }
         
         var migratedUsers = 0
-        var migratedTokens = 0
         
         // Migrate user data
         for userKey in userKeys {
@@ -134,15 +114,6 @@ class UserDefaultsStorage: UserStorage {
             }
         }
         
-        // Migrate tokens
-        for tokenKey in tokenKeys {
-            if let tokenData = standardDefaults.string(forKey: tokenKey) {
-                userDefaults.set(tokenData, forKey: tokenKey)
-                standardDefaults.removeObject(forKey: tokenKey)
-                migratedTokens += 1
-                print("UserDefaultsStorage: Migrated token key: \(tokenKey)")
-            }
-        }
         
         // Clean up any other legacy keys that might exist
         let legacyKeys = ["immich_server_url", "immich_access_token", "immich_user_email"]
@@ -156,7 +127,7 @@ class UserDefaultsStorage: UserStorage {
         // Mark migration as completed
         userDefaults.set(true, forKey: migrationKey)
         
-        print("UserDefaultsStorage: Migration completed - migrated \(migratedUsers) users and \(migratedTokens) tokens")
+        print("UserDefaultsStorage: Migration completed - migrated \(migratedUsers) users")
     }
 }
 
@@ -167,6 +138,9 @@ enum UserStorageError: Error, LocalizedError {
     case decodingFailed
     case userNotFound
     case tokenNotFound
+    case saveFailed
+    case loadFailed
+    case deleteFailed
     
     var errorDescription: String? {
         switch self {
@@ -178,6 +152,12 @@ enum UserStorageError: Error, LocalizedError {
             return "User not found"
         case .tokenNotFound:
             return "Token not found for user"
+        case .saveFailed:
+            return "Failed to save data to storage"
+        case .loadFailed:
+            return "Failed to load data from storage"
+        case .deleteFailed:
+            return "Failed to delete data from storage"
         }
     }
 }

@@ -17,7 +17,6 @@ struct UserDefaultsKeys {
     static let accessToken = "immich_access_token"
     static let userEmail = "immich_user_email"
     static let userPrefix = "immich_user_"
-    static let tokenPrefix = "immich_token_"
     
     // Settings
     static let hideImageOverlay = "hideImageOverlay"

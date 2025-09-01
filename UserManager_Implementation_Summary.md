@@ -254,75 +254,65 @@ The system now provides seamless switching between password and API key users, w
 
 ---
 
-**Complete implementation with API key authentication, legacy cleanup, and TopShelf support - all breaking changes resolved.**
+ Login Flow Summary
+
+  1. Two Authentication Methods
+
+  - Password Authentication (SignInView:234, UserManager:131)
+  - API Key Authentication (SignInView:246, UserManager:161)
+
+  2. API Calls Made During Login
+
+  For Password Login:
+  - POST /api/auth/login (UserManager:234)
+    - Payload: {"email": "user@email.com", "password": "password123"}
+    - Response: AuthResponse with accessToken, userId, userEmail, name, etc.
+
+  For API Key Login:
+  - GET /api/users/me (UserManager:265)
+    - Headers: x-api-key: <api-key>
+    - Response: User object with user details
+
+  After Authentication:
+  - GET /api/users/me (AuthenticationService:243)
+    - Headers: Authorization: Bearer <token> or x-api-key: <key>
+    - Response: User object to populate current user info
+
+  3. Data Saved During Login
+
+  In UserDefaults/Keychain:
+  - SavedUser object (UserManager:149, UserManager:179):
+    - id: Generated from email+serverURL base64 (generateUserIdForUser)
+    - email: User's email
+    - name: User's display name
+    - serverURL: Immich server URL
+    - authType: .jwt or .apiKey
+    - createdAt: Account creation timestamp
+  - Authentication token (password auth) or API key (UserManager:149, UserManager:179)
+  - Current active user ID in shared UserDefaults (UserManager:295)
+
+  In Memory (Published Properties):
+  - AuthenticationService.isAuthenticated = true
+  - AuthenticationService.currentUser: Owner object
+  - NetworkService.baseURL: Server URL
+  - NetworkService.accessToken: JWT token or API key
+  - NetworkService.currentAuthType: .jwt or .apiKey
+
+  4. Multi-User Support
+
+  The app supports multiple user accounts:
+  - Each user is stored separately with unique ID
+  - Users can switch between accounts without re-authentication
+  - Current user persists across app launches
+  - HTTP cookies are cleared when switching users for security
+
+  5. Security Features
+
+  - Tokens/API keys stored securely
+  - HTTP cookies cleared during authentication switches
+  - Different authentication headers based on auth type:
+    - JWT: Authorization: Bearer <token>
+    - API Key: x-api-key: <key>
 
 
-
-
-  ┌─────────────────────────────────────────────────────────────────────────────┐
-  │                        IMMICH GALLERY AUTH FLOW                            │
-  └─────────────────────────────────────────────────────────────────────────────┘
-
-  ┌─────────────┐    ┌──────────────────┐    ┌─────────────┐    ┌──────────────┐
-  │ SignInView  │    │ AuthService      │    │ UserManager │    │ NetworkService│
-  └─────────────┘    └──────────────────┘    └─────────────┘    └──────────────┘
-         │                    │                      │                   │
-         │ signIn(url,email,  │                      │                   │
-         │        password)   │                      │                   │
-         ├───────────────────►│                      │                   │
-         │                    │                      │                   │
-         │                    │ authenticateWith     │                   │
-         │                    │ Credentials()        │                   │
-         │                    ├─────────────────────►│                   │
-         │                    │                      │                   │
-         │                    │                      │ HTTP POST         │
-         │                    │                      │ /auth/login       │
-         │                    │                      ├──────────────────►│
-         │                    │                      │                   │
-         │                    │                      │ ◄─────────────────┤
-         │                    │                      │ { accessToken }   │
-         │                    │                      │                   │
-         │                    │ ◄─────────────────────┤                   │
-         │                    │ token                │                   │
-         │                    │                      │                   │
-         │                    │ saveCredentials()    │                   │
-         │                    ├─────────────────────────────────────────►│
-         │                    │                      │                   │
-         │                    │                      │                   │ 
-         │                    │                      │                   │ 
-         │                    │                      │                   │ 
-         │                    │                      │                   │  
-         │                    │                      │                   │
-         │                    │ fetchUserInfo()      │                   │
-         │                    ├─────────────────────────────────────────►│
-         │                    │                      │                   │
-         │                    │                      │                   │ GET /api/users/me
-         │                    │                      │                   ├──────────────►
-         │                    │                      │                   │              │
-         │                    │                      │                   │ ◄────────────┤
-         │                    │ ◄─────────────────────────────────────────┤ User data    │
-         │                    │                      │                   │              │
-         │ ◄───────────────────┤                      │                   │              │
-         │ success/error      │                      │                   │              │
-         │                    │                      │                   │              │
-
-  ┌─────────────────────────────────────────────────────────────────────────────┐
-  │                          DATA STORAGE FLOW                                 │
-  └─────────────────────────────────────────────────────────────────────────────┘
-
-      UserDefaults.standard           App Group Container          NetworkService
-           │                               │                         │
-           │ ◄─────────────────────────────┤                         │
-           │   Backward compatibility      │                         │
-           │                               │                         │
-           │                               │ ◄───────────────────────┤
-           │                               │   Primary storage       │ @Published
-           │                               │                         │ baseURL
-           │                               │                         │ accessToken
-           │                               │                         │    
-           │                               │                         │    │ ⚠️ 
-           │                               │                         │    │ : These
-           │                               │                         │    │ trigger UI
-           │                               │                         │    │ updates but
-           │                               │                         │    │ set from bg
-           │                               │                         │    │ 
+   

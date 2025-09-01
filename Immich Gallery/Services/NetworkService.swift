@@ -66,19 +66,15 @@ class NetworkService: ObservableObject {
     }
     
     // MARK: - Network Requests
-    func makeRequest<T: Codable>(
-        endpoint: String,
-        method: HTTPMethod = .GET,
-        body: [String: Any]? = nil,
-        responseType: T.Type
-    ) async throws -> T {
+    
+    /// Builds an authenticated URLRequest with proper headers based on current auth type
+    private func buildAuthenticatedRequest(endpoint: String, method: HTTPMethod = .GET, body: [String: Any]? = nil) throws -> URLRequest {
         guard let accessToken = accessToken, !baseURL.isEmpty else {
             print("NetworkService: No access token or server URL available")
             throw ImmichError.notAuthenticated
         }
         
         let urlString = "\(baseURL)\(endpoint)"
-        print("NetworkService: Making request to \(urlString)")
         guard let url = URL(string: urlString) else {
             print("NetworkService: Invalid URL: \(urlString)")
             throw ImmichError.invalidURL
@@ -94,34 +90,26 @@ class NetworkService: ObservableObject {
             request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         }
         
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        
+        // Set body if provided
         if let body = body {
-            do {
-                request.httpBody = try JSONSerialization.data(withJSONObject: body)
-            } catch {
-                throw ImmichError.networkError
-            }
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = try JSONSerialization.data(withJSONObject: body)
         }
         
-        let (data, response): (Data, URLResponse)
-        do {
-            (data, response) = try await session.data(for: request)
-        } catch {
-            print("NetworkService: Network error occurred: \(error)")
-            // Handle network connectivity issues (timeouts, connection refused, DNS failures, etc.)
-            throw ImmichError.networkError
-        }
-        
+        return request
+    }
+    
+    /// Processes the HTTP response and handles status codes consistently
+    private func processResponse(_ response: URLResponse, data: Data, context: String = "") throws -> Data {
         guard let httpResponse = response as? HTTPURLResponse else {
-            print("NetworkService: Invalid HTTP response")
+            print("NetworkService: Invalid HTTP response\(context.isEmpty ? "" : " in \(context)")")
             throw ImmichError.networkError
         }
         
-        print("NetworkService: Response status code: \(httpResponse.statusCode)")
+        print("NetworkService: Response status code: \(httpResponse.statusCode)\(context.isEmpty ? "" : " (\(context))")")
         
         guard httpResponse.statusCode == 200 else {
-            print("NetworkService: HTTP error with status \(httpResponse.statusCode)")
+            print("NetworkService: HTTP error\(context.isEmpty ? "" : " in \(context)") with status \(httpResponse.statusCode)")
             if let responseString = String(data: data, encoding: .utf8) {
                 print("NetworkService: Response body: \(responseString)")
             }
@@ -142,13 +130,35 @@ class NetworkService: ObservableObject {
             }
         }
         
+        return data
+    }
+    func makeRequest<T: Codable>(
+        endpoint: String,
+        method: HTTPMethod = .GET,
+        body: [String: Any]? = nil,
+        responseType: T.Type
+    ) async throws -> T {
+        let request = try buildAuthenticatedRequest(endpoint: endpoint, method: method, body: body)
+        print("NetworkService: Making request to \(request.url?.absoluteString ?? endpoint)")
+        
+        let (data, response): (Data, URLResponse)
         do {
-            let result = try JSONDecoder().decode(responseType, from: data)
+            (data, response) = try await session.data(for: request)
+        } catch {
+            print("NetworkService: Network error occurred: \(error)")
+            // Handle network connectivity issues (timeouts, connection refused, DNS failures, etc.)
+            throw ImmichError.networkError
+        }
+        
+        let validatedData = try processResponse(response, data: data, context: "makeRequest")
+        
+        do {
+            let result = try JSONDecoder().decode(responseType, from: validatedData)
             print("NetworkService: Successfully decoded response")
             return result
         } catch {
             print("NetworkService: Failed to decode response: \(error)")
-            if let responseString = String(data: data, encoding: .utf8) {
+            if let responseString = String(data: validatedData, encoding: .utf8) {
                 print("NetworkService: Raw response: \(responseString)")
             }
             throw error
@@ -156,24 +166,10 @@ class NetworkService: ObservableObject {
     }
     
     func makeDataRequest(endpoint: String) async throws -> Data {
-        guard let accessToken = accessToken, !baseURL.isEmpty else {
-            print("NetworkService: No access token or server URL available for data request")
-            throw ImmichError.notAuthenticated
-        }
+        var request = try buildAuthenticatedRequest(endpoint: endpoint, method: .GET, body: nil)
         
-        let urlString = "\(baseURL)\(endpoint)"
-        guard let url = URL(string: urlString) else {
-            throw ImmichError.invalidURL
-        }
-        
-        var request = URLRequest(url: url)
-        
-        // Set authentication header based on auth type
-        if currentAuthType == .apiKey {
-            request.setValue(accessToken, forHTTPHeaderField: "x-api-key")
-        } else {
-            request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-        }
+        // Remove Content-Type header for data requests (we don't want application/json for binary data)
+        request.setValue(nil, forHTTPHeaderField: "Content-Type")
         
         let (data, response): (Data, URLResponse)
         do {
@@ -184,31 +180,7 @@ class NetworkService: ObservableObject {
             throw ImmichError.networkError
         }
         
-        guard let httpResponse = response as? HTTPURLResponse else {
-            print("NetworkService: Invalid HTTP response in makeDataRequest")
-            throw ImmichError.networkError
-        }
-        
-        guard httpResponse.statusCode == 200 else {
-            print("NetworkService: HTTP error in makeDataRequest with status \(httpResponse.statusCode)")
-            
-            // Classify HTTP status codes into appropriate ImmichError types
-            switch httpResponse.statusCode {
-            case 401:
-                throw ImmichError.notAuthenticated
-            case 403:
-                throw ImmichError.forbidden
-            case 500...599:
-                throw ImmichError.serverError(httpResponse.statusCode)
-            case 400...499:
-                throw ImmichError.clientError(httpResponse.statusCode)
-            default:
-                // For any other status codes, treat as server error
-                throw ImmichError.serverError(httpResponse.statusCode)
-            }
-        }
-        
-        return data
+        return try processResponse(response, data: data, context: "makeDataRequest")
     }
 }
 
