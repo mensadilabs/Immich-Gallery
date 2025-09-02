@@ -79,6 +79,9 @@ struct SettingsView: View {
     @AppStorage("enableTopShelf", store: UserDefaults(suiteName: AppConstants.appGroupIdentifier)) private var enableTopShelf = true
     @AppStorage("topShelfStyle", store: UserDefaults(suiteName: AppConstants.appGroupIdentifier)) private var topShelfStyle = "carousel"
     @AppStorage(UserDefaultsKeys.autoSlideshowTimeout) private var autoSlideshowTimeout: Int = 0 // 0 = off
+    @AppStorage("artModeLevel") private var artModeLevel = "off"
+    @AppStorage("artModeDayStart") private var artModeDayStart = 7
+    @AppStorage("artModeNightStart") private var artModeNightStart = 20
     @FocusState private var isMinusFocused: Bool
     @FocusState private var isPlusFocused: Bool
     @FocusState private var focusedColor: String?
@@ -375,6 +378,62 @@ struct SettingsView: View {
                                 )
                                 .onChange(of: slideshowInterval) { _, newValue in
                                     UserDefaults.standard.set(newValue, forKey: "slideshowInterval")
+                                }
+                            })
+                        }
+                        
+                        // Art Mode Settings Section
+                        SettingsSection(title: "Dim Slideshow") {
+                            AnyView(VStack(spacing: 12) {
+                                HStack{Badge("Experimental", color: Color.red, minWidth: 200)
+                                    Spacer()
+                                }
+                                SettingsRow(
+                                    icon: "paintbrush",
+                                    title: "Dim Level",
+                                    subtitle: "Apply a transparent overlay to dim slideshow images. Best used with black slideshow background color",
+                                    content: AnyView(
+                                        Picker("Dim Level", selection: $artModeLevel) {
+                                            ForEach(ArtModeLevel.allCases, id: \.self) { level in
+                                                Text(level.displayName).tag(level.rawValue)
+                                            }
+                                        }
+                                            .pickerStyle(.menu)
+                                            .frame(width: 400, alignment: .trailing)
+                                    ),
+                                    isOn: artModeLevel != "off"
+                                )
+                                
+                                if artModeLevel == "automatic" {
+                                    SettingsRow(
+                                        icon: "sun.max",
+                                        title: "Day Mode Start",
+                                        subtitle: "Hour when low dimming begins (0-23)",
+                                        content: AnyView(
+                                            Picker("Day Start", selection: $artModeDayStart) {
+                                                ForEach(0..<24, id: \.self) { hour in
+                                                    Text(String(format: "%02d:00", hour)).tag(hour)
+                                                }
+                                            }
+                                            .pickerStyle(.menu)
+                                            .frame(width: 250, alignment: .trailing)
+                                        )
+                                    )
+                                    
+                                    SettingsRow(
+                                        icon: "moon.stars",
+                                        title: "Night Mode Start",
+                                        subtitle: "Hour when high dimming begins (0-23)",
+                                        content: AnyView(
+                                            Picker("Night Start", selection: $artModeNightStart) {
+                                                ForEach(0..<24, id: \.self) { hour in
+                                                    Text(String(format: "%02d:00", hour)).tag(hour)
+                                                }
+                                            }
+                                            .pickerStyle(.menu)
+                                            .frame(width: 250, alignment: .trailing)
+                                        )
+                                    )
                                 }
                             })
                         }

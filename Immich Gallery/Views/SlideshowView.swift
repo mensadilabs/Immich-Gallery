@@ -69,6 +69,12 @@ struct SlideshowView: View {
     @State private var enableShuffle: Bool = UserDefaults.standard.enableSlideshowShuffle
     @State private var isSharedAlbum: Bool = false
     @FocusState private var isFocused: Bool
+    
+    /// Computed property to get current Art Mode level from UserDefaults
+    private var currentArtModeLevel: ArtModeLevel {
+        let levelString = UserDefaults.standard.artModeLevel
+        return ArtModeLevel(rawValue: levelString) ?? .off
+    }
 
     enum SlideDirection {
         case left, right, up, down, diagonal_up_left, diagonal_up_right, diagonal_down_left, diagonal_down_right, zoom_out
@@ -196,6 +202,10 @@ struct SlideshowView: View {
                                             }
                                         }
                                     }
+                                )
+                                .overlay(
+                                    // Art Mode overlay
+                                    ArtModeOverlay(level: currentArtModeLevel)
                                 )
 
                             // Reflection with performance optimizations
