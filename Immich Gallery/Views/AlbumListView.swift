@@ -176,7 +176,7 @@ struct AlbumListView: View {
         
         Task {
             do {
-                let result = try await assetService.fetchAssets(page: 1, limit: 1, isFavorite: true)
+                let result = try await assetService.fetchAssets(page: 1, limit: nil, isFavorite: true)
                 await MainActor.run {
                     self.favoritesCount = result.total
                     self.firstFavoriteAssetId = result.assets.first?.id
