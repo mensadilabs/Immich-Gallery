@@ -13,6 +13,7 @@ struct AssetThumbnailView: View {
     @ObservedObject private var thumbnailCache = ThumbnailCache.shared
     @State private var image: UIImage?
     @State private var isLoading = true
+    @State private var loadingTask: Task<Void, Never>?
     let isFocused: Bool
     
     var body: some View {
@@ -87,19 +88,37 @@ struct AssetThumbnailView: View {
         .onAppear {
             loadThumbnail()
         }
+        .onDisappear {
+            cancelLoading()
+        }
     }
     
     private func loadThumbnail() {
-        Task {
+        // Cancel any existing loading task
+        loadingTask?.cancel()
+        
+        loadingTask = Task {
             do {
+                // Check if task was cancelled before starting
+                try Task.checkCancellation()
+                
                 let thumbnail = try await thumbnailCache.getThumbnail(for: asset.id, size: "preview") {
+                    // Check cancellation before network request
+                    try Task.checkCancellation()
                     // Load from server if not in cache
-                    try await assetService.loadImage(asset: asset, size: "preview")
+                    return try await assetService.loadImage(asset: asset, size: "preview")
                 }
+                
+                // Check cancellation before UI update
+                try Task.checkCancellation()
+                
                 await MainActor.run {
                     self.image = thumbnail
                     self.isLoading = false
                 }
+            } catch is CancellationError {
+                // Task was cancelled - don't update UI or log error
+                print("Thumbnail loading cancelled for asset \(asset.id)")
             } catch {
                 print("Failed to load thumbnail for asset \(asset.id): \(error)")
                 await MainActor.run {
@@ -107,6 +126,11 @@ struct AssetThumbnailView: View {
                 }
             }
         }
+    }
+    
+    private func cancelLoading() {
+        loadingTask?.cancel()
+        loadingTask = nil
     }
     
     

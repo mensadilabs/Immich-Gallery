@@ -13,6 +13,7 @@ struct AssetProviderFactory {
         personId: String? = nil,
         tagId: String? = nil,
         isAllPhotos: Bool = false,
+        isFavorite: Bool = false,
         assetService: AssetService,
         albumService: AlbumService? = nil
     ) -> AssetProvider {
@@ -25,7 +26,8 @@ struct AssetProviderFactory {
                 assetService: assetService,
                 personId: personId,
                 tagId: tagId,
-                isAllPhotos: isAllPhotos
+                isAllPhotos: isAllPhotos,
+                isFavorite: isFavorite
             )
         }
     }
@@ -96,12 +98,14 @@ class GeneralAssetProvider: AssetProvider {
     private let personId: String?
     private let tagId: String?
     private let isAllPhotos: Bool
+    private let isFavorite: Bool
     
-    init(assetService: AssetService, personId: String? = nil, tagId: String? = nil, isAllPhotos: Bool = false) {
+    init(assetService: AssetService, personId: String? = nil, tagId: String? = nil, isAllPhotos: Bool = false, isFavorite: Bool = false) {
         self.assetService = assetService
         self.personId = personId
         self.tagId = tagId
         self.isAllPhotos = isAllPhotos
+        self.isFavorite = isFavorite
     }
     
     func fetchAssets(page: Int, limit: Int) async throws -> SearchResult {
@@ -111,7 +115,8 @@ class GeneralAssetProvider: AssetProvider {
             albumId: nil,
             personId: personId,
             tagId: tagId,
-            isAllPhotos: isAllPhotos
+            isAllPhotos: isAllPhotos,
+            isFavorite: isFavorite
         )
     }
     
