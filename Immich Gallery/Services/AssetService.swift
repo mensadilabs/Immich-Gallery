@@ -93,11 +93,70 @@ class AssetService: ObservableObject {
     }
 
     func loadFullImage(asset: ImmichAsset) async throws -> UIImage? {
-        let originalEndpoint = "/api/assets/\(asset.id)/original"
+        // Check if it's a RAW format before loading
+        if let mimeType = asset.originalMimeType, isRawFormat(mimeType) {
+            print("AssetService: Detected RAW format (\(mimeType)), using server-converted version")
+            if let convertedImage = try await loadConvertedImage(asset: asset) {
+                return convertedImage
+            }
+        }
         
+        // Standard processing for non-RAW formats
+        let originalEndpoint = "/api/assets/\(asset.id)/original"
         let originalData = try await networkService.makeDataRequest(endpoint: originalEndpoint)
         
-        return UIImage(data: originalData)
+        if let image = UIImage(data: originalData) {
+            print("AssetService: Successfully loaded image for asset \(asset.id)")
+            return image
+        }
+        
+        print("AssetService: Failed to load image for asset \(asset.id)")
+        return nil
+    }
+    
+    private func isRawFormat(_ mimeType: String) -> Bool {
+        let rawMimeTypes = [
+            // Standard MIME types
+            "image/x-adobe-dng",
+            "image/x-canon-cr2",
+            "image/x-canon-crw", 
+            "image/x-nikon-nef",
+            "image/x-sony-arw",
+            "image/x-panasonic-raw",
+            "image/x-olympus-orf",
+            "image/x-fuji-raf",
+            
+            // Simplified types (what your logs show)
+            "image/nef",
+            "image/dng",
+            "image/cr2",
+            "image/arw",
+            "image/orf",
+            "image/raf",
+            
+            // Alternative formats
+            "image/x-panasonic-rw2",
+            "image/x-kodak-dcr",
+            "image/x-sigma-x3f"
+        ]
+        return rawMimeTypes.contains(mimeType.lowercased())
+    }
+    
+    private func loadConvertedImage(asset: ImmichAsset) async throws -> UIImage? {
+        // Use preview size for best quality RAW conversion
+        let endpoint = "/api/assets/\(asset.id)/thumbnail?format=webp&size=preview"
+        
+        do {
+            let data = try await networkService.makeDataRequest(endpoint: endpoint)
+            if let image = UIImage(data: data) {
+                print("AssetService: Loaded converted RAW image: \(image.size)")
+                return image
+            }
+        } catch {
+            print("AssetService: Failed to load converted RAW image: \(error)")
+        }
+        
+        return nil
     }
 
     func loadVideoURL(asset: ImmichAsset) async throws -> URL {
