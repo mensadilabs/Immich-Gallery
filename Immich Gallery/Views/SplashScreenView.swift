@@ -52,6 +52,11 @@ struct WhatsNewView: View {
     - This may go away if I can't convince myself this is good.
     - Create empty album named "immich-gallery-config" with specific description format. Check settings for more info on setup. 
     - Support for both album and person-based slideshow configuration
+
+     EXPERIMENTAL| Dimmed Slideshow
+    - Add support for dimmed slideshow in settings.
+    - Time based dim level
+    - How good does it work is a matter of personal opinion/s. Try it out and let me know. Yes, I'm talking to you specifically. 
     
     
     VERSION|1.1.2
