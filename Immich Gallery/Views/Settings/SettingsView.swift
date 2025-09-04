@@ -383,7 +383,7 @@ struct SettingsView: View {
                         }
                         
                         // Art Mode Settings Section
-                        SettingsSection(title: "Dim Slideshow") {
+                        SettingsSection(title: "") {
                             AnyView(VStack(spacing: 12) {
                                 HStack{Badge("Experimental", color: Color.red, minWidth: 200)
                                     Spacer()

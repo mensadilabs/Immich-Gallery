@@ -249,8 +249,7 @@ struct AssetGridView: View {
                 }
             }
         }
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name(NotificationNames.startAutoSlideshow))) { _ in
-            print("AssetGridView: Received auto-slideshow notification")
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name(NotificationNames.startAutoSlideshow))) { notification in
             startSlideshow()
         }
     }

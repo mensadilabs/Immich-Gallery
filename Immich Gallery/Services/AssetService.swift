@@ -47,6 +47,44 @@ class AssetService: ObservableObject {
             nextPage: result.assets.nextPage
         )
     }
+    
+    /// Fetches assets using slideshow configuration
+    func fetchAssets(config: SlideshowConfig, page: Int = 1, limit: Int = 50, isAllPhotos: Bool = false) async throws -> SearchResult {
+        // Use separate sort order for All Photos tab vs everything else
+        let sortOrder = isAllPhotos 
+            ? UserDefaults.standard.allPhotosSortOrder
+            : (UserDefaults.standard.string(forKey: "assetSortOrder") ?? "desc")
+        var searchRequest: [String: Any] = [
+            "page": page,
+            "size": limit,
+            "withPeople": true,
+            "order": sortOrder,
+            "withExif": true,
+        ]
+        
+        // Apply config parameters if they exist
+        if !config.albumIds.isEmpty {
+            searchRequest["albumIds"] = config.albumIds
+            searchRequest["type"] = "IMAGE"
+        }
+        if !config.personIds.isEmpty {
+            searchRequest["personIds"] = config.personIds
+            searchRequest["type"] = "IMAGE"
+        }
+        
+        let result: SearchResponse = try await networkService.makeRequest(
+            endpoint: "/api/search/metadata",
+            method: .POST,
+            body: searchRequest,
+            responseType: SearchResponse.self
+        )
+        
+        return SearchResult(
+            assets: result.assets.items,
+            total: result.assets.total,
+            nextPage: result.assets.nextPage
+        )
+    }
 
     func loadImage(asset: ImmichAsset, size: String = "thumbnail") async throws -> UIImage? {
         let endpoint = "/api/assets/\(asset.id)/thumbnail?format=webp&size=\(size)"
@@ -101,5 +139,12 @@ class AssetService: ObservableObject {
             total: assets.count,
             nextPage: nil // Random endpoint doesn't have pagination
         )
+    }
+    
+    /// Fetches random assets using slideshow configuration
+    func fetchRandomAssets(config: SlideshowConfig, limit: Int = 50) async throws -> SearchResult {
+        let albumIds = config.albumIds.isEmpty ? nil : config.albumIds
+        let personIds = config.personIds.isEmpty ? nil : config.personIds
+        return try await fetchRandomAssets(albumIds: albumIds, personIds: personIds, limit: limit)
     }
 } 

@@ -19,10 +19,11 @@ struct SlideshowView: View {
     private let assetService: AssetService
     private let albumService: AlbumService?
     
-    // Asset provider created using factory
-    private let assetProvider: AssetProvider
+    // Asset provider created using factory - will be recreated with config if needed
+    @State private var assetProvider: AssetProvider?
+    @State private var slideshowConfig: SlideshowConfig?
 
-    init(albumId: String?, personId: String?, tagId: String?, startingIndex: Int) {
+    init(albumId: String? = nil, personId: String? = nil, tagId: String? = nil, startingIndex: Int = 0) {
         self.albumId = albumId
         self.personId = personId
         self.tagId = tagId
@@ -32,18 +33,21 @@ struct SlideshowView: View {
         let userManager = UserManager()
         let networkService = NetworkService(userManager: userManager)
         self.assetService = AssetService(networkService: networkService)
-        self.albumService = albumId != nil ? AlbumService(networkService: networkService) : nil
+        self.albumService = AlbumService(networkService: networkService)
 
-        // Create appropriate asset provider using factory
-        self.assetProvider = AssetProviderFactory.createProvider(
+        // Initial asset provider - will be replaced if config is fetched
+        let initialProvider = AssetProviderFactory.createProvider(
             albumId: albumId,
             personId: personId,
             tagId: tagId,
             isAllPhotos: false, // Slideshow doesn't use "All Photos" mode
             assetService: assetService,
-            albumService: albumService
+            albumService: albumService,
+            config: nil
         )
+        _assetProvider = State(initialValue: initialProvider)
     }
+    
 
     // Image Queue System
     @State private var imageQueue: [(asset: ImmichAsset, image: UIImage, dominantColor: Color?)] = []
@@ -334,10 +338,58 @@ struct SlideshowView: View {
 
     private func initializeSlideshow() {
         loadAssetsTask = Task {
+            // Always fetch config first
+            await fetchConfigAndUpdateProvider()
             await checkIfAlbumIsShared()
             await loadInitialAssets()
             await loadInitialImages()
             await showFirstImage()
+        }
+    }
+    
+    private func fetchConfigAndUpdateProvider() async {
+        guard let albumService = albumService else { 
+            // No album service, use fallback provider
+            await MainActor.run {
+                self.assetProvider = AssetProviderFactory.createProvider(
+                    albumId: albumId,
+                    personId: personId,
+                    tagId: tagId,
+                    isAllPhotos: false,
+                    assetService: assetService,
+                    albumService: albumService
+                )
+            }
+            return 
+        }
+        
+        let configService = SlideshowConfigService(albumService: albumService)
+        let config = await configService.fetchSlideshowConfig()
+        
+        await MainActor.run {
+            self.slideshowConfig = config
+            
+            // If config has values, use it; otherwise fallback to original parameters
+            if !config.albumIds.isEmpty || !config.personIds.isEmpty {
+                self.assetProvider = AssetProviderFactory.createProvider(
+                    albumId: nil, // Use config instead of individual IDs
+                    personId: nil,
+                    tagId: nil,
+                    isAllPhotos: false,
+                    assetService: assetService,
+                    albumService: albumService,
+                    config: config
+                )
+            } else {
+                self.assetProvider = AssetProviderFactory.createProvider(
+                    albumId: albumId,
+                    personId: personId,
+                    tagId: tagId,
+                    isAllPhotos: false,
+                    assetService: assetService,
+                    albumService: albumService
+                )
+            }
         }
     }
 
@@ -379,7 +431,7 @@ struct SlideshowView: View {
     }
 
     private func loadInitialAssets() async {
-        guard !Task.isCancelled else { return }
+        guard !Task.isCancelled, let assetProvider = assetProvider else { return }
 
         do {
             let searchResult: SearchResult
@@ -660,7 +712,7 @@ struct SlideshowView: View {
             return true
         }
 
-        guard shouldLoad else { return }
+        guard shouldLoad, let assetProvider = assetProvider else { return }
 
         do {
             let searchResult: SearchResult
