@@ -89,7 +89,8 @@ struct AssetThumbnailView: View {
             loadThumbnail()
         }
         .onDisappear {
-            cancelLoading()
+            // Disable this, I think its slowing down stuff.
+            // cancelLoading()
         }
     }
     
@@ -102,11 +103,11 @@ struct AssetThumbnailView: View {
                 // Check if task was cancelled before starting
                 try Task.checkCancellation()
                 
-                let thumbnail = try await thumbnailCache.getThumbnail(for: asset.id, size: "preview") {
+                let thumbnail = try await thumbnailCache.getThumbnail(for: asset.id, size: "thumbnail") {
                     // Check cancellation before network request
                     try Task.checkCancellation()
                     // Load from server if not in cache
-                    return try await assetService.loadImage(asset: asset, size: "preview")
+                    return try await assetService.loadImage(asset: asset, size: "thumbnail")
                 }
                 
                 // Check cancellation before UI update

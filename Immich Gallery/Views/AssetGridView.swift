@@ -107,7 +107,7 @@ struct AssetGridView: View {
                                 .onAppear {
                                     // More efficient index check using enumerated
                                     if let index = assets.firstIndex(of: asset) {
-                                        let threshold = max(assets.count - 8, 0) // Load when 8 items away from end
+                                        let threshold = max(assets.count - 100, 0) // Load when 20 items away from end
                                         if index >= threshold && hasMoreAssets && !isLoadingMore {
                                             debouncedLoadMore()
                                         }
@@ -267,7 +267,7 @@ struct AssetGridView: View {
         
         Task {
             do {
-                let searchResult = try await assetProvider.fetchAssets(page: 1, limit: 100)
+                let searchResult = try await assetProvider.fetchAssets(page: 1, limit: 200)
                 await MainActor.run {
                     self.assets = searchResult.assets
                     self.nextPage = searchResult.nextPage
@@ -291,6 +291,11 @@ struct AssetGridView: View {
     }
     
     private func debouncedLoadMore() {
+        // Immediately set loading state to prevent multiple triggers
+        guard !isLoadingMore && hasMoreAssets else { return }
+        
+        isLoadingMore = true
+        
         // Cancel any existing load more task
         loadMoreTask?.cancel()
         
@@ -299,7 +304,12 @@ struct AssetGridView: View {
             try? await Task.sleep(nanoseconds: 300_000_000) // 300ms delay
             
             // Check if task was cancelled during sleep
-            if Task.isCancelled { return }
+            if Task.isCancelled {
+                await MainActor.run {
+                    isLoadingMore = false
+                }
+                return
+            }
             
             await MainActor.run {
                 loadMoreAssets()
@@ -308,15 +318,16 @@ struct AssetGridView: View {
     }
     
     private func loadMoreAssets() {
-        guard !isLoadingMore && hasMoreAssets && nextPage != nil else { return }
-        
-        isLoadingMore = true
+        guard hasMoreAssets && nextPage != nil else { 
+            isLoadingMore = false
+            return 
+        }
         
         Task {
             do {
                 // Extract page number from nextPage string
                 let pageNumber = extractPageFromNextPage(nextPage!)
-                let searchResult = try await assetProvider.fetchAssets(page: pageNumber, limit: 100)
+                let searchResult = try await assetProvider.fetchAssets(page: pageNumber, limit: 200)
                 
                 await MainActor.run {
                     if !searchResult.assets.isEmpty {
