@@ -15,6 +15,8 @@ struct AlbumListView: View {
     @State private var albums: [ImmichAlbum] = []
     @State private var isLoading = false
     @State private var errorMessage: String?
+    @State private var favoritesCount: Int = 0
+    @State private var firstFavoriteAssetId: String?
     @State private var selectedAlbum: ImmichAlbum?
     @State private var showingAlbumDetail = false
     @FocusState private var focusedAlbumId: String?
@@ -29,6 +31,14 @@ struct AlbumListView: View {
         GridItem(.fixed(500), spacing: 20),
         GridItem(.fixed(500), spacing: 20),
     ]
+    
+    private var allAlbums: [ImmichAlbum] {
+        var result = albums
+        if let favAlbums = createFavoritesAlbum() {
+            result.insert(favAlbums, at: 0)
+        }
+        return result
+    }
     
     var body: some View {
         ZStack {
@@ -70,7 +80,7 @@ struct AlbumListView: View {
             } else {
                 ScrollView {
                     LazyVGrid(columns: columns, spacing: 100) {
-                        ForEach(albums) { album in
+                        ForEach(allAlbums) { album in
                             Button(action: {
                                 selectedAlbum = album
                                 showingAlbumDetail = true
@@ -102,6 +112,7 @@ struct AlbumListView: View {
         .onAppear {
             if albums.isEmpty {
                 loadAlbums()
+                loadFavoritesCount()
             }
             startGlobalAnimation()
         }
@@ -122,6 +133,58 @@ struct AlbumListView: View {
     private func stopGlobalAnimation() {
         globalAnimationTimer?.invalidate()
         globalAnimationTimer = nil
+    }
+    
+    private func createFavoritesAlbum() -> ImmichAlbum?  {
+        
+        if let user = userManager.currentUser {
+            let owner = Owner(
+                id: user.id,
+                email: user.email,
+                name: user.name,
+                profileImagePath: "",
+                profileChangedAt: "",
+                avatarColor: "primary"
+            )
+            
+            return ImmichAlbum(
+                id: "smart_favorites",
+                albumName: "Favorites",
+                description: "Collection",
+                albumThumbnailAssetId: firstFavoriteAssetId,
+                createdAt: ISO8601DateFormatter().string(from: Date()),
+                updatedAt: ISO8601DateFormatter().string(from: Date()),
+                albumUsers: [],
+                assets: [],
+                assetCount: favoritesCount,
+                ownerId: user.id,
+                owner: owner,
+                shared: false,
+                hasSharedLink: false,
+                isActivityEnabled: false,
+                lastModifiedAssetTimestamp: nil,
+                order: nil,
+                startDate: nil,
+                endDate: nil
+            )
+        }
+        return nil
+    }
+    
+    private func loadFavoritesCount() {
+        guard authService.isAuthenticated else { return }
+        
+        Task {
+            do {
+                let result = try await assetService.fetchAssets(page: 1, limit: nil, isFavorite: true)
+                await MainActor.run {
+                    self.favoritesCount = result.total
+                    self.firstFavoriteAssetId = result.assets.first?.id
+                }
+            } catch {
+                print("Failed to fetch favorites count: \(error)")
+            }
+        }
     }
     
     private func loadAlbums() {
@@ -220,11 +283,19 @@ struct AlbumRowView: View {
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
                          HStack {
-                                            Text(album.albumName)
-                                                .font(.title3)
-                            .fontWeight(.semibold)
-                            .foregroundColor(isFocused ? .white : .gray)
-                            .lineLimit(1)
+                                            HStack(spacing: 6) {
+                                                if album.id.hasPrefix("smart_") {
+                                                    Image(systemName: "heart.fill")
+                                                         .font(.title3)
+                                                    .fontWeight(.semibold)
+                                                        .foregroundColor(.red)
+                                                }
+                                                Text(album.albumName)
+                                                    .font(.title3)
+                                                    .fontWeight(.semibold)
+                                                    .foregroundColor(isFocused ? .white : .gray)
+                                                    .lineLimit(1)
+                                            }
                                             
                                             Spacer()
                                             
@@ -382,12 +453,8 @@ struct AlbumDetailView: View {
                 AssetGridView(
                     assetService: assetService,
                     authService: authService,
-                    assetProvider: AssetProviderFactory.createProvider(
-                        albumId: album.id,
-                        assetService: assetService,
-                        albumService: albumService
-                    ),
-                    albumId: album.id,
+                    assetProvider: createAssetProvider(for: album),
+                    albumId: album.id.hasPrefix("smart_") ? nil : album.id,
                     personId: nil,
                     tagId: nil,
                     isAllPhotos: false,
@@ -417,6 +484,21 @@ struct AlbumDetailView: View {
         }
         .fullScreenCover(isPresented: $showingSlideshow) {
             SlideshowView(albumId: album.id, personId: nil, tagId: nil, startingIndex: 0)
+        }
+    }
+    
+    private func createAssetProvider(for album: ImmichAlbum) -> AssetProvider {
+        if album.id == "smart_favorites" {
+            return AssetProviderFactory.createProvider(
+                isFavorite: true,
+                assetService: assetService
+            )
+        } else {
+            return AssetProviderFactory.createProvider(
+                albumId: album.id,
+                assetService: assetService,
+                albumService: albumService
+            )
         }
     }
     
