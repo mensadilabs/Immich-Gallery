@@ -306,7 +306,7 @@ struct SettingsView: View {
                         }
                         
                         // TopShelf Settings Section
-                        SettingsSection(title: "Apple TV Top Shelf") {
+                        SettingsSection(title: "Top Shelf") {
                             AnyView(VStack(spacing: 12) {
                                 SettingsRow(
                                     icon: "tv",
