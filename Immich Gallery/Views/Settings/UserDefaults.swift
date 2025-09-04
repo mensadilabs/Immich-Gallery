@@ -73,4 +73,24 @@ extension UserDefaults {
         get { string(forKey: UserDefaultsKeys.allPhotosSortOrder) ?? "desc" }
         set { set(newValue, forKey: UserDefaultsKeys.allPhotosSortOrder) }
     }
+    
+    var artModeLevel: String {
+        get { string(forKey: UserDefaultsKeys.artModeLevel) ?? "off" }
+        set { set(newValue, forKey: UserDefaultsKeys.artModeLevel) }
+    }
+    
+    var artModeAutomatic: Bool {
+        get { bool(forKey: UserDefaultsKeys.artModeAutomatic) }
+        set { set(newValue, forKey: UserDefaultsKeys.artModeAutomatic) }
+    }
+    
+    var artModeDayStart: Int {
+        get { integer(forKey: UserDefaultsKeys.artModeDayStart) != 0 ? integer(forKey: UserDefaultsKeys.artModeDayStart) : 7 } // Default 7 AM
+        set { set(newValue, forKey: UserDefaultsKeys.artModeDayStart) }
+    }
+    
+    var artModeNightStart: Int {
+        get { integer(forKey: UserDefaultsKeys.artModeNightStart) != 0 ? integer(forKey: UserDefaultsKeys.artModeNightStart) : 20 } // Default 8 PM
+        set { set(newValue, forKey: UserDefaultsKeys.artModeNightStart) }
+    }
 }

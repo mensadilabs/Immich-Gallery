@@ -9,6 +9,7 @@ import Foundation
 
 struct AppConstants {
     static let appGroupIdentifier = "group.com.sanketh.dev.Immich-Gallery"
+    static let configAlbumName = "immich-gallery-config"
 }
 
 struct UserDefaultsKeys {
@@ -32,9 +33,16 @@ struct UserDefaultsKeys {
     static let allPhotosSortOrder = "allPhotosSortOrder"
     static let enableTopShelf = "enableTopShelf"
     static let topShelfStyle = "topShelfStyle"
+    static let topShelfImageSelection = "topShelfImageSelection"
     static let defaultStartupTab = "defaultStartupTab"
     static let lastSeenVersion = "lastSeenVersion"
     static let assetSortOrder = "assetSortOrder"
+    
+    // Art Mode settings
+    static let artModeLevel = "artModeLevel"
+    static let artModeAutomatic = "artModeAutomatic"
+    static let artModeDayStart = "artModeDayStart"
+    static let artModeNightStart = "artModeNightStart"
 }
 
 struct AppSchemes {

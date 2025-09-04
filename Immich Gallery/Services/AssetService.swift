@@ -14,7 +14,49 @@ class AssetService: ObservableObject {
         self.networkService = networkService
     }
 
-    func fetchAssets(page: Int = 1, limit: Int = 50, albumId: String? = nil, personId: String? = nil, tagId: String? = nil, isAllPhotos: Bool = false) async throws -> SearchResult {
+    func fetchAssets(page: Int = 1, limit: Int? = nil, albumId: String? = nil, personId: String? = nil, tagId: String? = nil, isAllPhotos: Bool = false, isFavorite: Bool = false) async throws -> SearchResult {
+        // Use separate sort order for All Photos tab vs everything else
+        let sortOrder = isAllPhotos 
+            ? UserDefaults.standard.allPhotosSortOrder
+            : (UserDefaults.standard.string(forKey: "assetSortOrder") ?? "desc")
+        var searchRequest: [String: Any] = [
+            "page": page,
+            "withPeople": true,
+            "order": sortOrder,
+            "withExif": true,
+        ]
+
+        if let limit = limit {
+            searchRequest["size"] = limit
+        }
+
+        if let albumId = albumId {
+            searchRequest["albumIds"] = [albumId]
+        }
+        if let personId = personId {
+            searchRequest["personIds"] = [personId]
+        }
+        if let tagId = tagId {
+            searchRequest["tagIds"] = [tagId]
+        }
+        if isFavorite {
+            searchRequest["isFavorite"] = true
+        }
+        let result: SearchResponse = try await networkService.makeRequest(
+            endpoint: "/api/search/metadata",
+            method: .POST,
+            body: searchRequest,
+            responseType: SearchResponse.self
+        )
+        return SearchResult(
+            assets: result.assets.items,
+            total: result.assets.total,
+            nextPage: result.assets.nextPage
+        )
+    }
+    
+    /// Fetches assets using slideshow configuration
+    func fetchAssets(config: SlideshowConfig, page: Int = 1, limit: Int = 50, isAllPhotos: Bool = false) async throws -> SearchResult {
         // Use separate sort order for All Photos tab vs everything else
         let sortOrder = isAllPhotos 
             ? UserDefaults.standard.allPhotosSortOrder
@@ -26,21 +68,24 @@ class AssetService: ObservableObject {
             "order": sortOrder,
             "withExif": true,
         ]
-        if let albumId = albumId {
-            searchRequest["albumIds"] = [albumId]
+        
+        // Apply config parameters if they exist
+        if !config.albumIds.isEmpty {
+            searchRequest["albumIds"] = config.albumIds
+            searchRequest["type"] = "IMAGE"
         }
-        if let personId = personId {
-            searchRequest["personIds"] = [personId]
+        if !config.personIds.isEmpty {
+            searchRequest["personIds"] = config.personIds
+            searchRequest["type"] = "IMAGE"
         }
-        if let tagId = tagId {
-            searchRequest["tagIds"] = [tagId]
-        }
+        
         let result: SearchResponse = try await networkService.makeRequest(
             endpoint: "/api/search/metadata",
             method: .POST,
             body: searchRequest,
             responseType: SearchResponse.self
         )
+        
         return SearchResult(
             assets: result.assets.items,
             total: result.assets.total,
@@ -55,11 +100,70 @@ class AssetService: ObservableObject {
     }
 
     func loadFullImage(asset: ImmichAsset) async throws -> UIImage? {
-        let originalEndpoint = "/api/assets/\(asset.id)/original"
+        // Check if it's a RAW format before loading
+        if let mimeType = asset.originalMimeType, isRawFormat(mimeType) {
+            print("AssetService: Detected RAW format (\(mimeType)), using server-converted version")
+            if let convertedImage = try await loadConvertedImage(asset: asset) {
+                return convertedImage
+            }
+        }
         
+        // Standard processing for non-RAW formats
+        let originalEndpoint = "/api/assets/\(asset.id)/original"
         let originalData = try await networkService.makeDataRequest(endpoint: originalEndpoint)
         
-        return UIImage(data: originalData)
+        if let image = UIImage(data: originalData) {
+            print("AssetService: Successfully loaded image for asset \(asset.id)")
+            return image
+        }
+        
+        print("AssetService: Failed to load image for asset \(asset.id)")
+        return nil
+    }
+    
+    private func isRawFormat(_ mimeType: String) -> Bool {
+        let rawMimeTypes = [
+            // Standard MIME types
+            "image/x-adobe-dng",
+            "image/x-canon-cr2",
+            "image/x-canon-crw", 
+            "image/x-nikon-nef",
+            "image/x-sony-arw",
+            "image/x-panasonic-raw",
+            "image/x-olympus-orf",
+            "image/x-fuji-raf",
+            
+            // Simplified types (what your logs show)
+            "image/nef",
+            "image/dng",
+            "image/cr2",
+            "image/arw",
+            "image/orf",
+            "image/raf",
+            
+            // Alternative formats
+            "image/x-panasonic-rw2",
+            "image/x-kodak-dcr",
+            "image/x-sigma-x3f"
+        ]
+        return rawMimeTypes.contains(mimeType.lowercased())
+    }
+    
+    private func loadConvertedImage(asset: ImmichAsset) async throws -> UIImage? {
+        // Use preview size for best quality RAW conversion
+        let endpoint = "/api/assets/\(asset.id)/thumbnail?format=webp&size=preview"
+        
+        do {
+            let data = try await networkService.makeDataRequest(endpoint: endpoint)
+            if let image = UIImage(data: data) {
+                print("AssetService: Loaded converted RAW image: \(image.size)")
+                return image
+            }
+        } catch {
+            print("AssetService: Failed to load converted RAW image: \(error)")
+        }
+        
+        return nil
     }
 
     func loadVideoURL(asset: ImmichAsset) async throws -> URL {
@@ -101,5 +205,12 @@ class AssetService: ObservableObject {
             total: assets.count,
             nextPage: nil // Random endpoint doesn't have pagination
         )
+    }
+    
+    /// Fetches random assets using slideshow configuration
+    func fetchRandomAssets(config: SlideshowConfig, limit: Int = 50) async throws -> SearchResult {
+        let albumIds = config.albumIds.isEmpty ? nil : config.albumIds
+        let personIds = config.personIds.isEmpty ? nil : config.personIds
+        return try await fetchRandomAssets(albumIds: albumIds, personIds: personIds, limit: limit)
     }
 } 

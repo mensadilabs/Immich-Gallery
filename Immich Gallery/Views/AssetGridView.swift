@@ -225,7 +225,7 @@ struct AssetGridView: View {
             // Cancel any pending load more tasks when view disappears
             loadMoreTask?.cancel()
         }
-        .onChange(of: showingFullScreen) { isShowing in
+        .onChange(of: showingFullScreen) { _, isShowing in
             print("AssetGridView: showingFullScreen changed to \(isShowing)")
             // When fullscreen is dismissed, highlight the current asset
             if !isShowing && currentAssetIndex < assets.count {
@@ -249,8 +249,7 @@ struct AssetGridView: View {
                 }
             }
         }
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name(NotificationNames.startAutoSlideshow))) { _ in
-            print("AssetGridView: Received auto-slideshow notification")
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name(NotificationNames.startAutoSlideshow))) { notification in
             startSlideshow()
         }
     }

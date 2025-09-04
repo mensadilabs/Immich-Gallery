@@ -19,10 +19,11 @@ struct SlideshowView: View {
     private let assetService: AssetService
     private let albumService: AlbumService?
     
-    // Asset provider created using factory
-    private let assetProvider: AssetProvider
+    // Asset provider created using factory - will be recreated with config if needed
+    @State private var assetProvider: AssetProvider?
+    @State private var slideshowConfig: SlideshowConfig?
 
-    init(albumId: String?, personId: String?, tagId: String?, startingIndex: Int) {
+    init(albumId: String? = nil, personId: String? = nil, tagId: String? = nil, startingIndex: Int = 0) {
         self.albumId = albumId
         self.personId = personId
         self.tagId = tagId
@@ -32,18 +33,21 @@ struct SlideshowView: View {
         let userManager = UserManager()
         let networkService = NetworkService(userManager: userManager)
         self.assetService = AssetService(networkService: networkService)
-        self.albumService = albumId != nil ? AlbumService(networkService: networkService) : nil
+        self.albumService = AlbumService(networkService: networkService)
 
-        // Create appropriate asset provider using factory
-        self.assetProvider = AssetProviderFactory.createProvider(
+        // Initial asset provider - will be replaced if config is fetched
+        let initialProvider = AssetProviderFactory.createProvider(
             albumId: albumId,
             personId: personId,
             tagId: tagId,
             isAllPhotos: false, // Slideshow doesn't use "All Photos" mode
             assetService: assetService,
-            albumService: albumService
+            albumService: albumService,
+            config: nil
         )
+        _assetProvider = State(initialValue: initialProvider)
     }
+    
 
     // Image Queue System
     @State private var imageQueue: [(asset: ImmichAsset, image: UIImage, dominantColor: Color?)] = []
@@ -69,6 +73,12 @@ struct SlideshowView: View {
     @State private var enableShuffle: Bool = UserDefaults.standard.enableSlideshowShuffle
     @State private var isSharedAlbum: Bool = false
     @FocusState private var isFocused: Bool
+    
+    /// Computed property to get current Art Mode level from UserDefaults
+    private var currentArtModeLevel: ArtModeLevel {
+        let levelString = UserDefaults.standard.artModeLevel
+        return ArtModeLevel(rawValue: levelString) ?? .off
+    }
 
     enum SlideDirection {
         case left, right, up, down, diagonal_up_left, diagonal_up_right, diagonal_down_left, diagonal_down_right, zoom_out
@@ -197,6 +207,10 @@ struct SlideshowView: View {
                                         }
                                     }
                                 )
+                                .overlay(
+                                    // Art Mode overlay
+                                    ArtModeOverlay(level: currentArtModeLevel)
+                                )
 
                             // Reflection with performance optimizations
                             if enableReflectionsInSlideshow {
@@ -302,7 +316,7 @@ struct SlideshowView: View {
                         dominantColor = cachedColor
                     } else {
                         Task {
-                            let color = await extractDominantColorAsync(from: imageData.image)
+                            let color = await ImageColorExtractor.extractDominantColorAsync(from: imageData.image)
                             await MainActor.run {
                                 self.dominantColor = color
                             }
@@ -324,10 +338,58 @@ struct SlideshowView: View {
 
     private func initializeSlideshow() {
         loadAssetsTask = Task {
+            // Always fetch config first
+            await fetchConfigAndUpdateProvider()
             await checkIfAlbumIsShared()
             await loadInitialAssets()
             await loadInitialImages()
             await showFirstImage()
+        }
+    }
+    
+    private func fetchConfigAndUpdateProvider() async {
+        guard let albumService = albumService else { 
+            // No album service, use fallback provider
+            await MainActor.run {
+                self.assetProvider = AssetProviderFactory.createProvider(
+                    albumId: albumId,
+                    personId: personId,
+                    tagId: tagId,
+                    isAllPhotos: false,
+                    assetService: assetService,
+                    albumService: albumService
+                )
+            }
+            return 
+        }
+        
+        let configService = SlideshowConfigService(albumService: albumService)
+        let config = await configService.fetchSlideshowConfig()
+        
+        await MainActor.run {
+            self.slideshowConfig = config
+            
+            // If config has values, use it; otherwise fallback to original parameters
+            if !config.albumIds.isEmpty || !config.personIds.isEmpty {
+                self.assetProvider = AssetProviderFactory.createProvider(
+                    albumId: nil, // Use config instead of individual IDs
+                    personId: nil,
+                    tagId: nil,
+                    isAllPhotos: false,
+                    assetService: assetService,
+                    albumService: albumService,
+                    config: config
+                )
+            } else {
+                self.assetProvider = AssetProviderFactory.createProvider(
+                    albumId: albumId,
+                    personId: personId,
+                    tagId: tagId,
+                    isAllPhotos: false,
+                    assetService: assetService,
+                    albumService: albumService
+                )
+            }
         }
     }
 
@@ -369,7 +431,7 @@ struct SlideshowView: View {
     }
 
     private func loadInitialAssets() async {
-        guard !Task.isCancelled else { return }
+        guard !Task.isCancelled, let assetProvider = assetProvider else { return }
 
         do {
             let searchResult: SearchResult
@@ -431,7 +493,7 @@ struct SlideshowView: View {
             }
 
             let dominantColor = slideshowBackgroundColor == "auto" ?
-                await extractDominantColorAsync(from: image) : nil
+                await ImageColorExtractor.extractDominantColorAsync(from: image) : nil
 
             await MainActor.run {
                 self.imageQueue.append((asset: asset, image: image, dominantColor: dominantColor))
@@ -600,93 +662,6 @@ struct SlideshowView: View {
         }
     }
 
-   private func extractDominantColorAsync(from image: UIImage) async -> Color {
-    return await withCheckedContinuation { continuation in
-        DispatchQueue.global(qos: .userInitiated).async {
-            guard let cgImage = image.cgImage else {
-                continuation.resume(returning: .black)
-                return
-            }
-
-            // Resize image to 50x50 using Core Image
-            let ciImage = CIImage(cgImage: cgImage)
-            let scale = CGAffineTransform(scaleX: 50.0 / ciImage.extent.width, y: 50.0 / ciImage.extent.height)
-            let resizedCIImage = ciImage.transformed(by: scale)
-
-            let context = CIContext()
-            guard let resizedCGImage = context.createCGImage(resizedCIImage, from: resizedCIImage.extent) else {
-                continuation.resume(returning: .black)
-                return
-            }
-
-            let width = resizedCGImage.width
-            let height = resizedCGImage.height
-            let bytesPerPixel = 4
-            let bytesPerRow = bytesPerPixel * width
-            let pixelCount = width * height
-
-            let pixelData = UnsafeMutablePointer<UInt8>.allocate(capacity: pixelCount * bytesPerPixel)
-            defer { pixelData.deallocate() }
-
-            guard let bitmapContext = CGContext(
-                data: pixelData,
-                width: width,
-                height: height,
-                bitsPerComponent: 8,
-                bytesPerRow: bytesPerRow,
-                space: CGColorSpaceCreateDeviceRGB(),
-                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-            ) else {
-                continuation.resume(returning: .black)
-                return
-            }
-
-            bitmapContext.draw(resizedCGImage, in: CGRect(x: 0, y: 0, width: width, height: height))
-
-            // Count quantized color frequency
-            var colorCounts: [UInt32: Int] = [:]
-
-            for i in 0..<pixelCount {
-                let offset = i * bytesPerPixel
-                let r = pixelData[offset]
-                let g = pixelData[offset + 1]
-                let b = pixelData[offset + 2]
-
-                // Skip very dark or very bright pixels
-                if r < 30 && g < 30 && b < 30 { continue }
-                if r > 230 && g > 230 && b > 230 { continue }
-
-                let reducedR = (r / 32) * 32
-                let reducedG = (g / 32) * 32
-                let reducedB = (b / 32) * 32
-
-                let key = (UInt32(reducedR) << 16) | (UInt32(reducedG) << 8) | UInt32(reducedB)
-                colorCounts[key, default: 0] += 1
-            }
-
-            guard let dominantColorKey = colorCounts.max(by: { $0.value < $1.value })?.key else {
-                continuation.resume(returning: .black)
-                return
-            }
-
-            let r = Double((dominantColorKey >> 16) & 0xFF) / 255.0
-            let g = Double((dominantColorKey >> 8) & 0xFF) / 255.0
-            let b = Double(dominantColorKey & 0xFF) / 255.0
-
-            // Adjust brightness for contrast (optional)
-            let brightness = 0.299 * r + 0.587 * g + 0.114 * b
-            let darkenFactor = brightness > 0.6 ? 0.6 : 1.0 // Darken only if it's too bright
-
-            let color = Color(
-                red: r * darkenFactor,
-                green: g * darkenFactor,
-                blue: b * darkenFactor
-            )
-
-            continuation.resume(returning: color)
-        }
-    }
-}
 
     private func startKenBurnsEffect() {
         guard enableKenBurnsEffect else {
@@ -737,7 +712,7 @@ struct SlideshowView: View {
             return true
         }
 
-        guard shouldLoad else { return }
+        guard shouldLoad, let assetProvider = assetProvider else { return }
 
         do {
             let searchResult: SearchResult
