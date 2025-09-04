@@ -225,7 +225,7 @@ struct AssetGridView: View {
             // Cancel any pending load more tasks when view disappears
             loadMoreTask?.cancel()
         }
-        .onChange(of: showingFullScreen) { isShowing in
+        .onChange(of: showingFullScreen) { _, isShowing in
             print("AssetGridView: showingFullScreen changed to \(isShowing)")
             // When fullscreen is dismissed, highlight the current asset
             if !isShowing && currentAssetIndex < assets.count {

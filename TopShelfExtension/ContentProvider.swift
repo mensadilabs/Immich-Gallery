@@ -208,12 +208,13 @@ class ContentProvider: TVTopShelfContentProvider {
     }
     
     private func fetchPhotos() async throws -> [SimpleAsset] {
-        print("TopShelf: Starting to fetch first \(TOTAL_ITEMS_COUNT) photos")
+        print("TopShelf: Starting to fetch \(TOTAL_ITEMS_COUNT) photos")
         
         let (serverURL, accessToken, authType) = getCurrentUserCredentials()
         let isTopShelfEnabledFromDefaults = sharedDefaults.bool(forKey: UserDefaultsKeys.enableTopShelf)
+        let imageSelection = sharedDefaults.string(forKey: UserDefaultsKeys.topShelfImageSelection) ?? "recent"
         
-        print("top shelf \(isTopShelfEnabledFromDefaults)")
+        print("TopShelf: enabled=\(isTopShelfEnabledFromDefaults), imageSelection=\(imageSelection)")
         
         print("TopShelf: Credentials check - serverURL: \(serverURL), accessToken: \(accessToken != nil ? "✓" : "✗"), authType: \(authType?.rawValue ?? "nil")")
         if let url = serverURL { print("TopShelf: Server URL: \(url)") }
@@ -229,6 +230,14 @@ class ContentProvider: TVTopShelfContentProvider {
         // Test token validity first
         try await testTokenValidity(serverURL: serverURL, accessToken: accessToken, authType: authType)
         
+        if imageSelection == "random" {
+            return try await fetchRandomPhotos(serverURL: serverURL, accessToken: accessToken, authType: authType)
+        } else {
+            return try await fetchRecentPhotos(serverURL: serverURL, accessToken: accessToken, authType: authType)
+        }
+    }
+    
+    private func fetchRecentPhotos(serverURL: String, accessToken: String, authType: SavedUser.AuthType) async throws -> [SimpleAsset] {
         let urlString = "\(serverURL)/api/search/metadata"
         print("TopShelf: Making request to: \(urlString)")
         guard let url = URL(string: urlString) else {
@@ -279,7 +288,60 @@ class ContentProvider: TVTopShelfContentProvider {
         print("TopShelf: Decoding response...")
         let searchResponse = try JSONDecoder().decode(SimpleSearchResponse.self, from: data)
         let imageAssets = Array(searchResponse.assets.items.filter { $0.type == "IMAGE" }.prefix(TOTAL_ITEMS_COUNT))
-        print("TopShelf: Found \(imageAssets.count) image assets")
+        print("TopShelf: Found \(imageAssets.count) recent image assets")
+        return imageAssets
+    }
+    
+    private func fetchRandomPhotos(serverURL: String, accessToken: String, authType: SavedUser.AuthType) async throws -> [SimpleAsset] {
+        let urlString = "\(serverURL)/api/assets/random"
+        print("TopShelf: Making request to: \(urlString)")
+        guard let url = URL(string: urlString) else {
+            print("TopShelf: Invalid URL: \(urlString)")
+            throw TopShelfError.invalidURL
+        }
+        
+        var urlComponents = URLComponents(url: url, resolvingAgainstBaseURL: false)
+        urlComponents?.queryItems = [
+            URLQueryItem(name: "count", value: String(TOTAL_ITEMS_COUNT))
+        ]
+        
+        guard let finalURL = urlComponents?.url else {
+            print("TopShelf: Failed to construct URL with query parameters")
+            throw TopShelfError.invalidURL
+        }
+        
+        var request = URLRequest(url: finalURL)
+        request.httpMethod = "GET"
+        
+        // Set authentication header based on auth type
+        if authType == .apiKey {
+            request.setValue(accessToken, forHTTPHeaderField: "x-api-key")
+        } else {
+            request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        }
+        
+        print("TopShelf: Sending random API request...")
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            print("TopShelf: Invalid HTTP response")
+            throw TopShelfError.networkError
+        }
+        
+        print("TopShelf: API response status: \(httpResponse.statusCode)")
+        
+        guard httpResponse.statusCode == 200 else {
+            print("TopShelf: API error - Status: \(httpResponse.statusCode)")
+            if let responseString = String(data: data, encoding: .utf8) {
+                print("TopShelf: Error response body: \(responseString)")
+            }
+            throw TopShelfError.networkError
+        }
+        
+        print("TopShelf: Decoding random response...")
+        let randomAssets = try JSONDecoder().decode([SimpleAsset].self, from: data)
+        let imageAssets = Array(randomAssets.filter { $0.type == "IMAGE" }.prefix(TOTAL_ITEMS_COUNT))
+        print("TopShelf: Found \(imageAssets.count) random image assets")
         return imageAssets
     }
     
