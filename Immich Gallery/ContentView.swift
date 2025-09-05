@@ -94,7 +94,7 @@ struct ContentView: View {
                                 isAllPhotos: true,
                                 assetService: assetService
                             ),
-                            albumId: nil, personId: nil, tagId: nil, isAllPhotos: true, 
+                            albumId: nil, personId: nil, tagId: nil, isAllPhotos: true, isFavorite: false,
                             onAssetsLoaded: nil, 
                             deepLinkAssetId: deepLinkAssetId
                         )

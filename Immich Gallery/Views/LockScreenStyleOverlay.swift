@@ -223,5 +223,5 @@ struct LockScreenStyleOverlay: View {
         )
     ]
     
-    SlideshowView(albumId: nil, personId: nil, tagId: nil, startingIndex: 0)
+    SlideshowView(albumId: nil, personId: nil, tagId: nil, startingIndex: 0, isFavorite: false)
 }

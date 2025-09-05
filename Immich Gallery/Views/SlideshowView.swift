@@ -13,6 +13,7 @@ struct SlideshowView: View {
     let personId: String?
     let tagId: String?
     let startingIndex: Int
+    let isFavorite: Bool
     @Environment(\.dismiss) private var dismiss
 
     // Services created internally
@@ -23,11 +24,12 @@ struct SlideshowView: View {
     @State private var assetProvider: AssetProvider?
     @State private var slideshowConfig: SlideshowConfig?
 
-    init(albumId: String? = nil, personId: String? = nil, tagId: String? = nil, startingIndex: Int = 0) {
+    init(albumId: String? = nil, personId: String? = nil, tagId: String? = nil, startingIndex: Int = 0, isFavorite: Bool = false) {
         self.albumId = albumId
         self.personId = personId
         self.tagId = tagId
         self.startingIndex = startingIndex
+        self.isFavorite = isFavorite
 
         // Create services internally
         let userManager = UserManager()
@@ -41,6 +43,7 @@ struct SlideshowView: View {
             personId: personId,
             tagId: tagId,
             isAllPhotos: false, // Slideshow doesn't use "All Photos" mode
+            isFavorite: isFavorite,
             assetService: assetService,
             albumService: albumService,
             config: nil
@@ -356,6 +359,7 @@ struct SlideshowView: View {
                     personId: personId,
                     tagId: tagId,
                     isAllPhotos: false,
+                    isFavorite: isFavorite,
                     assetService: assetService,
                     albumService: albumService
                 )
@@ -376,6 +380,7 @@ struct SlideshowView: View {
                     personId: nil,
                     tagId: nil,
                     isAllPhotos: false,
+                    isFavorite: isFavorite,
                     assetService: assetService,
                     albumService: albumService,
                     config: config
@@ -386,6 +391,7 @@ struct SlideshowView: View {
                     personId: personId,
                     tagId: tagId,
                     isAllPhotos: false,
+                    isFavorite: isFavorite,
                     assetService: assetService,
                     albumService: albumService
                 )
@@ -791,5 +797,5 @@ struct SlideshowView: View {
         )
     ]
 
-     return SlideshowView(albumId: nil, personId: nil, tagId: nil, startingIndex: 0)
+     return SlideshowView(albumId: nil, personId: nil, tagId: nil, startingIndex: 0, isFavorite: false)
 }
