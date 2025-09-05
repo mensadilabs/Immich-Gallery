@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import SwiftUI
 
 // MARK: - Asset Models
 struct ImmichAsset: Codable, Identifiable, Equatable {
@@ -249,4 +250,105 @@ struct AuthResponse: Codable {
     let profileImagePath: String
     let shouldChangePassword: Bool
     let isOnboarded: Bool
+}
+// MARK: Moved by Human
+
+import SwiftUI
+
+// MARK: - Grid Item Protocol
+protocol GridDisplayable: Identifiable {
+    var id: String { get }
+    var primaryTitle: String { get }
+    var secondaryTitle: String? { get }
+    var description: String? { get }
+    var thumbnailId: String? { get }
+    var itemCount: Int? { get }
+    var gridCreatedAt: String? { get }
+    var isFavorite: Bool? { get }
+    var isShared: Bool? { get }
+    var sharingText: String? { get }
+    var iconName: String { get }
+    var gridColor: Color? { get }
+}
+
+// MARK: - Grid Configuration
+struct GridConfig {
+    let columns: [GridItem]
+    let itemWidth: CGFloat
+    let itemHeight: CGFloat
+    let spacing: CGFloat
+    let loadingText: String
+    let emptyStateText: String
+    let emptyStateDescription: String
+    
+    static let albumStyle = GridConfig(
+        columns: [
+            GridItem(.fixed(500), spacing: 20),
+            GridItem(.fixed(500), spacing: 20),
+            GridItem(.fixed(500), spacing: 20)
+        ],
+        itemWidth: 490,
+        itemHeight: 400,
+        spacing: 100,
+        loadingText: "Loading albums...",
+        emptyStateText: "No Albums Found",
+        emptyStateDescription: "Your albums will appear here"
+    )
+    
+    static let peopleStyle = GridConfig(
+        columns: [
+            GridItem(.fixed(400), spacing: 20),
+            GridItem(.fixed(400), spacing: 20),
+            GridItem(.fixed(400), spacing: 20),
+            GridItem(.fixed(400), spacing: 20)
+        ],
+        itemWidth: 400,
+        itemHeight: 450,
+        spacing: 50,
+        loadingText: "Loading people...",
+        emptyStateText: "No People Found",
+        emptyStateDescription: "People detected in your photos will appear here"
+    )
+    
+    static let tagsStyle = GridConfig(
+        columns: [
+            GridItem(.fixed(500), spacing: 20),
+            GridItem(.fixed(500), spacing: 20),
+            GridItem(.fixed(500), spacing: 20)
+        ],
+        itemWidth: 490,
+        itemHeight: 400,
+        spacing: 100,
+        loadingText: "Loading tags...",
+        emptyStateText: "No Tags Found",
+        emptyStateDescription: "Your tags will appear here"
+    )
+}
+
+
+
+// MARK: - Explore Data Models
+struct ExploreAsset: GridDisplayable {
+    let asset: ImmichAsset
+    
+    // GridDisplayable conformance
+    var id: String { asset.id }
+    var primaryTitle: String { 
+        asset.exifInfo?.city ?? "Unknown City"
+    }
+    var secondaryTitle: String? { 
+        if let state = asset.exifInfo?.state, let country = asset.exifInfo?.country {
+            return "\(state), \(country)"
+        }
+        return asset.exifInfo?.state ?? asset.exifInfo?.country
+    }
+    var description: String? { nil }
+    var thumbnailId: String? { asset.id }
+    var itemCount: Int? { nil }
+    var gridCreatedAt: String? { asset.fileCreatedAt }
+    var isFavorite: Bool? { asset.isFavorite }
+    var isShared: Bool? { false }
+    var sharingText: String? { nil }
+    var iconName: String { "photo" }
+    var gridColor: Color? { nil }
 } 

@@ -4,82 +4,11 @@
 //
 //  Created by mensadi-labs on 2025-09-04.
 //
-
 import SwiftUI
-
-// MARK: - Grid Item Protocol
-protocol GridDisplayable: Identifiable {
-    var id: String { get }
-    var primaryTitle: String { get }
-    var secondaryTitle: String? { get }
-    var description: String? { get }
-    var thumbnailId: String? { get }
-    var itemCount: Int? { get }
-    var gridCreatedAt: String? { get }
-    var isFavorite: Bool? { get }
-    var isShared: Bool? { get }
-    var sharingText: String? { get }
-    var iconName: String { get }
-    var gridColor: Color? { get }
-}
-
-// MARK: - Grid Configuration
-struct GridConfig {
-    let columns: [GridItem]
-    let itemWidth: CGFloat
-    let itemHeight: CGFloat
-    let spacing: CGFloat
-    let loadingText: String
-    let emptyStateText: String
-    let emptyStateDescription: String
-    
-    static let albumStyle = GridConfig(
-        columns: [
-            GridItem(.fixed(500), spacing: 20),
-            GridItem(.fixed(500), spacing: 20),
-            GridItem(.fixed(500), spacing: 20)
-        ],
-        itemWidth: 490,
-        itemHeight: 400,
-        spacing: 100,
-        loadingText: "Loading albums...",
-        emptyStateText: "No Albums Found",
-        emptyStateDescription: "Your albums will appear here"
-    )
-    
-    static let peopleStyle = GridConfig(
-        columns: [
-            GridItem(.fixed(400), spacing: 20),
-            GridItem(.fixed(400), spacing: 20),
-            GridItem(.fixed(400), spacing: 20),
-            GridItem(.fixed(400), spacing: 20)
-        ],
-        itemWidth: 400,
-        itemHeight: 450,
-        spacing: 50,
-        loadingText: "Loading people...",
-        emptyStateText: "No People Found",
-        emptyStateDescription: "People detected in your photos will appear here"
-    )
-    
-    static let tagsStyle = GridConfig(
-        columns: [
-            GridItem(.fixed(500), spacing: 20),
-            GridItem(.fixed(500), spacing: 20),
-            GridItem(.fixed(500), spacing: 20)
-        ],
-        itemWidth: 490,
-        itemHeight: 400,
-        spacing: 100,
-        loadingText: "Loading tags...",
-        emptyStateText: "No Tags Found",
-        emptyStateDescription: "Your tags will appear here"
-    )
-}
 
 // MARK: - Thumbnail Provider Protocol
 protocol ThumbnailProvider {
-    func loadThumbnails(for item: GridDisplayable) async -> [UIImage]
+    func loadThumbnails(for item: any GridDisplayable) async -> [UIImage]
 }
 
 // MARK: - Main Grid View

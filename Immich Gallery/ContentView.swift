@@ -12,8 +12,9 @@ enum TabName: Int, CaseIterable {
     case albums = 1
     case people = 2
     case tags = 3
-    case search = 4
-    case settings = 5
+    case explore = 4
+    case search = 5
+    case settings = 6
     
     var title: String {
         switch self {
@@ -21,6 +22,7 @@ enum TabName: Int, CaseIterable {
         case .albums: return "Albums"
         case .people: return "People"
         case .tags: return "Tags"
+        case .explore: return "Explore"
         case .search: return "Search"
         case .settings: return "Settings"
         }
@@ -32,6 +34,7 @@ enum TabName: Int, CaseIterable {
         case .albums: return "folder"
         case .people: return "person.crop.circle"
         case .tags: return "tag"
+        case .explore: return "globe"
         case .search: return "magnifyingglass"
         case .settings: return "gear"
         }
@@ -54,6 +57,7 @@ struct ContentView: View {
     @StateObject private var albumService: AlbumService
     @StateObject private var peopleService: PeopleService
     @StateObject private var tagService: TagService
+    @StateObject private var exploreService: ExploreService
     @StateObject private var searchService: SearchService
     @State private var selectedTab = 0
     @State private var refreshTrigger = UUID()
@@ -74,6 +78,7 @@ struct ContentView: View {
         _albumService = StateObject(wrappedValue: AlbumService(networkService: networkService))
         _peopleService = StateObject(wrappedValue: PeopleService(networkService: networkService))
         _tagService = StateObject(wrappedValue: TagService(networkService: networkService))
+        _exploreService = StateObject(wrappedValue: ExploreService(networkService: networkService))
         _searchService = StateObject(wrappedValue: SearchService(networkService: networkService))
     }
     
@@ -130,6 +135,14 @@ struct ContentView: View {
                                 }
                                 .tag(TabName.tags.rawValue)
                         }
+                        
+                        ExploreView(exploreService: exploreService, assetService: assetService, authService: authService)
+                            .errorBoundary(context: "Explore Tab")
+                            .tabItem {
+                                Image(systemName: TabName.explore.iconName)
+                                Text(TabName.explore.title)
+                            }
+                            .tag(TabName.explore.rawValue)
                         
                         SearchView(searchService: searchService, assetService: assetService, authService: authService)
                             .errorBoundary(context: "Search Tab")
@@ -249,6 +262,8 @@ struct ContentView: View {
             } else {
                 selectedTab = TabName.photos.rawValue // Default to photos if tags tab is disabled
             }
+        case "explore":
+            selectedTab = TabName.explore.rawValue
         default: // "photos"
             selectedTab = TabName.photos.rawValue
         }
