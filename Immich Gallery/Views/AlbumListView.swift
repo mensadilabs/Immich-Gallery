@@ -157,6 +157,7 @@ struct AlbumDetailView: View {
                     albumId: album.id.hasPrefix("smart_") ? nil : album.id,
                     personId: nil,
                     tagId: nil,
+                    city: nil,
                     isAllPhotos: false,
                     isFavorite: album.id.hasPrefix("smart_") ? true : false,
                     onAssetsLoaded: { loadedAssets in
@@ -188,6 +189,7 @@ struct AlbumDetailView: View {
                 albumId: album.id.hasPrefix("smart_") ? nil : album.id, 
                 personId: nil, 
                 tagId: nil, 
+                city: nil,
                 startingIndex: 0,
                 isFavorite: album.id == "smart_favorites"
             )

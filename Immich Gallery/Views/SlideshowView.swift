@@ -12,6 +12,7 @@ struct SlideshowView: View {
     let albumId: String?
     let personId: String?
     let tagId: String?
+    let city: String?
     let startingIndex: Int
     let isFavorite: Bool
     @Environment(\.dismiss) private var dismiss
@@ -24,10 +25,11 @@ struct SlideshowView: View {
     @State private var assetProvider: AssetProvider?
     @State private var slideshowConfig: SlideshowConfig?
 
-    init(albumId: String? = nil, personId: String? = nil, tagId: String? = nil, startingIndex: Int = 0, isFavorite: Bool = false) {
+    init(albumId: String? = nil, personId: String? = nil, tagId: String? = nil, city: String? = nil, startingIndex: Int = 0, isFavorite: Bool = false) {
         self.albumId = albumId
         self.personId = personId
         self.tagId = tagId
+        self.city = city
         self.startingIndex = startingIndex
         self.isFavorite = isFavorite
 
@@ -42,6 +44,7 @@ struct SlideshowView: View {
             albumId: albumId,
             personId: personId,
             tagId: tagId,
+            city: city,
             isAllPhotos: false, // Slideshow doesn't use "All Photos" mode
             isFavorite: isFavorite,
             assetService: assetService,
@@ -358,6 +361,7 @@ struct SlideshowView: View {
                     albumId: albumId,
                     personId: personId,
                     tagId: tagId,
+                    city: city,
                     isAllPhotos: false,
                     isFavorite: isFavorite,
                     assetService: assetService,
@@ -390,6 +394,7 @@ struct SlideshowView: View {
                     albumId: albumId,
                     personId: personId,
                     tagId: tagId,
+                    city: city,
                     isAllPhotos: false,
                     isFavorite: isFavorite,
                     assetService: assetService,
@@ -797,5 +802,5 @@ struct SlideshowView: View {
         )
     ]
 
-     return SlideshowView(albumId: nil, personId: nil, tagId: nil, startingIndex: 0, isFavorite: false)
+     return SlideshowView(albumId: nil, personId: nil, tagId: nil, city: nil, startingIndex: 0, isFavorite: false)
 }

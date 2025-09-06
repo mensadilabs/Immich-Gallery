@@ -12,6 +12,7 @@ struct AssetProviderFactory {
         albumId: String? = nil,
         personId: String? = nil,
         tagId: String? = nil,
+        city: String? = nil,
         isAllPhotos: Bool = false,
         isFavorite: Bool = false,
         assetService: AssetService,
@@ -26,6 +27,7 @@ struct AssetProviderFactory {
                 assetService: assetService,
                 personId: personId,
                 tagId: tagId,
+                city: city,
                 isAllPhotos: isAllPhotos,
                 isFavorite: isFavorite,
                 config: config
@@ -98,14 +100,16 @@ class GeneralAssetProvider: AssetProvider {
     private let assetService: AssetService
     private let personId: String?
     private let tagId: String?
+    private let city: String?
     private let isAllPhotos: Bool
     private let isFavorite: Bool
     private let config: SlideshowConfig?
     
-    init(assetService: AssetService, personId: String? = nil, tagId: String? = nil, isAllPhotos: Bool = false, isFavorite: Bool = false, config: SlideshowConfig? = nil) {
+    init(assetService: AssetService, personId: String? = nil, tagId: String? = nil, city: String? = nil, isAllPhotos: Bool = false, isFavorite: Bool = false, config: SlideshowConfig? = nil) {
         self.assetService = assetService
         self.personId = personId
         self.tagId = tagId
+        self.city = city
         self.isAllPhotos = isAllPhotos
         self.isFavorite = isFavorite
         self.config = config
@@ -122,6 +126,7 @@ class GeneralAssetProvider: AssetProvider {
                 albumId: nil,
                 personId: personId,
                 tagId: tagId,
+                city: city,
                 isAllPhotos: isAllPhotos,
                 isFavorite: isFavorite
             )

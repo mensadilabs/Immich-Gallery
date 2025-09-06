@@ -15,6 +15,7 @@ struct AssetGridView: View {
     let albumId: String? // Optional album ID to filter assets
     let personId: String? // Optional person ID to filter assets
     let tagId: String? // Optional tag ID to filter assets
+    let city: String? // Optional city to filter assets
     let isAllPhotos: Bool // Whether this is the All Photos tab
     let isFavorite: Bool // Whether this is showing favorite assets
     let onAssetsLoaded: (([ImmichAsset]) -> Void)? // Callback for when assets are loaded
@@ -210,7 +211,7 @@ struct AssetGridView: View {
                 // Find the index of the current asset in the filtered image assets
                 let startingIndex = currentAssetIndex < assets.count ? 
                     (imageAssets.firstIndex(of: assets[currentAssetIndex]) ?? 0) : 0
-                SlideshowView(albumId: albumId, personId: personId, tagId: tagId, startingIndex: startingIndex, isFavorite: isFavorite)
+                SlideshowView(albumId: albumId, personId: personId, tagId: tagId, city: city, startingIndex: startingIndex, isFavorite: isFavorite)
             }
         }
         .onPlayPauseCommand(perform: {

@@ -86,6 +86,7 @@ struct TagDetailView: View {
                               ),
                               albumId: nil, personId: nil,
                               tagId: tag.id,
+                              city: nil,
                               isAllPhotos: false,
                               isFavorite: false,
                               onAssetsLoaded: nil,

@@ -104,6 +104,7 @@ struct PersonPhotosView: View {
                      albumId: nil,
                      personId: person.id,
                     tagId: nil,
+                    city: nil,
                     isAllPhotos: false,
                     isFavorite: false,
                     onAssetsLoaded: { loadedAssets in
@@ -113,7 +114,7 @@ struct PersonPhotosView: View {
                 )
             }
             .navigationTitle(person.name.isEmpty ? "Unknown Person" : person.name)
-            .toolbar(content: {
+            .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: startSlideshow) {
                         Image(systemName: "play.rectangle")
@@ -128,10 +129,10 @@ struct PersonPhotosView: View {
                     }
                     .foregroundColor(.white)
                 }
-            })
+            }
         }
         .fullScreenCover(isPresented: $slideshowTrigger) {
-            SlideshowView(albumId: nil, personId: person.id, tagId: nil, startingIndex: 0, isFavorite: false)
+            SlideshowView(albumId: nil, personId: person.id, tagId: nil, city: nil, startingIndex: 0, isFavorite: false)
         }
     }
     

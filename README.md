@@ -4,6 +4,10 @@
 
 A native Apple TV app for browsing your self-hosted Immich photo library with a beautiful, TV-optimized interface.
 
+> [!TIP]
+> If you see "Data couldnt read because its missing", update Immich and try again: https://github.com/mensadilabs/Immich-Gallery/issues/67 
+
+
 ## Features
 
 - 🖼️ **Photo Grid View**: Browse all your photos in a responsive grid layout with infinite scrolling

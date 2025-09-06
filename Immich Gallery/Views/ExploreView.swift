@@ -21,6 +21,7 @@ struct ExploreView: View {
     @State private var showingFullScreen = false
     @State private var currentAssetIndex: Int = 0
     @State private var showingStats = false
+    @State private var selectedExploreItem: ExploreAsset?
     
     var body: some View {
         ZStack {
@@ -59,6 +60,7 @@ struct ExploreView: View {
                         .foregroundColor(.gray)
                 }
             } else {
+                // cannot use sharedGridView directly because we want the button to scroll away
                 ScrollView {
                     LazyVStack(spacing: 20) {
                         // Stats Button Header
@@ -124,6 +126,9 @@ struct ExploreView: View {
         }
         .sheet(isPresented: $showingStats) {
             StatsView(statsService: createStatsService())
+        }
+        .fullScreenCover(item: $selectedExploreItem) { exploreItem in
+            ExploreDetailView(city: exploreItem.primaryTitle, assetService: assetService, authService: authService)
         }
         .onAppear {
             if assets.isEmpty {
