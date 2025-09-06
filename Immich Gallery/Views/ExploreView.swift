@@ -11,6 +11,7 @@ struct ExploreView: View {
     @ObservedObject var exploreService: ExploreService
     @ObservedObject var assetService: AssetService
     @ObservedObject var authService: AuthenticationService
+    @ObservedObject var userManager: UserManager
     
     @State private var assets: [ImmichAsset] = []
     @State private var exploreItems: [ExploreAsset] = []
@@ -19,25 +20,111 @@ struct ExploreView: View {
     @State private var selectedAsset: ImmichAsset?
     @State private var showingFullScreen = false
     @State private var currentAssetIndex: Int = 0
+    @State private var showingStats = false
     
     var body: some View {
-        SharedGridView(
-            items: exploreItems,
-            config: .peopleStyle,
-            thumbnailProvider: ExploreThumbnailProvider(assetService: assetService),
-            isLoading: isLoading,
-            errorMessage: errorMessage,
-            onItemSelected: { item in
-                selectedAsset = item.asset
-                if let index = assets.firstIndex(of: item.asset) {
-                    currentAssetIndex = index
+        ZStack {
+            SharedGradientBackground()
+            
+            if isLoading {
+                ProgressView("Loading explore data...")
+                    .foregroundColor(.white)
+                    .scaleEffect(1.5)
+            } else if let errorMessage = errorMessage {
+                VStack {
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.system(size: 60))
+                        .foregroundColor(.orange)
+                    Text("Error")
+                        .font(.title)
+                        .foregroundColor(.white)
+                    Text(errorMessage)
+                        .foregroundColor(.gray)
+                        .multilineTextAlignment(.center)
+                        .padding()
+                    Button("Retry") {
+                        loadExploreData()
+                    }
+                    .buttonStyle(.borderedProminent)
                 }
-                showingFullScreen = true
-            },
-            onRetry: {
-                loadExploreData()
+            } else if exploreItems.isEmpty {
+                VStack {
+                    Image(systemName: "photo")
+                        .font(.system(size: 60))
+                        .foregroundColor(.gray)
+                    Text("No Places Found")
+                        .font(.title)
+                        .foregroundColor(.white)
+                    Text("Photos with location data will appear here")
+                        .foregroundColor(.gray)
+                }
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: 20) {
+                        // Stats Button Header
+                        VStack(spacing: 16) {
+                            Button(action: {
+                                showingStats = true
+                            }) {
+                                HStack(spacing: 16) {
+                                    Image(systemName: "chart.bar.fill")
+                                        .font(.title2)
+                                        .foregroundColor(.blue)
+                                    
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("Library Statistics")
+                                            .font(.headline)
+                                            .foregroundColor(.primary)
+                                        Text("View places visited and people stats")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    
+                                    Spacer()
+                                    
+                                    Image(systemName: "chevron.right")
+                                        .foregroundColor(.blue)
+                                        .font(.caption)
+                                }
+                                .padding()
+                                .background(Color.blue.opacity(0.05))
+                                .cornerRadius(12)
+                            }
+                            .buttonStyle(CardButtonStyle())
+                        }
+                        .padding(.horizontal)
+                        
+                        // Grid Content
+                        LazyVGrid(columns: GridConfig.peopleStyle.columns, spacing: GridConfig.peopleStyle.spacing) {
+                            ForEach(exploreItems) { item in
+                                Button(action: {
+                                    selectedAsset = item.asset
+                                    if let index = assets.firstIndex(of: item.asset) {
+                                        currentAssetIndex = index
+                                    }
+                                    showingFullScreen = true
+                                }) {
+                                    SharedGridItemView(
+                                        item: item,
+                                        config: .peopleStyle,
+                                        thumbnailProvider: ExploreThumbnailProvider(assetService: assetService),
+                                        isFocused: false,
+                                        animationTrigger: 0
+                                    )
+                                }
+                                .frame(width: GridConfig.peopleStyle.itemWidth, height: GridConfig.peopleStyle.itemHeight)
+                                .padding(10)
+                                .buttonStyle(CardButtonStyle())
+                            }
+                        }
+                    }
+                    .padding(.vertical)
+                }
             }
-        )
+        }
+        .sheet(isPresented: $showingStats) {
+            StatsView(statsService: createStatsService())
+        }
         .onAppear {
             if assets.isEmpty {
                 loadExploreData()
@@ -69,6 +156,13 @@ struct ExploreView: View {
                 }
             }
         }
+    }
+    
+    private func createStatsService() -> StatsService {
+        let networkService = NetworkService(userManager: userManager)
+        let exploreService = ExploreService(networkService: networkService)
+        let peopleService = PeopleService(networkService: networkService)
+        return StatsService(exploreService: exploreService, peopleService: peopleService, networkService: networkService)
     }
     
 }

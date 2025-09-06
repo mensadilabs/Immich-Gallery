@@ -138,7 +138,7 @@ struct SignInView: View {
                     .foregroundColor(.white)
                     .cornerRadius(12)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(CardButtonStyle())
                 .disabled(isLoading || serverURL.isEmpty || email.isEmpty || (authType == .password ? password.isEmpty : apiKey.isEmpty))
                 .opacity((isLoading || serverURL.isEmpty || email.isEmpty || (authType == .password ? password.isEmpty : apiKey.isEmpty)) ? 0.6 : 1.0)
                 

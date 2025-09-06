@@ -251,6 +251,12 @@ struct AuthResponse: Codable {
     let shouldChangePassword: Bool
     let isOnboarded: Bool
 }
+
+struct AssetStatistics: Codable {
+    let images: Int
+    let total: Int
+    let videos: Int
+}
 // MARK: Moved by Human
 
 import SwiftUI

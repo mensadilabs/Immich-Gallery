@@ -18,25 +18,26 @@ struct AssetThumbnailView: View {
     
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color.gray.opacity(0.3))
-                .frame(width: 320, height: 320)
+        
+             RoundedRectangle(cornerRadius: 12)
+                 .fill(Color.gray.opacity(0.3))
+                 .frame(width: 320, height: 320)
             
-            if isLoading {
-                ProgressView()
-                    .scaleEffect(1.2)
-            } else if let image = image {
-                Image(uiImage: image)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(width: 320, height: 320)
-                    .clipped()
-                    .cornerRadius(12)
-            } else {
-                Image(systemName: "photo")
-                    .font(.system(size: 40))
-                    .foregroundColor(.gray)
-            }
+             if isLoading {
+                 ProgressView()
+                     .scaleEffect(1.2)
+             } else if let image = image {
+                 Image(uiImage: image)
+                     .resizable()
+                     .aspectRatio(contentMode: .fill)
+                     .frame(width: 320, height: 320)
+                     .clipped()
+                     .cornerRadius(12)
+             } else {
+                 Image(systemName: "photo")
+                     .font(.system(size: 40))
+                     .foregroundColor(.gray)
+             }
             
             // Video indicator
             if asset.type == .video {
