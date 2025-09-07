@@ -26,15 +26,12 @@ struct ExploreView: View {
     @State private var showcaseHeight: CGFloat = 0
     @State private var showcaseHighlightedItem: ExploreAsset?
     @State private var focusedItemID: String?
-    @State private var navigationDirection: BackgroundImageView.NavigationDirection = .none
-    @State private var previousFocusedItemID: String?
-    @State private var randomizedFirstRowItems: [ExploreAsset] = []
     
     // Computed property to get the focused explore item
     private var focusedExploreItem: ExploreAsset? {
         guard let focusedItemID = focusedItemID else { 
-            print("🎯 ExploreView: No focused item ID, using first randomized item")
-            return randomizedFirstRowItems.first
+            print("🎯 ExploreView: No focused item ID")
+            return nil 
         }
         let item = exploreItems.first { $0.id == focusedItemID }
         print("🎯 ExploreView: Focused item - ID: \(focusedItemID), Found: \(item?.primaryTitle ?? "nil")")
@@ -48,8 +45,7 @@ struct ExploreView: View {
                 selectedItem: focusedExploreItem ?? exploreItems.first,
                 assetService: assetService,
                 belowFold: belowFold,
-                exploreItems: exploreItems,
-                navigationDirection: navigationDirection
+                exploreItems: exploreItems
             )
             .onAppear {
                 print("🎯 BackgroundImageView: Initial item - \((focusedExploreItem ?? exploreItems.first)?.primaryTitle ?? "nil")")
@@ -97,7 +93,7 @@ struct ExploreView: View {
                                     VStack(alignment: .leading, spacing: 20) {
                                         Spacer(minLength: 40)
                                         
-                                        Text(displayItem.primaryTitle.isEmpty == true ? "Unknown City" : displayItem.primaryTitle )
+                                        Text(displayItem.primaryTitle)
                                             .font(.largeTitle)
                                             .fontWeight(.bold)
                                             .foregroundColor(.white)
@@ -107,13 +103,18 @@ struct ExploreView: View {
                                             .font(.title2)
                                             .foregroundColor(.white.opacity(0.8))
                                         
-                                        HStack(spacing: 20) {                                            
-                                            Button("Library Stats") {
-                                                showingStats = true
-                                            }
-                                            .buttonStyle(.bordered)
-                                            .foregroundColor(.white)
-                                        }
+//                                        HStack(spacing: 20) {
+//                                            Button("View Details") {
+//                                                selectedExploreItem = displayItem
+//                                            }
+//                                            .buttonStyle(.borderedProminent)
+//                                            
+//                                            Button("Library Stats") {
+//                                                showingStats = true
+//                                            }
+//                                            .buttonStyle(.bordered)
+//                                            .foregroundColor(.white)
+//                                        }
                                         
                                         Spacer(minLength: 20)
                                     }
@@ -138,7 +139,7 @@ struct ExploreView: View {
                         
                         // First Row (Above the fold)
                         ExploreFirstRow(
-                            exploreItems: randomizedFirstRowItems,
+                            exploreItems: Array(exploreItems.prefix(GridConfig.peopleStyle.columns.count)),
                             assetService: assetService,
                             focusedItemID: $focusedItemID,
                             onItemSelected: { item in
@@ -150,7 +151,7 @@ struct ExploreView: View {
                         // Remaining Grid Items (Below the fold)
                         if exploreItems.count > GridConfig.peopleStyle.columns.count {
                             ExploreRemainingGrid(
-                                exploreItems: exploreItems,
+                                exploreItems: Array(exploreItems.dropFirst(GridConfig.peopleStyle.columns.count)),
                                 assetService: assetService,
                                 focusedItemID: $focusedItemID,
                                 onItemSelected: { item in
@@ -178,35 +179,13 @@ struct ExploreView: View {
         .onAppear {
             if assets.isEmpty {
                 loadExploreData()
-            } else if randomizedFirstRowItems.isEmpty {
-                // If data is already loaded but first row items aren't randomized yet
-                randomizeFirstRowItems()
             }
         }
         .onChange(of: focusedItemID) { oldValue, newValue in
             print("🎯 ExploreView: focusedItemID changed from \(oldValue ?? "nil") to \(newValue ?? "nil")")
-            
-            // Determine navigation direction based on index changes
-            if let oldValue = oldValue, let newValue = newValue,
-               let oldIndex = exploreItems.firstIndex(where: { $0.id == oldValue }),
-               let newIndex = exploreItems.firstIndex(where: { $0.id == newValue }) {
-                
-                if newIndex > oldIndex {
-                    navigationDirection = .forward
-                } else if newIndex < oldIndex {
-                    navigationDirection = .backward
-                } else {
-                    navigationDirection = .none
-                }
-            } else {
-                navigationDirection = .none
-            }
-            
             if let newValue = newValue, let item = exploreItems.first(where: { $0.id == newValue }) {
-                print("🎯 ExploreView: Above-the-fold should update to: \(item.primaryTitle), direction: \(navigationDirection)")
+                print("🎯 ExploreView: Above-the-fold should update to: \(item.primaryTitle)")
             }
-            
-            previousFocusedItemID = oldValue
         }
     }
     
@@ -226,7 +205,6 @@ struct ExploreView: View {
                     self.assets = result
                     self.exploreItems = result.map { ExploreAsset(asset: $0) }
                     self.isLoading = false
-                    self.randomizeFirstRowItems()
                 }
             } catch {
                 await MainActor.run {
@@ -254,16 +232,6 @@ struct ExploreView: View {
 //            return height
 //        }
 //    }
-    
-    private func randomizeFirstRowItems() {
-        let columnsCount = GridConfig.peopleStyle.columns.count
-        if exploreItems.count > columnsCount {
-            randomizedFirstRowItems = Array(exploreItems.shuffled().prefix(columnsCount))
-        } else {
-            randomizedFirstRowItems = exploreItems
-        }
-        print("🎯 ExploreView: Randomized first row items: \(randomizedFirstRowItems.map { $0.primaryTitle })")
-    }
     
     private func createStatsService() -> StatsService {
         let networkService = NetworkService(userManager: userManager)
@@ -347,7 +315,7 @@ struct FirstRowItem: View {
                         .stroke(isCurrentlyFocused ? Color.white : Color.clear, lineWidth: isCurrentlyFocused ? 4 : 0)
                 )
                 .scaleEffect(isCurrentlyFocused ? 1.1 : 1.0)
-                .animation(.easeIn(duration: 1), value: isCurrentlyFocused)
+                .animation(.easeInOut(duration: 0.2), value: isCurrentlyFocused)
             }
         }
         .padding(.top, 100)
@@ -490,16 +458,8 @@ struct BackgroundImageView: View {
     let assetService: AssetService
     let belowFold: Bool
     let exploreItems: [ExploreAsset] // Need all items for mosaic
-    let navigationDirection: NavigationDirection
     @State private var backgroundImage: UIImage?
     @State private var additionalImages: [UIImage] = []
-    @State private var pendingItem: ExploreAsset?
-    @State private var opacity: Double = 1.0
-    @State private var animationTask: Task<Void, Never>?
-    
-    enum NavigationDirection {
-        case none, forward, backward
-    }
     
     var body: some View {
         Group {
@@ -508,163 +468,85 @@ struct BackgroundImageView: View {
                     let imageAspectRatio = backgroundImage.size.width / backgroundImage.size.height
                     let isPortrait = imageAspectRatio < 1.0
                     
-                    Group {
-                        if isPortrait && !additionalImages.isEmpty {
-                            // Portrait mosaic layout
-                            HStack(spacing: 0) {
-                                // Main image (left side)
-                                Image(uiImage: backgroundImage)
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fill)
-                                    .frame(width: geometry.size.width * 0.5)
-                                    .clipped()
-                                
-                                // Additional images (right side)
-                                VStack(spacing: 0) {
-                                    ForEach(Array(additionalImages.prefix(2).enumerated()), id: \.offset) { index, image in
-                                        Image(uiImage: image)
-                                            .resizable()
-                                            .aspectRatio(contentMode: .fill)
-                                            .frame(
-                                                width: geometry.size.width * 0.5,
-                                                height: geometry.size.height / 1.65
-                                            )
-                                            .clipped()
-                                    }
-                                    
-                                    // Fill remaining space if we have less than 2 images
-                                    if additionalImages.count < 2 {
-                                        Rectangle()
-                                            .fill(Color.clear)
-                                            .frame(
-                                                width: geometry.size.width * 0.5,
-                                                height: geometry.size.height / 2
-                                            )
-                                    }
-                                }
-                                .frame(maxHeight: .infinity)
-                            }
-                            .ignoresSafeArea()
-                        } else {
-                            // Single image layout (landscape or no additional images)
+                    if isPortrait && !additionalImages.isEmpty {
+                        // Portrait mosaic layout
+                        HStack(spacing: 0) {
+                            // Main image (left side)
                             Image(uiImage: backgroundImage)
                                 .resizable()
-                                .aspectRatio(contentMode: isPortrait ? .fit : .fill)
-                                .frame(
-                                    width: isPortrait ? min(geometry.size.width * 0.8, geometry.size.height * imageAspectRatio) : geometry.size.width,
-                                    height: isPortrait ? min(geometry.size.height, geometry.size.width / imageAspectRatio) : geometry.size.height,
-                                    alignment: .center
-                                )
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: geometry.size.width * 0.5)
                                 .clipped()
-                                .ignoresSafeArea()
+                            
+                            // Additional images (right side)
+                            VStack(spacing: 0) {
+                                ForEach(Array(additionalImages.prefix(2).enumerated()), id: \.offset) { index, image in
+                                    Image(uiImage: image)
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fill)
+                                        .frame(
+                                            width: geometry.size.width * 0.5,
+                                            height: geometry.size.height / 1.65
+                                        )
+                                        .clipped()
+                                }
+                                
+                                // Fill remaining space if we have less than 2 images
+                                if additionalImages.count < 2 {
+                                    Rectangle()
+                                        .fill(Color.clear)
+                                        .frame(
+                                            width: geometry.size.width * 0.5,
+                                            height: geometry.size.height / 2
+                                        )
+                                }
+                            }
+                            .frame(maxHeight: .infinity)
                         }
-                    }
-                    .opacity(opacity)
-                    .animation(.easeIn(duration: 1), value: opacity)
-                }
-                .overlay {
-                    Rectangle()
-                        .fill(.regularMaterial)
-                        .mask {
-                            LinearGradient(
-                                stops: [
-                                    .init(color: .black, location: 0.25),
-                                    .init(color: .black.opacity(belowFold ? 1 : 0.3), location: 0.375),
-                                    .init(color: .black.opacity(belowFold ? 1 : 0), location: 0.5)
-                                ],
-                                startPoint: .bottom, endPoint: .top
+                        .ignoresSafeArea()
+                    } else {
+                        // Single image layout (landscape or no additional images)
+                        Image(uiImage: backgroundImage)
+                            .resizable()
+                            .aspectRatio(contentMode: isPortrait ? .fit : .fill)
+                            .frame(
+                                width: isPortrait ? min(geometry.size.width * 0.8, geometry.size.height * imageAspectRatio) : geometry.size.width,
+                                height: isPortrait ? min(geometry.size.height, geometry.size.width / imageAspectRatio) : geometry.size.height,
+                                alignment: .center
                             )
-                        }
+                            .clipped()
+                            .ignoresSafeArea()
+                    }
                 }
-                .ignoresSafeArea()
+                    .overlay {
+                        Rectangle()
+                            .fill(.regularMaterial)
+                            .mask {
+                                LinearGradient(
+                                    stops: [
+                                        .init(color: .black, location: 0.25),
+                                        .init(color: .black.opacity(belowFold ? 1 : 0.3), location: 0.375),
+                                        .init(color: .black.opacity(belowFold ? 1 : 0), location: 0.5)
+                                    ],
+                                    startPoint: .bottom, endPoint: .top
+                                )
+                            }
+                    }
+                    .ignoresSafeArea()
             } else {
                 SharedGradientBackground()
             }
         }
         .task(id: selectedItem?.id) {
-            await scheduleBackgroundImageUpdate()
-        }
-        .onDisappear {
-            animationTask?.cancel()
+            await loadBackgroundImage()
         }
     }
-    
-    private func scheduleBackgroundImageUpdate() async {
-        // Cancel any existing animation task
-        animationTask?.cancel()
-        
-        guard let selectedItem = selectedItem else {
-            print("🖼️ BackgroundImageView: No selected item to load")
-            return
-        }
-        
-        // Store the pending item
-        pendingItem = selectedItem
-        
-        // Create a new task with 1-second delay
-        animationTask = Task {
-            do {
-                // Wait 1 second, but check if task is cancelled
-                try await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
-                
-                // Check if this is still the current pending item and task wasn't cancelled
-                guard !Task.isCancelled, pendingItem?.id == selectedItem.id else {
-                    print("🖼️ BackgroundImageView: Animation cancelled or focus changed")
-                    return
-                }
-                
-                // Step 1: Fade out current image
-                await MainActor.run {
-                    opacity = 0.0
-                }
-                
-                // Wait for fade out animation to complete
-                try await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
-                
-                // Check if still valid
-                guard !Task.isCancelled, pendingItem?.id == selectedItem.id else {
-                    print("🖼️ BackgroundImageView: Animation cancelled during fade out")
-                    return
-                }
-                
-                // Step 2: Load new image while faded out
-                await loadBackgroundImage(for: selectedItem)
-                
-                // Check if still valid
-                guard !Task.isCancelled, pendingItem?.id == selectedItem.id else {
-                    print("🖼️ BackgroundImageView: Animation cancelled after loading")
-                    return
-                }
-                
-                // Step 3: Fade in new image
-                await MainActor.run {
-                    opacity = 1.0
-                }
-                
-            } catch is CancellationError {
-                print("🖼️ BackgroundImageView: Animation task was cancelled")
-                await MainActor.run {
-                    opacity = 1.0
-                }
-            } catch {
-                print("🖼️ BackgroundImageView: Unexpected error in animation task: \(error)")
-                await MainActor.run {
-                    opacity = 1.0
-                }
-            }
-        }
-    }
-    
     
     private func loadBackgroundImage() async {
         guard let selectedItem = selectedItem else { 
             print("🖼️ BackgroundImageView: No selected item to load")
-            return
+            return 
         }
-        await loadBackgroundImage(for: selectedItem)
-    }
-    
-    private func loadBackgroundImage(for selectedItem: ExploreAsset) async {
         
         print("🖼️ BackgroundImageView: Loading background for \(selectedItem.primaryTitle) (ID: \(selectedItem.id))")
         

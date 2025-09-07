@@ -296,6 +296,7 @@ struct SettingsView: View {
                                                 if showTagsTab {
                                                     Text("Tags").tag("tags")
                                                 }
+                                                Text("Explore").tag("explore")
                                             }
                                                 .pickerStyle(.menu)
                                                 .frame(width: 300, alignment: .trailing)

@@ -340,7 +340,7 @@ struct ExploreAsset: GridDisplayable {
     // GridDisplayable conformance
     var id: String { asset.id }
     var primaryTitle: String { 
-        asset.exifInfo?.city ?? "Unknown City"
+        asset.exifInfo?.city ?? ""
     }
     var secondaryTitle: String? { 
         if let state = asset.exifInfo?.state, let country = asset.exifInfo?.country {
