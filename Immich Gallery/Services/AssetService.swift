@@ -14,7 +14,7 @@ class AssetService: ObservableObject {
         self.networkService = networkService
     }
 
-    func fetchAssets(page: Int = 1, limit: Int? = nil, albumId: String? = nil, personId: String? = nil, tagId: String? = nil, isAllPhotos: Bool = false, isFavorite: Bool = false) async throws -> SearchResult {
+    func fetchAssets(page: Int = 1, limit: Int? = nil, albumId: String? = nil, personId: String? = nil, tagId: String? = nil, city: String? = nil, isAllPhotos: Bool = false, isFavorite: Bool = false) async throws -> SearchResult {
         // Use separate sort order for All Photos tab vs everything else
         let sortOrder = isAllPhotos 
             ? UserDefaults.standard.allPhotosSortOrder
@@ -41,6 +41,9 @@ class AssetService: ObservableObject {
         }
         if isFavorite {
             searchRequest["isFavorite"] = true
+        }
+        if let city = city {
+            searchRequest["city"] = city
         }
         let result: SearchResponse = try await networkService.makeRequest(
             endpoint: "/api/search/metadata",

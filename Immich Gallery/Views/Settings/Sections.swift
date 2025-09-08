@@ -173,6 +173,6 @@ struct ActionButton: View {
             .background(color.opacity(0.1))
             .cornerRadius(12)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(CardButtonStyle())
     }
 }

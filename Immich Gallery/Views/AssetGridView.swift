@@ -15,7 +15,9 @@ struct AssetGridView: View {
     let albumId: String? // Optional album ID to filter assets
     let personId: String? // Optional person ID to filter assets
     let tagId: String? // Optional tag ID to filter assets
+    let city: String? // Optional city to filter assets
     let isAllPhotos: Bool // Whether this is the All Photos tab
+    let isFavorite: Bool // Whether this is showing favorite assets
     let onAssetsLoaded: (([ImmichAsset]) -> Void)? // Callback for when assets are loaded
     let deepLinkAssetId: String? // Asset ID to highlight from deep link
     @State private var assets: [ImmichAsset] = []
@@ -107,7 +109,7 @@ struct AssetGridView: View {
                                 .onAppear {
                                     // More efficient index check using enumerated
                                     if let index = assets.firstIndex(of: asset) {
-                                        let threshold = max(assets.count - 8, 0) // Load when 8 items away from end
+                                        let threshold = max(assets.count - 100, 0) // Load when 20 items away from end
                                         if index >= threshold && hasMoreAssets && !isLoadingMore {
                                             debouncedLoadMore()
                                         }
@@ -209,7 +211,7 @@ struct AssetGridView: View {
                 // Find the index of the current asset in the filtered image assets
                 let startingIndex = currentAssetIndex < assets.count ? 
                     (imageAssets.firstIndex(of: assets[currentAssetIndex]) ?? 0) : 0
-                SlideshowView(albumId: albumId, personId: personId, tagId: tagId, startingIndex: startingIndex)
+                SlideshowView(albumId: albumId, personId: personId, tagId: tagId, city: city, startingIndex: startingIndex, isFavorite: isFavorite)
             }
         }
         .onPlayPauseCommand(perform: {
@@ -217,6 +219,7 @@ struct AssetGridView: View {
             startSlideshow()
         })
         .onAppear {
+            print("Appared")
             if assets.isEmpty {
                 loadAssets()
             }
@@ -267,7 +270,7 @@ struct AssetGridView: View {
         
         Task {
             do {
-                let searchResult = try await assetProvider.fetchAssets(page: 1, limit: 100)
+                let searchResult = try await assetProvider.fetchAssets(page: 1, limit: 200)
                 await MainActor.run {
                     self.assets = searchResult.assets
                     self.nextPage = searchResult.nextPage
@@ -291,6 +294,11 @@ struct AssetGridView: View {
     }
     
     private func debouncedLoadMore() {
+        // Immediately set loading state to prevent multiple triggers
+        guard !isLoadingMore && hasMoreAssets else { return }
+        
+        isLoadingMore = true
+        
         // Cancel any existing load more task
         loadMoreTask?.cancel()
         
@@ -299,7 +307,12 @@ struct AssetGridView: View {
             try? await Task.sleep(nanoseconds: 300_000_000) // 300ms delay
             
             // Check if task was cancelled during sleep
-            if Task.isCancelled { return }
+            if Task.isCancelled {
+                await MainActor.run {
+                    isLoadingMore = false
+                }
+                return
+            }
             
             await MainActor.run {
                 loadMoreAssets()
@@ -308,15 +321,16 @@ struct AssetGridView: View {
     }
     
     private func loadMoreAssets() {
-        guard !isLoadingMore && hasMoreAssets && nextPage != nil else { return }
-        
-        isLoadingMore = true
+        guard hasMoreAssets && nextPage != nil else { 
+            isLoadingMore = false
+            return 
+        }
         
         Task {
             do {
                 // Extract page number from nextPage string
                 let pageNumber = extractPageFromNextPage(nextPage!)
-                let searchResult = try await assetProvider.fetchAssets(page: pageNumber, limit: 100)
+                let searchResult = try await assetProvider.fetchAssets(page: pageNumber, limit: 200)
                 
                 await MainActor.run {
                     if !searchResult.assets.isEmpty {
