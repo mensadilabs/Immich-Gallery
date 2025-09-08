@@ -312,7 +312,7 @@ struct SettingsView: View {
                                 SettingsRow(
                                     icon: "tv",
                                     title: "Top Shelf Extension",
-                                    subtitle: "Choose display style or disable Top Shelf entirely",
+                                    subtitle: "Choose display style or disable Top Shelf entirely (Top shelf does not show portrait images)",
                                     content: AnyView(
                                         Picker("Top Shelf", selection: Binding(
                                             get: { enableTopShelf ? topShelfStyle : "off" },
