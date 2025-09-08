@@ -32,7 +32,7 @@ struct ExploreView: View {
     
     // Computed property to get the focused explore item
     private var focusedExploreItem: ExploreAsset? {
-        guard let focusedItemID = focusedItemID else { 
+        guard let focusedItemID = focusedItemID else {
             print("🎯 ExploreView: No focused item ID, using first randomized item")
             return randomizedFirstRowItems.first
         }
@@ -107,12 +107,22 @@ struct ExploreView: View {
                                             .font(.title2)
                                             .foregroundColor(.white.opacity(0.8))
                                         
-                                        HStack(spacing: 20) {                                            
-                                            Button("Library Stats") {
+                                        HStack(spacing: 20) {
+                                            Button(action: {
                                                 showingStats = true
+                                            }) {
+                                                HStack(spacing: 8) {
+                                                    Image(systemName: "chart.line.uptrend.xyaxis")
+                                                        .font(.title2)
+                                                        .foregroundColor(Color.teal)
+                                                    Text("View Library Stats")
+                                                        .font(.caption)
+                                                        .foregroundColor(.primary)
+                                                }
+                                                .padding(16)
+                                                .cornerRadius(12)
                                             }
-                                            .buttonStyle(.bordered)
-                                            .foregroundColor(.white)
+                                            .buttonStyle(.card)
                                         }
                                         
                                         Spacer(minLength: 20)
@@ -128,8 +138,8 @@ struct ExploreView: View {
                         .containerRelativeFrame(.vertical, alignment: .topLeading) {
                             length, _ in length * 0.6
                         }
-
-//                        .frame(height: calculateShowcaseHeight())
+                        
+                        //                        .frame(height: calculateShowcaseHeight())
                         .onScrollVisibilityChange { visible in
                             withAnimation {
                                 belowFold = !visible
@@ -161,12 +171,12 @@ struct ExploreView: View {
                         }
                     }
                 }
-//                .scrollTargetBehavior(
-//                    FoldSnappingScrollTargetBehavior(
-//                        aboveFold: !belowFold, 
-//                        showcaseHeight: showcaseHeight
-//                    )
-//                )
+                //                .scrollTargetBehavior(
+                //                    FoldSnappingScrollTargetBehavior(
+                //                        aboveFold: !belowFold,
+                //                        showcaseHeight: showcaseHeight
+                //                    )
+                //                )
             }
         }
         .sheet(isPresented: $showingStats) {
@@ -237,23 +247,23 @@ struct ExploreView: View {
         }
     }
     
-//    private func calculateShowcaseHeight() -> CGFloat {
-//        let screenHeight = UIScreen.main.bounds.height
-//        let screenWidth = UIScreen.main.bounds.width
-//        
-//        // Detect 4K vs 1080p based on screen dimensions
-//        if screenHeight >= 2160 || screenWidth >= 3840 {
-//            // 4K Apple TV
-//            let height: CGFloat = 1600
-//            showcaseHeight = height
-//            return height
-//        } else {
-//            // 1080p Apple TV
-//            let height: CGFloat = 800
-//            showcaseHeight = height
-//            return height
-//        }
-//    }
+    //    private func calculateShowcaseHeight() -> CGFloat {
+    //        let screenHeight = UIScreen.main.bounds.height
+    //        let screenWidth = UIScreen.main.bounds.width
+    //
+    //        // Detect 4K vs 1080p based on screen dimensions
+    //        if screenHeight >= 2160 || screenWidth >= 3840 {
+    //            // 4K Apple TV
+    //            let height: CGFloat = 1600
+    //            showcaseHeight = height
+    //            return height
+    //        } else {
+    //            // 1080p Apple TV
+    //            let height: CGFloat = 800
+    //            showcaseHeight = height
+    //            return height
+    //        }
+    //    }
     
     private func randomizeFirstRowItems() {
         let columnsCount = GridConfig.peopleStyle.columns.count
@@ -274,7 +284,7 @@ struct ExploreView: View {
     
 }
 
-// MARK: - First Row Component  
+// MARK: - First Row Component
 struct ExploreFirstRow: View {
     let exploreItems: [ExploreAsset]
     let assetService: AssetService
@@ -284,7 +294,8 @@ struct ExploreFirstRow: View {
     @FocusState private var localFocusedItem: String?
     
     var body: some View {
-        HStack(spacing: GridConfig.peopleStyle.spacing) {
+        HStack(alignment: .top, spacing: GridConfig.peopleStyle.spacing) {
+            Spacer()
             ForEach(exploreItems) { item in
                 FirstRowItem(
                     item: item,
@@ -294,7 +305,9 @@ struct ExploreFirstRow: View {
                 )
                 .focused($localFocusedItem, equals: item.id)
             }
+            Spacer()
         }
+        .focusSection()
         .onChange(of: localFocusedItem) { oldValue, newValue in
             print("🎯 ExploreFirstRow: Focus changed from \(oldValue ?? "nil") to \(newValue ?? "nil")")
             if let newValue = newValue {
@@ -314,7 +327,7 @@ struct ExploreFirstRow: View {
 // MARK: - First Row Item (No bottom text)
 struct FirstRowItem: View {
     let item: ExploreAsset
-    let assetService: AssetService  
+    let assetService: AssetService
     let isCurrentlyFocused: Bool
     let onItemSelected: (ExploreAsset) -> Void
     
@@ -347,7 +360,7 @@ struct FirstRowItem: View {
                         .stroke(isCurrentlyFocused ? Color.white : Color.clear, lineWidth: isCurrentlyFocused ? 4 : 0)
                 )
                 .scaleEffect(isCurrentlyFocused ? 1.1 : 1.0)
-                .animation(.easeIn(duration: 1), value: isCurrentlyFocused)
+                .animation(.easeIn(duration: 2), value: isCurrentlyFocused)
             }
         }
         .padding(.top, 100)
@@ -560,7 +573,7 @@ struct BackgroundImageView: View {
                         }
                     }
                     .opacity(opacity)
-                    .animation(.easeIn(duration: 1), value: opacity)
+                    .animation(.easeIn(duration: 2), value: opacity)
                 }
                 .overlay {
                     Rectangle()
@@ -619,7 +632,7 @@ struct BackgroundImageView: View {
                 }
                 
                 // Wait for fade out animation to complete
-                try await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+                try await Task.sleep(nanoseconds: 2000_000_000) // 0.5 seconds
                 
                 // Check if still valid
                 guard !Task.isCancelled, pendingItem?.id == selectedItem.id else {
@@ -657,7 +670,7 @@ struct BackgroundImageView: View {
     
     
     private func loadBackgroundImage() async {
-        guard let selectedItem = selectedItem else { 
+        guard let selectedItem = selectedItem else {
             print("🖼️ BackgroundImageView: No selected item to load")
             return
         }
