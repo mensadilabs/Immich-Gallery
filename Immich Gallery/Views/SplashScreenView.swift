@@ -33,6 +33,20 @@ struct WhatsNewView: View {
     
     private let changelogContent = """
     
+    VERSION|1.1.4
+
+    IMPROVEMENT| Performance Optimizations
+    - Various performance improvements throughout the app for smoother navigation.
+    - Enhanced loading times and reduced memory usage.
+    - More improvements coming next for people with large libraries, for now, but if you're experiencing crashes when scrolling, please report. 
+    
+    NEW_FEATURE| Explore Tab
+    - New explore tab to discover your photos through statistics or by cities visited.
+    
+    IMPROVEMENT| Top Shelf Enhancement
+    - Top shelf now shows only landscape orientation images for better visual presentation on Apple TV.
+
+    
     VERSION|1.1.3
     
     NEW_FEATURE| Apple TV Top Shelf Customization
