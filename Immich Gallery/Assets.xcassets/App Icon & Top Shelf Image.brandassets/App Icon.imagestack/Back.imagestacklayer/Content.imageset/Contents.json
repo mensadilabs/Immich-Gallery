@@ -1,12 +1,12 @@
 {
   "images" : [
     {
-      "filename" : "background copy.jpg",
+      "filename" : "400*72.jpeg",
       "idiom" : "tv",
       "scale" : "1x"
     },
     {
-      "filename" : "background 1.jpg",
+      "filename" : "background 800 480.jpeg",
       "idiom" : "tv",
       "scale" : "2x"
     }
