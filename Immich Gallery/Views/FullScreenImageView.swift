@@ -42,8 +42,9 @@ struct FullScreenImageView: View {
             
             if currentAsset.type == .video {
                 if showingVideoPlayer {
-                    // Use VideoPlayerView for videos when user clicked play
-                    VideoPlayerView(asset: currentAsset, assetService: assetService, authenticationService: authenticationService)
+                    // Use simplified video player when user clicks play
+                    SimpleVideoPlayerView(asset: currentAsset, assetService: assetService, authenticationService: authenticationService)
+                        .id(currentAsset.id)
                 } else {
                     // Show video thumbnail with play button overlay
                     VideoThumbnailView(
@@ -346,7 +347,7 @@ struct VideoThumbnailView: View {
                         .multilineTextAlignment(.center)
                         .padding()
                     Button("Retry") {
-                        loadThumbnail()
+                        loadThumbnailForVideo()
                     }
                     .buttonStyle(.borderedProminent)
                 }
@@ -403,23 +404,23 @@ struct VideoThumbnailView: View {
         .focusable(true)
         .focused($isFocused)
         .onAppear {
-            loadThumbnail()
+            loadThumbnailForVideo()
         }
         .onTapGesture {
             onPlayButtonTapped()
         }
     }
     
-    private func loadThumbnail() {
+    private func loadThumbnailForVideo() {
         isLoading = true
         errorMessage = nil
         
         Task {
             do {
                 print("Loading thumbnail for video asset \(asset.id)")
-                let thumbnailImage = try await thumbnailCache.getThumbnail(for: asset.id, size: "thumbnail") {
+                let thumbnailImage = try await thumbnailCache.getThumbnail(for: asset.id, size: "preview") {
                     // Load from server if not in cache
-                    try await assetService.loadImage(asset: asset, size: "thumbnail")
+                    try await assetService.loadImage(asset: asset, size: "preview")
                 }
                 await MainActor.run {
                     print("Loaded thumbnail for video asset \(asset.id)")

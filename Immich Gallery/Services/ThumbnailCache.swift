@@ -65,7 +65,7 @@ class ThumbnailCache: NSObject, ObservableObject {
     // MARK: - Public Methods
     
     /// Get thumbnail from cache or load from server
-    func getThumbnail(for assetId: String, size: String = "preview", loadFromServer: @escaping () async throws -> UIImage?) async throws -> UIImage? {
+    func getThumbnail(for assetId: String, size: String = "thumbnail", loadFromServer: @escaping () async throws -> UIImage?) async throws -> UIImage? {
         let cacheKey = cacheKey(for: assetId, size: size)
         
         print("🔍 Looking for thumbnail: \(cacheKey)")
@@ -105,7 +105,7 @@ class ThumbnailCache: NSObject, ObservableObject {
     }
     
     /// Preload thumbnails for better performance
-    func preloadThumbnails(for assets: [ImmichAsset], size: String = "preview") {
+    func preloadThumbnails(for assets: [ImmichAsset], size: String = "thumbnail") {
         Task {
             for asset in assets {
                 let cacheKey = cacheKey(for: asset.id, size: size)

@@ -1,17 +1,17 @@
 {
   "images" : [
     {
-      "filename" : "appIcon.svg",
+      "filename" : "svgviewer-png-output-4.png",
       "idiom" : "universal",
       "scale" : "1x"
     },
     {
-      "filename" : "appIcon 1.svg",
+      "filename" : "svgviewer-png-output-4 1.png",
       "idiom" : "universal",
       "scale" : "2x"
     },
     {
-      "filename" : "appIcon 2.svg",
+      "filename" : "svgviewer-png-output-4 2.png",
       "idiom" : "universal",
       "scale" : "3x"
     }

@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="640" height="440" viewBox="0 0 640 440" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title>Immich Gallery – Square Edges</title>
+  <desc>
+    Teal card with straight edges and layered mountains.
+  </desc>
+  <defs>
+    <filter id="softDrop" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="18" result="blur"/>
+      <feOffset dy="10" result="off"/>
+      <feColorMatrix in="off" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.25 0" result="shadow"/>
+      <feMerge>
+        <feMergeNode in="shadow"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#18C2C9"/>
+      <stop offset="100%" stop-color="#7DE6DD"/>
+    </linearGradient>
+    <radialGradient id="sunGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFF7B3"/>
+      <stop offset="40%" stop-color="#FFE988"/>
+      <stop offset="100%" stop-color="#FFD15C"/>
+    </radialGradient>
+    <linearGradient id="playGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FF6A5E"/>
+      <stop offset="100%" stop-color="#FF9A5A"/>
+    </linearGradient>
+<!--Warm neutral mountain gradients-->
+    <linearGradient id="mountainBack" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#E2E5EC"/>
+      <stop offset="100%" stop-color="#C2CAD8"/>
+    </linearGradient>
+    <linearGradient id="mountainMid" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#C8CFDC"/>
+      <stop offset="100%" stop-color="#A2ACBD"/>
+    </linearGradient>
+    <linearGradient id="mountainFront" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#98A1B2"/>
+      <stop offset="100%" stop-color="#747F93"/>
+    </linearGradient>
+  </defs>
+<!--Card-->
+  <g id="card" filter="url(#softDrop)">
+    <rect x="0" y="0" width="640" height="440" fill="url(#skyGrad)"/>
+    <rect x="0.5" y="0.5" width="639" height="439" fill="none" stroke="#E6E6EE"/>
+  </g>
+<!--Art contents-->
+  <g id="art">
+<!--Sun-->
+    <circle cx="330" cy="220" r="70" fill="url(#sunGrad)" opacity="0.95"/>
+<!--Mountains-->
+    <path d="M60,370 L240,210 L400,370 Z" fill="url(#mountainBack)"/>
+    <path d="M140,370 L360,165 L560,370 Z" fill="url(#mountainMid)"/>
+    <path d="M280,370 L480,240 L600,370 Z" fill="url(#mountainFront)"/>
+<!--Baseline-->
+    <rect x="60" y="370" width="540" height="10" fill="#DFF2F2"/>
+<!--Play badge-->
+    <g id="playBadge" transform="translate(558, 324) scale(0.6)">
+      <circle cx="0" cy="0" r="76" fill="url(#playGrad)"/>
+      <polygon points="-18,-26 32,0 -18,26" fill="#FFFFFF" opacity="0.96"/>
+      <ellipse cx="-16" cy="-34" rx="34" ry="14" fill="#FFFFFF" opacity="0.18"/>
+    </g>
+<!--Label-->
+    <g id="label" transform="translate(200, 100)">
+      <text x="0" y="0" font-family="Inter, Helvetica, Arial, sans-serif" font-size="36" font-weight="600" fill="#2A2A2A" opacity="0.85">
+        Immich Gallery
+      </text>
+    </g>
+  </g>
+</svg>

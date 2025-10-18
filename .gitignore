@@ -1,5 +1,7 @@
 # macOS metadata files
-._* 
+._*
 CLAUDE.local.md
 .vscode/**
 .kiro/**
+ios/**
+.claude/**

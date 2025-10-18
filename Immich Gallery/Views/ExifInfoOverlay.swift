@@ -27,6 +27,9 @@ struct ExifInfoOverlay: View {
             .padding(.bottom, 8)
             
             HStack{
+                
+                TechnicalInfoItem(icon: "tag", label: "Name", value: asset.originalFileName )
+
                 // Date and time
                 if let dateTimeOriginal = asset.exifInfo?.dateTimeOriginal {
                     TechnicalInfoItem(icon: "calendar", label: "Date", value: DateFormatter.formatSpecificISO8601(dateTimeOriginal, includeTime: true))

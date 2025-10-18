@@ -13,29 +13,31 @@ struct AssetThumbnailView: View {
     @ObservedObject private var thumbnailCache = ThumbnailCache.shared
     @State private var image: UIImage?
     @State private var isLoading = true
+    @State private var loadingTask: Task<Void, Never>?
     let isFocused: Bool
     
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color.gray.opacity(0.3))
-                .frame(width: 320, height: 320)
+        
+             RoundedRectangle(cornerRadius: 12)
+                 .fill(Color.gray.opacity(0.3))
+                 .frame(width: 320, height: 320)
             
-            if isLoading {
-                ProgressView()
-                    .scaleEffect(1.2)
-            } else if let image = image {
-                Image(uiImage: image)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(width: 320, height: 320)
-                    .clipped()
-                    .cornerRadius(12)
-            } else {
-                Image(systemName: "photo")
-                    .font(.system(size: 40))
-                    .foregroundColor(.gray)
-            }
+             if isLoading {
+                 ProgressView()
+                     .scaleEffect(1.2)
+             } else if let image = image {
+                 Image(uiImage: image)
+                     .resizable()
+                     .aspectRatio(contentMode: .fill)
+                     .frame(width: 320, height: 320)
+                     .clipped()
+                     .cornerRadius(12)
+             } else {
+                 Image(systemName: "photo")
+                     .font(.system(size: 40))
+                     .foregroundColor(.gray)
+             }
             
             // Video indicator
             if asset.type == .video {
@@ -87,19 +89,38 @@ struct AssetThumbnailView: View {
         .onAppear {
             loadThumbnail()
         }
+        .onDisappear {
+            // Disable this, I think its slowing down stuff.
+            // cancelLoading()
+        }
     }
     
     private func loadThumbnail() {
-        Task {
+        // Cancel any existing loading task
+        loadingTask?.cancel()
+        
+        loadingTask = Task {
             do {
-                let thumbnail = try await thumbnailCache.getThumbnail(for: asset.id, size: "preview") {
+                // Check if task was cancelled before starting
+                try Task.checkCancellation()
+                
+                let thumbnail = try await thumbnailCache.getThumbnail(for: asset.id, size: "thumbnail") {
+                    // Check cancellation before network request
+                    try Task.checkCancellation()
                     // Load from server if not in cache
-                    try await assetService.loadImage(asset: asset, size: "preview")
+                    return try await assetService.loadImage(asset: asset, size: "thumbnail")
                 }
+                
+                // Check cancellation before UI update
+                try Task.checkCancellation()
+                
                 await MainActor.run {
                     self.image = thumbnail
                     self.isLoading = false
                 }
+            } catch is CancellationError {
+                // Task was cancelled - don't update UI or log error
+                print("Thumbnail loading cancelled for asset \(asset.id)")
             } catch {
                 print("Failed to load thumbnail for asset \(asset.id): \(error)")
                 await MainActor.run {
@@ -107,6 +128,11 @@ struct AssetThumbnailView: View {
                 }
             }
         }
+    }
+    
+    private func cancelLoading() {
+        loadingTask?.cancel()
+        loadingTask = nil
     }
     
     

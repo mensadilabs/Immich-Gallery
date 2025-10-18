@@ -1,4 +1,35 @@
-# VERSION|1.1.0
+# VERSION|1.1.4
+
+IMPROVEMENT| Performance Optimizations
+- Various performance improvements throughout the app for smoother navigation.
+- Enhanced loading times and reduced memory usage.
+- More improvements coming next for people with large libraries, for now, but if you're experiencing crashes when scrolling, please report. 
+
+NEW_FEATURE| Explore Tab
+- New explore tab to discover your photos through statistics or by cities visited.
+
+IMPROVEMENT| Top Shelf Enhancement
+- Top shelf now shows only landscape orientation images for better visual presentation on Apple TV.
+
+# VERSION|1.1.3
+
+NEW_FEATURE| Apple TV Top Shelf Customization
+- Be brave, embrace choas: Now you can choose to display random photos on top shelf.
+
+IMPROVEMENT| Raw Image Support
+- Raw images now work kinda maybe. TV cannot display RAW images natively so I now load a fullsize version provided by immich.
+    
+IMPROVEMENT| Album & UI Enhancements
+- Albums now show all favorite photos as a new album. Do not worry, the album does not exist in reality, like me.
+- Performance improvements to the all photos tab.
+- Changes to settings page as usual. 
+
+EXPERIMENTAL| Auto Slideshow Configuration (experimental only)
+- This may go away if I can't convince myself this is good.
+- Create empty album named "immich-gallery-config" with specific description format. Check settings for more info on setup. 
+- Support for both album and person-based slideshow configuration
+
+# VERSION|1.1.2
 
 NEW_FEATURE| Sign In With API key
 - All of the SSO users can now use API keys to sign in. Not sure what will break if the API does not have needed scopes. Eventually maybe I'll list them out but for now, take a guess based on the available features.
@@ -6,6 +37,7 @@ NEW_FEATURE| Sign In With API key
 IMPROVEMENT| Cleanups
 - Bug fixes and performance improvements.
 - Album view now shows "shared by you" for the albums shared by you.
+- Cleaner settings view.
 
 # VERSION|1.0.14
 

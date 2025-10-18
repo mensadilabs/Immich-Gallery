@@ -38,6 +38,11 @@ extension UserDefaults {
         set { set(newValue, forKey: UserDefaultsKeys.showTagsTab) }
     }
     
+    var showFoldersTab: Bool {
+        get { bool(forKey: UserDefaultsKeys.showFoldersTab) }
+        set { set(newValue, forKey: UserDefaultsKeys.showFoldersTab) }
+    }
+    
     var use24HourClock: Bool {
         get { bool(forKey: UserDefaultsKeys.use24HourClock) }
         set { set(newValue, forKey: UserDefaultsKeys.use24HourClock) }
@@ -72,5 +77,25 @@ extension UserDefaults {
     var allPhotosSortOrder: String {
         get { string(forKey: UserDefaultsKeys.allPhotosSortOrder) ?? "desc" }
         set { set(newValue, forKey: UserDefaultsKeys.allPhotosSortOrder) }
+    }
+    
+    var artModeLevel: String {
+        get { string(forKey: UserDefaultsKeys.artModeLevel) ?? "off" }
+        set { set(newValue, forKey: UserDefaultsKeys.artModeLevel) }
+    }
+    
+    var artModeAutomatic: Bool {
+        get { bool(forKey: UserDefaultsKeys.artModeAutomatic) }
+        set { set(newValue, forKey: UserDefaultsKeys.artModeAutomatic) }
+    }
+    
+    var artModeDayStart: Int {
+        get { integer(forKey: UserDefaultsKeys.artModeDayStart) != 0 ? integer(forKey: UserDefaultsKeys.artModeDayStart) : 7 } // Default 7 AM
+        set { set(newValue, forKey: UserDefaultsKeys.artModeDayStart) }
+    }
+    
+    var artModeNightStart: Int {
+        get { integer(forKey: UserDefaultsKeys.artModeNightStart) != 0 ? integer(forKey: UserDefaultsKeys.artModeNightStart) : 20 } // Default 8 PM
+        set { set(newValue, forKey: UserDefaultsKeys.artModeNightStart) }
     }
 }

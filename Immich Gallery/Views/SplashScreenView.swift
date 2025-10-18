@@ -14,6 +14,7 @@ enum ChangelogSectionType {
     case newFeature
     case improvement
     case bugFix
+    case experimental
     case other
 }
 
@@ -31,6 +32,68 @@ struct WhatsNewView: View {
     @State private var opacity: Double = 0
     
     private let changelogContent = """
+    
+    VERSION|1.1.6
+
+    NEW_FEATURE| ✨✨New Icon✨✨
+    - The Icon has been a placeholder for too long. 
+
+    BUGFIX| Fix shared album content. Discussion#81
+    - Thank you for reporting @madasus. Issue has been fixed.
+    
+    BUGFIX| The overlay windows were broken on TvOS 26. Add user/whats new etc.Part of issue #75
+    - Thanks for reporting @rmayergfx. This should fix that issue.
+
+    VERSION|1.1.5
+
+    NEW_FEATURE| Folders Tab
+    - New opt-in Folders tab allows you to view folders from your external library.
+
+    BUGFIX| Sorting order
+    - We are once again respecting the sorting order selected in settings.
+    
+    IMPROVEMENT| Performance Optimizations
+    - Hopefully better video player. 
+    
+    VERSION|1.1.4
+
+    IMPROVEMENT| Performance Optimizations
+    - Various performance improvements throughout the app for smoother navigation.
+    - Enhanced loading times and reduced memory usage.
+    - More improvements coming next for people with large libraries, for now, but if you're experiencing crashes when scrolling, please report. 
+    
+    NEW_FEATURE| Explore Tab
+    - New explore tab to discover your photos through statistics or by cities visited.
+    
+    IMPROVEMENT| Top Shelf Enhancement
+    - Top shelf now shows only landscape orientation images for better visual presentation on Apple TV.
+
+    
+    VERSION|1.1.3
+    
+    NEW_FEATURE| Apple TV Top Shelf Customization
+    - Be brave, embrace choas: Now you can choose to display random photos on top shelf.
+
+
+    IMPROVEMENT| Raw Image Support
+    - Raw images now work kinda maybe. TV cannot display RAW images natively so I now load a fullsize version provided by immich.
+
+        
+    IMPROVEMENT| Album & UI Enhancements
+    - Albums now show all favorite photos as a new album. Do not worry, the album does not exist in reality, like me.
+    - Performance improvements to the all photos tab.
+    - Changes to settings page as usual. 
+    
+    EXPERIMENTAL| Auto Slideshow Configuration (experimental only)
+    - This may go away if I can't convince myself this is good.
+    - Create empty album named "immich-gallery-config" with specific description format. Check settings for more info on setup. 
+    - Support for both album and person-based slideshow configuration
+
+     EXPERIMENTAL| Dimmed Slideshow
+    - Add support for dimmed slideshow in settings.
+    - Time based dim level
+    - How good does it work is a matter of personal opinion/s. Try it out and let me know. Yes, I'm talking to you specifically. 
+    
     
     VERSION|1.1.2
     
@@ -162,6 +225,7 @@ private extension WhatsNewView {
         case "NEW_FEATURE": type = .newFeature
         case "IMPROVEMENT": type = .improvement
         case "BUGFIX": type = .bugFix
+        case "EXPERIMENTAL": type = .experimental
         default: type = .other
         }
         return (type, components[1])
@@ -180,6 +244,7 @@ struct ChangelogCard: View {
         case .newFeature: return ("sparkles", .green, "NEW")
         case .improvement: return ("arrow.up.circle.fill", .orange, "IMPROVED")
         case .bugFix: return ("ladybug.slash", .red, "FIXED")
+        case .experimental: return ("flask", .purple, "EXPERIMENTAL")
         case .other: return ("info.circle.fill", .gray, "INFO")
         }
     }
