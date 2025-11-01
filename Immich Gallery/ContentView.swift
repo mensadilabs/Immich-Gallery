@@ -70,6 +70,7 @@ struct ContentView: View {
     @AppStorage(UserDefaultsKeys.showFoldersTab) private var showFoldersTab = false
     @AppStorage(UserDefaultsKeys.defaultStartupTab) private var defaultStartupTab = "photos"
     @AppStorage(UserDefaultsKeys.lastSeenVersion) private var lastSeenVersion = ""
+    @AppStorage(UserDefaultsKeys.navigationStyle) private var navigationStyle = NavigationStyle.tabs.rawValue
     @State private var searchTabHighlighted = false
     @State private var deepLinkAssetId: String?
     
@@ -86,6 +87,10 @@ struct ContentView: View {
         _folderService = StateObject(wrappedValue: FolderService(networkService: networkService))
         _exploreService = StateObject(wrappedValue: ExploreService(networkService: networkService))
         _searchService = StateObject(wrappedValue: SearchService(networkService: networkService))
+    }
+    
+    private var currentNavigationStyle: NavigationStyle {
+        NavigationStyle(rawValue: navigationStyle) ?? .tabs
     }
     
     var body: some View {
@@ -176,6 +181,7 @@ struct ContentView: View {
                             }
                             .tag(TabName.settings.rawValue)
                     }
+                    .tabNavigationStyle(currentNavigationStyle)
                     .onAppear {
                         setDefaultTab()
                         checkForAppUpdate()
@@ -320,6 +326,25 @@ struct ContentView: View {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
         let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
         return "\(version).\(build)"
+    }
+}
+
+private struct TabNavigationStyleModifier: ViewModifier {
+    let style: NavigationStyle
+    
+    func body(content: Content) -> some View {
+        switch style {
+        case .sidebar:
+            content.tabViewStyle(.sidebarAdaptable)
+        case .tabs:
+            content
+        }
+    }
+}
+
+private extension View {
+    func tabNavigationStyle(_ style: NavigationStyle) -> some View {
+        modifier(TabNavigationStyleModifier(style: style))
     }
 }
 

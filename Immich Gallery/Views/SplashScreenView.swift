@@ -33,6 +33,15 @@ struct WhatsNewView: View {
     
     private let changelogContent = """
     
+    VERSION|1.1.7
+
+    NEW_FEATURE| Tabs vs Sidebar
+    - Pick your style in Settings → Interface. Tabs for the classics, Sidebar for the minimal.
+
+    BUGFIX| Sort Order & album cover
+    - Fixed the sort order again.
+    - If thumbnail animation is disabled, we now show album cover of the album.
+    
     VERSION|1.1.6
 
     NEW_FEATURE| ✨✨New Icon✨✨

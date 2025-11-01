@@ -74,6 +74,11 @@ extension UserDefaults {
         set { set(newValue, forKey: UserDefaultsKeys.enableSlideshowShuffle) }
     }
     
+    var navigationStyle: String {
+        get { string(forKey: UserDefaultsKeys.navigationStyle) ?? NavigationStyle.tabs.rawValue }
+        set { set(newValue, forKey: UserDefaultsKeys.navigationStyle) }
+    }
+    
     var allPhotosSortOrder: String {
         get { string(forKey: UserDefaultsKeys.allPhotosSortOrder) ?? "desc" }
         set { set(newValue, forKey: UserDefaultsKeys.allPhotosSortOrder) }

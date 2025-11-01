@@ -47,6 +47,23 @@ class AlbumAssetProvider: AssetProvider {
     private let albumService: AlbumService
     private let albumId: String
     private var cachedAssets: [ImmichAsset]?
+    
+    private enum SortOrder {
+        case newestFirst
+        case oldestFirst
+    }
+    
+    private static let isoFormatterWithFractional: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
+    
+    private static let isoFormatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter
+    }()
 
     init(albumService: AlbumService, albumId: String) {
         self.albumService = albumService
@@ -66,26 +83,27 @@ class AlbumAssetProvider: AssetProvider {
     
     func fetchAssets(page: Int, limit: Int) async throws -> SearchResult {
         let assets = try await loadAlbumAssets()
+        let sortedAssets = sortAssets(assets)
         guard !assets.isEmpty else {
             return SearchResult(assets: [], total: 0, nextPage: nil)
         }
 
         let pageSize = max(limit, 1)
         let startIndex = max((page - 1) * pageSize, 0)
-        let endIndex = min(startIndex + pageSize, assets.count)
+        let endIndex = min(startIndex + pageSize, sortedAssets.count)
 
         let pageAssets: [ImmichAsset]
         if startIndex < endIndex {
-            pageAssets = Array(assets[startIndex..<endIndex])
+            pageAssets = Array(sortedAssets[startIndex..<endIndex])
         } else {
             pageAssets = []
         }
 
-        let nextPage: String? = endIndex < assets.count ? String(page + 1) : nil
+        let nextPage: String? = endIndex < sortedAssets.count ? String(page + 1) : nil
 
         return SearchResult(
             assets: pageAssets,
-            total: assets.count,
+            total: sortedAssets.count,
             nextPage: nextPage
         )
     }
@@ -104,6 +122,55 @@ class AlbumAssetProvider: AssetProvider {
             total: assets.count,
             nextPage: nil
         )
+    }
+    
+    private func sortAssets(_ assets: [ImmichAsset]) -> [ImmichAsset] {
+        let sortOrder = currentSortOrder()
+        return assets.sorted { lhs, rhs in
+            let lhsDate = captureDate(for: lhs)
+            let rhsDate = captureDate(for: rhs)
+            
+            if lhsDate == rhsDate {
+                return lhs.id < rhs.id
+            }
+            
+            switch sortOrder {
+            case .newestFirst:
+                return lhsDate > rhsDate
+            case .oldestFirst:
+                return lhsDate < rhsDate
+            }
+        }
+    }
+    
+    private func currentSortOrder() -> SortOrder {
+        let storedValue = UserDefaults.standard.string(forKey: UserDefaultsKeys.assetSortOrder) ?? "desc"
+        return storedValue.lowercased() == "asc" ? .oldestFirst : .newestFirst
+    }
+    
+    private func captureDate(for asset: ImmichAsset) -> Date {
+        if let date = parseDate(asset.exifInfo?.dateTimeOriginal) {
+            return date
+        }
+        if let date = parseDate(asset.fileCreatedAt) {
+            return date
+        }
+        if let date = parseDate(asset.fileModifiedAt) {
+            return date
+        }
+        if let date = parseDate(asset.updatedAt) {
+            return date
+        }
+        
+        return .distantPast
+    }
+    
+    private func parseDate(_ value: String?) -> Date? {
+        guard let value = value else { return nil }
+        if let date = AlbumAssetProvider.isoFormatterWithFractional.date(from: value) {
+            return date
+        }
+        return AlbumAssetProvider.isoFormatter.date(from: value)
     }
 }
 

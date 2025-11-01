@@ -83,11 +83,11 @@ class MockAssetService: AssetService {
         )
     }
     
-    override func loadImage(asset: ImmichAsset, size: String = "thumbnail") async throws -> UIImage? {
-        // Generate different colored images based on asset ID for visual variety
-        let hash = abs(asset.id.hashValue)
+    override func loadImage(assetId: String, size: String = "thumbnail") async throws -> UIImage? {
+        let hash = abs(assetId.hashValue)
         let seed = hash % 1000
-        let url = URL(string: "https://picsum.photos/seed/\(seed)/300/300")!
+        let dimension = size == "preview" ? 600 : 300
+        let url = URL(string: "https://picsum.photos/seed/\(seed)/\(dimension)/\(dimension)")!
         let (data, _) = try await URLSession.shared.data(from: url)
         return UIImage(data: data)
     }

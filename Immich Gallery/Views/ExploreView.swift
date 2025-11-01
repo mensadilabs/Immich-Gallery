@@ -375,7 +375,7 @@ struct FirstRowItem: View {
     
     private func loadThumbnail() async {
         do {
-            let image = try await assetService.loadImage(asset: item.asset, size: "preview")
+            let image = try await assetService.loadImage(assetId: item.asset.id, size: "preview")
             await MainActor.run {
                 thumbnailImage = image
             }
@@ -682,7 +682,7 @@ struct BackgroundImageView: View {
         print("🖼️ BackgroundImageView: Loading background for \(selectedItem.primaryTitle) (ID: \(selectedItem.id))")
         
         do {
-            guard let image = try await assetService.loadImage(asset: selectedItem.asset, size: "preview") else {
+            guard let image = try await assetService.loadImage(assetId: selectedItem.asset.id, size: "preview") else {
                 print("🖼️ BackgroundImageView: No image returned for \(selectedItem.primaryTitle)")
                 return
             }
@@ -710,7 +710,7 @@ struct BackgroundImageView: View {
                     // Load all images to check their orientations
                     for asset in allAssets.prefix(4) { // Load up to 4 additional images
                         do {
-                            if let loadedImage = try await assetService.loadImage(asset: asset, size: "preview") {
+                            if let loadedImage = try await assetService.loadImage(assetId: asset.id, size: "preview") {
                                 allLoadedImages.append(loadedImage)
                             }
                         } catch {
@@ -797,7 +797,7 @@ class ExploreThumbnailProvider: ThumbnailProvider {
         guard let exploreAsset = item as? ExploreAsset else { return [] }
         
         do {
-            if let image = try await assetService.loadImage(asset: exploreAsset.asset, size: "preview") {
+            if let image = try await assetService.loadImage(assetId: exploreAsset.asset.id, size: "preview") {
                 return [image]
             }
         } catch {

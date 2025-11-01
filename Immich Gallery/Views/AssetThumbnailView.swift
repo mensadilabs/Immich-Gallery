@@ -108,7 +108,7 @@ struct AssetThumbnailView: View {
                     // Check cancellation before network request
                     try Task.checkCancellation()
                     // Load from server if not in cache
-                    return try await assetService.loadImage(asset: asset, size: "thumbnail")
+                    return try await assetService.loadImage(assetId: asset.id, size: "thumbnail")
                 }
                 
                 // Check cancellation before UI update
@@ -176,4 +176,3 @@ struct AssetThumbnailView: View {
     
     AssetThumbnailView(asset: mockAsset, assetService: assetService, isFocused: false)
 } 
-

@@ -77,6 +77,7 @@ struct SettingsView: View {
     @AppStorage("enableThumbnailAnimation") private var enableThumbnailAnimation = false
     @AppStorage("enableSlideshowShuffle") private var enableSlideshowShuffle = false
     @AppStorage("allPhotosSortOrder") private var allPhotosSortOrder = "desc"
+    @AppStorage("navigationStyle") private var navigationStyle = NavigationStyle.tabs.rawValue
     @AppStorage("enableTopShelf", store: UserDefaults(suiteName: AppConstants.appGroupIdentifier)) private var enableTopShelf = true
     @AppStorage("topShelfStyle", store: UserDefaults(suiteName: AppConstants.appGroupIdentifier)) private var topShelfStyle = "carousel"
     @AppStorage("topShelfImageSelection", store: UserDefaults(suiteName: AppConstants.appGroupIdentifier)) private var topShelfImageSelection = "recent"
@@ -308,6 +309,24 @@ struct SettingsView: View {
                                                     Text("Folders").tag("folders")
                                                 }
                                                 Text("Explore").tag("explore")
+                                            }
+                                                .pickerStyle(.menu)
+                                                .frame(width: 300, alignment: .trailing)
+                                        )
+                                    )
+                                    
+                                    SettingsRow(
+                                        icon: "rectangle.split.3x1",
+                                        title: "Navigation Style",
+                                        subtitle: "Choose between a classic tab bar or the adaptive sidebar layout",
+                                        content: AnyView(
+                                            Picker("Navigation Style", selection: Binding(
+                                                get: { NavigationStyle(rawValue: navigationStyle) ?? .tabs },
+                                                set: { navigationStyle = $0.rawValue }
+                                            )) {
+                                                ForEach(NavigationStyle.allCases, id: \.self) { style in
+                                                    Text(style.displayName).tag(style)
+                                                }
                                             }
                                                 .pickerStyle(.menu)
                                                 .frame(width: 300, alignment: .trailing)

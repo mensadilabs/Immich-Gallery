@@ -420,7 +420,7 @@ struct VideoThumbnailView: View {
                 print("Loading thumbnail for video asset \(asset.id)")
                 let thumbnailImage = try await thumbnailCache.getThumbnail(for: asset.id, size: "preview") {
                     // Load from server if not in cache
-                    try await assetService.loadImage(asset: asset, size: "preview")
+                    try await assetService.loadImage(assetId: asset.id, size: "preview")
                 }
                 await MainActor.run {
                     print("Loaded thumbnail for video asset \(asset.id)")

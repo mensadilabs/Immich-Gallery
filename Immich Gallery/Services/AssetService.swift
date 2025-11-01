@@ -101,8 +101,8 @@ class AssetService: ObservableObject {
         )
     }
 
-    func loadImage(asset: ImmichAsset, size: String = "thumbnail") async throws -> UIImage? {
-        let endpoint = "/api/assets/\(asset.id)/thumbnail?format=webp&size=\(size)"
+    func loadImage(assetId: String, size: String = "thumbnail") async throws -> UIImage? {
+        let endpoint = "/api/assets/\(assetId)/thumbnail?format=webp&size=\(size)"
         let data = try await networkService.makeDataRequest(endpoint: endpoint)
         return UIImage(data: data)
     }

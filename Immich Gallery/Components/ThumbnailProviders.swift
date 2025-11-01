@@ -21,6 +21,34 @@ class AlbumThumbnailProvider: ThumbnailProvider {
     func loadThumbnails(for item: GridDisplayable) async -> [UIImage] {
         guard let album = item as? ImmichAlbum else { return [] }
         
+        if shouldUseStaticThumbnail(),
+           let staticThumbnail = await loadStaticThumbnail(for: album) {
+            return [staticThumbnail]
+        }
+        
+        return await loadAnimatedThumbnails(for: album)
+    }
+    
+    private func shouldUseStaticThumbnail() -> Bool {
+        return !UserDefaults.standard.enableThumbnailAnimation
+    }
+    
+    private func loadStaticThumbnail(for album: ImmichAlbum) async -> UIImage? {
+        guard let thumbnailId = album.albumThumbnailAssetId, !thumbnailId.isEmpty else {
+            return nil
+        }
+        
+        do {
+            return try await thumbnailCache.getThumbnail(for: thumbnailId, size: "thumbnail") {
+                try await self.assetService.loadImage(assetId: thumbnailId, size: "thumbnail")
+            }
+        } catch {
+            print("Failed to load static thumbnail for album \(album.id): \(error)")
+            return nil
+        }
+    }
+    
+    private func loadAnimatedThumbnails(for album: ImmichAlbum) async -> [UIImage] {
         do {
             let albumProvider = AlbumAssetProvider(albumService: albumService, albumId: album.id)
             let searchResult = try await albumProvider.fetchAssets(page: 1, limit: 10)
@@ -31,7 +59,7 @@ class AlbumThumbnailProvider: ThumbnailProvider {
             for asset in imageAssets.prefix(10) {
                 do {
                     let thumbnail = try await thumbnailCache.getThumbnail(for: asset.id, size: "thumbnail") {
-                        try await self.assetService.loadImage(asset: asset, size: "thumbnail")
+                        try await self.assetService.loadImage(assetId: asset.id, size: "thumbnail")
                     }
                     if let thumbnail = thumbnail {
                         loadedThumbnails.append(thumbnail)
@@ -70,7 +98,7 @@ class PeopleThumbnailProvider: ThumbnailProvider {
             for asset in imageAssets.prefix(10) {
                 do {
                     let thumbnail = try await thumbnailCache.getThumbnail(for: asset.id, size: "thumbnail") {
-                        try await self.assetService.loadImage(asset: asset, size: "thumbnail")
+                        try await self.assetService.loadImage(assetId: asset.id, size: "thumbnail")
                     }
                     if let thumbnail = thumbnail {
                         loadedThumbnails.append(thumbnail)
@@ -109,7 +137,7 @@ class TagThumbnailProvider: ThumbnailProvider {
             for asset in imageAssets.prefix(10) {
                 do {
                     let thumbnail = try await thumbnailCache.getThumbnail(for: asset.id, size: "thumbnail") {
-                        try await self.assetService.loadImage(asset: asset, size: "thumbnail")
+                        try await self.assetService.loadImage(assetId: asset.id, size: "thumbnail")
                     }
                     if let thumbnail = thumbnail {
                         loadedThumbnails.append(thumbnail)
@@ -148,7 +176,7 @@ class FolderThumbnailProvider: ThumbnailProvider {
             for asset in imageAssets.prefix(10) {
                 do {
                     let thumbnail = try await thumbnailCache.getThumbnail(for: asset.id, size: "thumbnail") {
-                        try await self.assetService.loadImage(asset: asset, size: "thumbnail")
+                        try await self.assetService.loadImage(assetId: asset.id, size: "thumbnail")
                     }
                     if let thumbnail = thumbnail {
                         loadedThumbnails.append(thumbnail)
