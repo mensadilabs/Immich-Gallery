@@ -78,6 +78,7 @@ struct SettingsView: View {
     @AppStorage("enableSlideshowShuffle") private var enableSlideshowShuffle = false
     @AppStorage("allPhotosSortOrder") private var allPhotosSortOrder = "desc"
     @AppStorage("navigationStyle") private var navigationStyle = NavigationStyle.tabs.rawValue
+    @AppStorage("timeZone") private var timeZone = TimeZone.current.identifier
     @AppStorage("enableTopShelf", store: UserDefaults(suiteName: AppConstants.appGroupIdentifier)) private var enableTopShelf = true
     @AppStorage("topShelfStyle", store: UserDefaults(suiteName: AppConstants.appGroupIdentifier)) private var topShelfStyle = "carousel"
     @AppStorage("topShelfImageSelection", store: UserDefaults(suiteName: AppConstants.appGroupIdentifier)) private var topShelfImageSelection = "recent"
@@ -330,6 +331,21 @@ struct SettingsView: View {
                                             }
                                                 .pickerStyle(.menu)
                                                 .frame(width: 300, alignment: .trailing)
+                                        )
+                                    )
+                                
+                                    SettingsRow(
+                                        icon: "globe",
+                                        title: "Timezone",
+                                        subtitle: "Choose your timezone",
+                                        content: AnyView(
+                                            Picker("Timezone", selection: $timeZone) {
+                                                ForEach(TimeZoneService.timeZones, id: \.identifier) { tz in
+                                                    Text(tz.identifier).tag(tz)
+                                                }
+                                            }
+                                            .pickerStyle(.menu)
+                                            .frame(width: 300, alignment: .trailing)
                                         )
                                     )
                                 }
