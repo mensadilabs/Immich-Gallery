@@ -74,7 +74,7 @@ class AssetService: ObservableObject {
         // Use separate sort order for All Photos tab vs everything else
         let sortOrder = isAllPhotos 
             ? UserDefaults.standard.allPhotosSortOrder
-            : (UserDefaults.standard.string(forKey: "collectionsSortOrder") ?? "desc")
+            : (UserDefaults.standard.string(forKey: "assetSortOrder") ?? "desc")
         var searchRequest: [String: Any] = [
             "page": page,
             "size": limit,

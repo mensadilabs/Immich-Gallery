@@ -75,7 +75,7 @@ struct SettingsView: View {
     @AppStorage("enableKenBurnsEffect") private var enableKenBurnsEffect = false
     @AppStorage("enableThumbnailAnimation") private var enableThumbnailAnimation = false
     @AppStorage("enableSlideshowShuffle") private var enableSlideshowShuffle = false
-    @AppStorage("collectionsSortOrder") private var collectionsSortOrder = "desc"
+    @AppStorage("assetSortOrder") private var assetSortOrder = "desc"
     @AppStorage("navigationStyle") private var navigationStyle = NavigationStyle.tabs.rawValue
     @AppStorage("timeZone") private var timeZone = TimeZone.current.identifier
     @AppStorage("enableTopShelf", store: UserDefaults(suiteName: AppConstants.appGroupIdentifier)) private var enableTopShelf = true
@@ -406,7 +406,7 @@ struct SettingsView: View {
                                     title: "Albums & Collections Sort Order",
                                     subtitle: "Order photos in Albums, People, and Tags",
                                     content: AnyView(
-                                        Picker("Collections Sort Order", selection: $collectionsSortOrder) {
+                                        Picker("Collections Sort Order", selection: $assetSortOrder) {
                                             Text("Newest First").tag("desc")
                                             Text("Oldest First").tag("asc")
                                         }

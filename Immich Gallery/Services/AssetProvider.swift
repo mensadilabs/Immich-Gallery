@@ -144,7 +144,7 @@ class AlbumAssetProvider: AssetProvider {
     }
     
     private func currentSortOrder() -> SortOrder {
-        let storedValue = UserDefaults.standard.string(forKey: UserDefaultsKeys.collectionsSortOrder) ?? "desc"
+        let storedValue = UserDefaults.standard.string(forKey: UserDefaultsKeys.assetSortOrder) ?? "desc"
         return storedValue.lowercased() == "asc" ? .oldestFirst : .newestFirst
     }
     

@@ -7,10 +7,12 @@
 
 import SwiftUI
 
+
+
 // MARK: - LockScreenStyleOverlay View
 struct LockScreenStyleOverlay: View {
     let asset: ImmichAsset
-    let isSlideshowMode: Bool
+    let isSlideshowMode: Bool // Determines larger font sizes for slideshow
     
     @State private var currentTime = Date()
     @State private var timeUpdateTimer: Timer?
@@ -27,33 +29,37 @@ struct LockScreenStyleOverlay: View {
     }
     
     var body: some View {
-        VStack(alignment: .trailing, spacing: 24) {
+        
+        
+        VStack(alignment: .trailing, spacing: 24) { // Increased spacing for tvOS
             // MARK: - Clock and Date Display
             if isSlideshowMode {
-                VStack(alignment: .trailing, spacing: 12) {
+                VStack(alignment: .trailing, spacing: 12) { // Increased spacing
                     // Current time in large text
                     Text(formatCurrentTime())
-                        .font(.system(size: isSlideshowMode ? 100 : 48, weight: .light, design: .default))
+                        .font(.system(size: isSlideshowMode ? 100 : 48, weight: .light, design: .default)) // Larger sizes
                         .foregroundColor(.black)
-                        .shadow(color: .white.opacity(0.6), radius: 6, x: 0, y: 3)
+                        .shadow(color: .white.opacity(0.6), radius: 6, x: 0, y: 3) // Slightly stronger shadow
                     
                     // Current date
                     Text(formatCurrentDate())
-                        .font(.system(size: isSlideshowMode ? 32 : 22, weight: .regular, design: .default))
+                        .font(.system(size: isSlideshowMode ? 32 : 22, weight: .regular, design: .default)) // Larger sizes
                         .foregroundColor(.black.opacity(0.95))
                         .shadow(color: .white.opacity(0.6), radius: 6, x: 0, y: 3)
                 }
                 .padding(.horizontal, 48)
                 .padding(.top, 12)
                 .padding(.bottom, 24)
-                .background(RoundedRectangle(cornerRadius: 12).fill(Color.black.opacity(0.6)))
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.black.opacity(0.6)))
             }
             
-            Spacer()
-            
-            VStack(alignment: .trailing, spacing: 0) {
+            Spacer() // Pushes content to the top (or bottom if this is the only spacer)
+            VStack(alignment: .trailing, spacing: 0) { // This VStack will get the single background and shadow
+                // MARK: - Group for internal padding (all text/HStacks inside this will share the padding)
                 Group {
-                    // People names
+                    // MARK: - People names with elegant styling
                     let nonEmptyNames = asset.people.map(\.name).filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
                     
                     if !nonEmptyNames.isEmpty {
@@ -62,7 +68,7 @@ struct LockScreenStyleOverlay: View {
                             .foregroundColor(.white)
                     }
                     
-                    // Location
+                    // MARK: - Location with elegant styling
                     if let location = getLocationString() {
                         HStack(spacing: 0) {
                             Image(systemName: "location.fill")
@@ -74,7 +80,7 @@ struct LockScreenStyleOverlay: View {
                         }
                     }
                     
-                    // Date
+                    // MARK: - Date with elegant styling
                     let assetDate = asset.exifInfo?.dateTimeOriginal ?? asset.fileCreatedAt
                     HStack(spacing: 0) {
                         Image(systemName: "calendar")
@@ -121,15 +127,18 @@ struct LockScreenStyleOverlay: View {
     
     private func formatCurrentDate() -> String {
         let formatter = DateFormatter()
-        formatter.dateStyle = .full
+        formatter.dateStyle = .full // e.g., "Friday, July 5, 2025"
         formatter.timeStyle = .none
         formatter.timeZone = TimeZone(identifier: timeZoneIdentifier)
         return formatter.string(from: currentTime)
     }
     
     private func startTimeUpdate() {
+        // Invalidate any existing timer first to prevent duplicates
         stopTimeUpdate()
+        // Update time immediately
         currentTime = Date()
+        // Set up timer to update every second
         timeUpdateTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
             currentTime = Date()
         }
@@ -141,3 +150,43 @@ struct LockScreenStyleOverlay: View {
     }
 }
 
+
+#Preview {
+    let (_, _, _, assetService, _, _, _, _) = MockServiceFactory.createMockServices()
+
+    // Create mock assets for preview
+    let mockAssets = [
+        ImmichAsset(
+            id: "mock-1",
+            deviceAssetId: "mock-device-1",
+            deviceId: "mock-device",
+            ownerId: "mock-owner",
+            libraryId: nil,
+            type: .image,
+            originalPath: "/mock/path1",
+            originalFileName: "mock1.jpg",
+            originalMimeType: "image/jpeg",
+            resized: false,
+            thumbhash: nil,
+            fileModifiedAt: "2023-01-01",
+            createdAt: "2023-01-01",
+            fileCreatedAt: "2023-01-01",
+            localDateTime: "2023-01-01",
+            updatedAt: "2023-01-01",
+            isFavorite: false,
+            isArchived: false,
+            isOffline: false,
+            isTrashed: false,
+            checksum: "mock-checksum-1",
+            duration: nil,
+            hasMetadata: false,
+            livePhotoVideoId: nil,
+            people: [],
+            visibility: "public",
+            duplicateId: nil,
+            exifInfo: nil
+        )
+    ]
+
+    SlideshowView(albumId: nil, personId: nil, tagId: nil, startingIndex: 0, isFavorite: false)
+}

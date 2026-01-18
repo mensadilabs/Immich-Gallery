@@ -33,7 +33,7 @@ struct UserDefaultsKeys {
     static let enableSlideshowShuffle = "enableSlideshowShuffle"
     static let allPhotosSortField = "allPhotosSortField"
     static let allPhotosSortOrder = "allPhotosSortOrder"
-    static let collectionsSortOrder = "collectionsSortOrder"
+    static let assetSortOrder = "assetSortOrder"
     static let navigationStyle = "navigationStyle"
     static let enableTopShelf = "enableTopShelf"
     static let topShelfStyle = "topShelfStyle"

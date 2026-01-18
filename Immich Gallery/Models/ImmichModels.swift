@@ -52,12 +52,6 @@ struct ImmichAsset: Codable, Identifiable, Equatable {
     }
 }
 
-enum AssetSortField {
-    case dateAdded
-    case dateTaken
-    case filename
-}
-
 extension Array where Element == ImmichAsset {
     func sorted(by sortField: String, sortOrder: String = "desc") -> [ImmichAsset] {
             let ascending = (sortOrder.lowercased() == "asc")
