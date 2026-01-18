@@ -1,10 +1,3 @@
-//
-//  TimezoneService.swift
-//  Immich Gallery
-//
-//  Created by Harley Wakeman on 1/17/26.
-//
-
 import Foundation
 
 struct TimeZoneService {
@@ -41,15 +34,23 @@ struct TimeZoneService {
     ) -> String {
         let isoFormatter = ISO8601DateFormatter()
         isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        
+
         guard let date = isoFormatter.date(from: isoString) else {
-            return isoString // fallback if parsing fails
+            return isoString
         }
-        
+
+        let timeZone = TimeZone(identifier: timeZoneIdentifier) ?? .current
+
         let formatter = DateFormatter()
-        formatter.timeZone = TimeZone(identifier: timeZoneIdentifier) ?? .current
+        formatter.timeZone = timeZone
         formatter.dateFormat = format
-        
-        return formatter.string(from: date)
+
+        let dateString = formatter.string(from: date)
+        let abbreviation = timeZone.abbreviation(for: date) ?? ""
+
+        return abbreviation.isEmpty
+            ? dateString
+            : "\(dateString) \(abbreviation)"
     }
 }
+
