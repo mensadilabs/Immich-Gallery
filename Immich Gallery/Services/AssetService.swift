@@ -15,10 +15,14 @@ class AssetService: ObservableObject {
     }
 
     func fetchAssets(page: Int = 1, limit: Int? = nil, albumId: String? = nil, personId: String? = nil, tagId: String? = nil, city: String? = nil, isAllPhotos: Bool = false, isFavorite: Bool = false, folderPath: String? = nil) async throws -> SearchResult {
-        // Use separate sort order for All Photos tab vs everything else
+        let sortField = isAllPhotos
+            ? UserDefaults.standard.allPhotosSortField
+            : "localDateTime"
+        
         let sortOrder = isAllPhotos 
             ? UserDefaults.standard.allPhotosSortOrder
-            : (UserDefaults.standard.string(forKey: "assetSortOrder") ?? "desc")
+            : "desc"
+        
         var searchRequest: [String: Any] = [
             "page": page,
             "withPeople": true,
@@ -56,8 +60,10 @@ class AssetService: ObservableObject {
             body: searchRequest,
             responseType: SearchResponse.self
         )
+        let sortedAssets = result.assets.items.sorted(by: sortField, sortOrder: sortOrder)
+
         return SearchResult(
-            assets: result.assets.items,
+            assets: sortedAssets,
             total: result.assets.total,
             nextPage: result.assets.nextPage
         )
@@ -68,7 +74,7 @@ class AssetService: ObservableObject {
         // Use separate sort order for All Photos tab vs everything else
         let sortOrder = isAllPhotos 
             ? UserDefaults.standard.allPhotosSortOrder
-            : (UserDefaults.standard.string(forKey: "assetSortOrder") ?? "desc")
+            : (UserDefaults.standard.string(forKey: "collectionsSortOrder") ?? "desc")
         var searchRequest: [String: Any] = [
             "page": page,
             "size": limit,

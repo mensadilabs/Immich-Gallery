@@ -33,9 +33,18 @@ struct TimeZoneService {
         format: String = "yyyy-MM-dd HH:mm:ss"
     ) -> String {
         let isoFormatter = ISO8601DateFormatter()
+        
+        // Try parsing with fractional seconds first (e.g., .123Z)
         isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        var date = isoFormatter.date(from: isoString)
+        
+        // Fallback: Try parsing without fractional seconds (your specific case)
+        if date == nil {
+            isoFormatter.formatOptions = [.withInternetDateTime]
+            date = isoFormatter.date(from: isoString)
+        }
 
-        guard let date = isoFormatter.date(from: isoString) else {
+        guard let validDate = date else {
             return isoString
         }
 
@@ -45,12 +54,11 @@ struct TimeZoneService {
         formatter.timeZone = timeZone
         formatter.dateFormat = format
 
-        let dateString = formatter.string(from: date)
-        let abbreviation = timeZone.abbreviation(for: date) ?? ""
+        let dateString = formatter.string(from: validDate)
+        let abbreviation = timeZone.abbreviation(for: validDate) ?? ""
 
         return abbreviation.isEmpty
             ? dateString
             : "\(dateString) \(abbreviation)"
     }
 }
-

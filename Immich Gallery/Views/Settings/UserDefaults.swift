@@ -79,6 +79,11 @@ extension UserDefaults {
         set { set(newValue, forKey: UserDefaultsKeys.navigationStyle) }
     }
     
+    var allPhotosSortField: String {
+        get { string(forKey: UserDefaultsKeys.allPhotosSortField) ?? "localDateTime" }
+        set { set(newValue, forKey: UserDefaultsKeys.allPhotosSortField) }
+    }
+    
     var allPhotosSortOrder: String {
         get { string(forKey: UserDefaultsKeys.allPhotosSortOrder) ?? "desc" }
         set { set(newValue, forKey: UserDefaultsKeys.allPhotosSortOrder) }

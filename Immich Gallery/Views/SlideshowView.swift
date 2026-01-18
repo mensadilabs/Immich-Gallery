@@ -784,6 +784,7 @@ struct SlideshowView: View {
             resized: false,
             thumbhash: nil,
             fileModifiedAt: "2023-01-01",
+            createdAt: "2023-01-01",
             fileCreatedAt: "2023-01-01",
             localDateTime: "2023-01-01",
             updatedAt: "2023-01-01",

@@ -2,8 +2,6 @@
 //  AssetGridView.swift
 //  Immich Gallery
 //
-//  Created by mensadi-labs on 2025-06-29.
-//
 
 import SwiftUI
 
@@ -12,24 +10,32 @@ struct AssetGridView: View {
     @ObservedObject var authService: AuthenticationService
     @ObservedObject private var thumbnailCache = ThumbnailCache.shared
     let assetProvider: AssetProvider
-    let albumId: String? // Optional album ID to filter assets
-    let personId: String? // Optional person ID to filter assets
-    let tagId: String? // Optional tag ID to filter assets
-    let city: String? // Optional city to filter assets
-    let isAllPhotos: Bool // Whether this is the All Photos tab
-    let isFavorite: Bool // Whether this is showing favorite assets
-    let onAssetsLoaded: (([ImmichAsset]) -> Void)? // Callback for when assets are loaded
-    let deepLinkAssetId: String? // Asset ID to highlight from deep link
+    
+    // Sorting
+    @AppStorage("allPhotosSortField") private var allPhotosSortField = "localDateTime"
+    @AppStorage("allPhotosSortOrder") private var allPhotosSortOrder = "desc"
+    @State private var showingSortModal = false
+
+    // Slideshow attributes
+    let albumId: String?
+    let personId: String?
+    let tagId: String?
+    let city: String?
+    let isAllPhotos: Bool
+    let isFavorite: Bool
+    
+    let onAssetsLoaded: (([ImmichAsset]) -> Void)?
+    let deepLinkAssetId: String?
     @State private var assets: [ImmichAsset] = []
     @State private var isLoading = false
     @State private var isLoadingMore = false
     @State private var errorMessage: String?
     @State private var selectedAsset: ImmichAsset?
     @State private var showingFullScreen = false
-    @State private var currentAssetIndex: Int = 0 // Track current asset index for highlighting
+    @State private var currentAssetIndex: Int = 0
     @FocusState private var focusedAssetId: String?
-    @State private var isProgrammaticFocusChange = false // Flag to track programmatic focus changes
-    @State private var shouldScrollToAsset: String? // Asset ID to scroll to
+    @State private var isProgrammaticFocusChange = false
+    @State private var shouldScrollToAsset: String?
     @State private var nextPage: String?
     @State private var hasMoreAssets = true
     @State private var loadMoreTask: Task<Void, Never>?
@@ -43,9 +49,17 @@ struct AssetGridView: View {
         GridItem(.fixed(300), spacing: 50),
     ]
     
+    private func formatSortLabel(_ field: String) -> String {
+        switch field {
+        case "localDateTime": return "Date Taken"
+        case "originalFileName": return "File Name"
+        case "createdAt": return "Date Added" // Added display label for the new attribute
+        default: return field.capitalized
+        }
+    }
+    
     var body: some View {
         ZStack {
-            // Background
             SharedGradientBackground()
             
             if isLoading {
@@ -57,136 +71,89 @@ struct AssetGridView: View {
                     Image(systemName: "exclamationmark.triangle")
                         .font(.system(size: 60))
                         .foregroundColor(.orange)
-                    Text("Error")
-                        .font(.title)
-                        .foregroundColor(.white)
-                    Text(errorMessage)
-                        .foregroundColor(.gray)
-                        .multilineTextAlignment(.center)
-                        .padding()
-                    Button("Retry") {
-                        loadAssets()
-                    }
-                    .buttonStyle(.borderedProminent)
+                    Text("Error").font(.title).foregroundColor(.white)
+                    Text(errorMessage).foregroundColor(.gray).multilineTextAlignment(.center).padding()
+                    Button("Retry") { loadAssets() }.buttonStyle(.borderedProminent)
                 }
             } else if assets.isEmpty {
                 VStack {
-                    Image(systemName: "photo.on.rectangle.angled")
-                        .font(.system(size: 60))
-                        .foregroundColor(.gray)
-                    Text(getEmptyStateTitle())
-                        .font(.title)
-                        .foregroundColor(.white)
-                    Text(getEmptyStateMessage())
-                        .foregroundColor(.gray)
+                    Image(systemName: "photo.on.rectangle.angled").font(.system(size: 60)).foregroundColor(.gray)
+                    Text(getEmptyStateTitle()).font(.title).foregroundColor(.white)
+                    Text(getEmptyStateMessage()).foregroundColor(.gray)
                 }
             } else {
-                VStack {
+                VStack(spacing: 0) {
+                    if isAllPhotos {
+                        HStack {
+                            Spacer()
+                            Button(action: { showingSortModal = true }) {
+                                HStack {
+                                    Image(systemName: "line.3.horizontal.decrease.circle")
+                                    Text("Sort: \(formatSortLabel(allPhotosSortField)) (\(allPhotosSortOrder.uppercased()))")
+                                }
+                            }
+                            .buttonStyle(.bordered)
+                            .padding(.trailing, 60)
+                            .padding(.top, 20)
+                        }
+                    }
+
                     ScrollViewReader { proxy in
                         ScrollView {
                             LazyVGrid(columns: columns, spacing: 50) {
-                            ForEach(assets) { asset in
-                                Button(action: {
-                                    print("AssetGridView: Asset selected: \(asset.id)")
-                                    selectedAsset = asset
-                                    if let index = assets.firstIndex(of: asset) {
-                                        currentAssetIndex = index
-                                        print("AssetGridView: Set currentAssetIndex to \(index)")
-                                    }
-                                    showingFullScreen = true
-                                }) {
-                                    AssetThumbnailView(
-                                        asset: asset,
-                                        assetService: assetService,
-                                        isFocused: focusedAssetId == asset.id
-                                    )
-                                }
-                                .frame(width: 300, height: 360)
-                                .id(asset.id) // Add id for ScrollViewReader
-                                .focused($focusedAssetId, equals: asset.id)
-//                                .scaleEffect(focusedAssetId == asset.id ? 1.1 : 1.0)
-                                .animation(.easeInOut(duration: 0.2), value: focusedAssetId)
-                                .onAppear {
-                                    // More efficient index check using enumerated
-                                    if let index = assets.firstIndex(of: asset) {
-                                        let threshold = max(assets.count - 100, 0) // Load when 20 items away from end
-                                        if index >= threshold && hasMoreAssets && !isLoadingMore {
-                                            debouncedLoadMore()
+                                ForEach(assets) { asset in
+                                    Button(action: {
+                                        selectedAsset = asset
+                                        if let index = assets.firstIndex(of: asset) {
+                                            currentAssetIndex = index
                                         }
-                                        
-                                        // Check if this is the asset we need to scroll to
-                                        if shouldScrollToAsset == asset.id {
-                                            print("AssetGridView: Target asset appeared in grid - \(asset.id)")
+                                        showingFullScreen = true
+                                    }) {
+                                        AssetThumbnailView(
+                                            asset: asset,
+                                            assetService: assetService,
+                                            isFocused: focusedAssetId == asset.id
+                                        )
+                                    }
+                                    .frame(width: 300, height: 360)
+                                    .id(asset.id)
+                                    .focused($focusedAssetId, equals: asset.id)
+                                    .animation(.easeInOut(duration: 0.2), value: focusedAssetId)
+                                    .onAppear {
+                                        if let index = assets.firstIndex(of: asset) {
+                                            let threshold = max(assets.count - 100, 0)
+                                            if index >= threshold && hasMoreAssets && !isLoadingMore {
+                                                debouncedLoadMore()
+                                            }
                                         }
                                     }
+                                    .buttonStyle(CardButtonStyle())
                                 }
-                                .buttonStyle(CardButtonStyle())
-                            }
-                            
-                            // Loading indicator at the bottom
-                            if isLoadingMore {
-                                HStack {
-                                    Spacer()
-                                    ProgressView("Loading more...")
-                                        .foregroundColor(.white)
-                                        .scaleEffect(1.2)
-                                    Spacer()
+                                
+                                if isLoadingMore {
+                                    HStack {
+                                        Spacer()
+                                        ProgressView("Loading more...")
+                                            .foregroundColor(.white)
+                                            .scaleEffect(1.2)
+                                        Spacer()
+                                    }
+                                    .frame(height: 100)
+                                    .padding()
                                 }
-                                .frame(height: 100)
-                                .padding()
                             }
+                            .padding(.horizontal).padding(.top, 20).padding(.bottom, 40)
                         }
-                        .padding(.horizontal)
-                        .padding(.top, 20)
-                        .padding(.bottom, 40)
                         .onChange(of: focusedAssetId) { newFocusedId in
-                            print("AssetGridView: focusedAssetId changed to \(newFocusedId ?? "nil"), isProgrammatic: \(isProgrammaticFocusChange)")
-                            
-                            // Update currentAssetIndex when focus changes
                             if let focusedId = newFocusedId,
                                let focusedAsset = assets.first(where: { $0.id == focusedId }),
                                let index = assets.firstIndex(of: focusedAsset) {
                                 currentAssetIndex = index
-                                print("AssetGridView: Updated currentAssetIndex to \(index) for focused asset")
                             }
-                            
-                            // Scroll to the focused asset when it changes
-                            if let focusedId = newFocusedId {
-                                if isProgrammaticFocusChange {
-                                    print("AssetGridView: Programmatic focus change - scrolling to asset ID: \(focusedId)")
-                                    withAnimation(.easeInOut(duration: 0.5)) {
-                                        proxy.scrollTo(focusedId, anchor: .center)
-                                    }
-                                    // Reset the flag after scrolling
-                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                                        isProgrammaticFocusChange = false
-                                    }
-                                } else {
-                                    print("AssetGridView: User navigation - not scrolling")
-                                }
+                            if let focusedId = newFocusedId, isProgrammaticFocusChange {
+                                withAnimation(.easeInOut(duration: 0.5)) { proxy.scrollTo(focusedId, anchor: .center) }
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { isProgrammaticFocusChange = false }
                             }
-                        }
-                        .onChange(of: shouldScrollToAsset) { assetId in
-                            if let assetId = assetId {
-                                print("AssetGridView: shouldScrollToAsset triggered - scrolling to asset ID: \(assetId)")
-                                // Use a more robust scrolling approach with proper timing
-                                DispatchQueue.main.async {
-                                    withAnimation(.easeInOut(duration: 0.5)) {
-                                        proxy.scrollTo(assetId, anchor: .center)
-                                    }
-                                }
-                                // Clear the trigger after a longer delay to ensure scroll completes
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-                                    shouldScrollToAsset = nil
-                                }
-                                }
-                            }
-                        .onChange(of: deepLinkAssetId) { assetId in
-                            if let assetId = assetId {
-                                print("AssetGridView: Deep link asset ID received: \(assetId)")
-                                handleDeepLinkAsset(assetId)
-                            }
-                        }
                         }
                     }
                 }
@@ -195,74 +162,47 @@ struct AssetGridView: View {
         .fullScreenCover(isPresented: $showingFullScreen) {
             if let selectedAsset = selectedAsset {
                 FullScreenImageView(
-                    asset: selectedAsset, 
-                    assets: assets, 
-                    currentIndex: assets.firstIndex(of: selectedAsset) ?? 0, 
-                    assetService: assetService, 
-                    authenticationService: authService,
-                    currentAssetIndex: $currentAssetIndex
+                    asset: selectedAsset, assets: assets, currentIndex: assets.firstIndex(of: selectedAsset) ?? 0,
+                    assetService: assetService, authenticationService: authService, currentAssetIndex: $currentAssetIndex
                 )
             }
         }
         .fullScreenCover(isPresented: $showingSlideshow) {
             let imageAssets = assets.filter { $0.type == .image }
             if !imageAssets.isEmpty {
-                let _ = print("currentAssetIndex test", currentAssetIndex)
-                // Find the index of the current asset in the filtered image assets
-                let startingIndex = currentAssetIndex < assets.count ? 
-                    (imageAssets.firstIndex(of: assets[currentAssetIndex]) ?? 0) : 0
+                let startingIndex = currentAssetIndex < assets.count ? (imageAssets.firstIndex(of: assets[currentAssetIndex]) ?? 0) : 0
                 SlideshowView(albumId: albumId, personId: personId, tagId: tagId, city: city, startingIndex: startingIndex, isFavorite: isFavorite)
             }
         }
-        .onPlayPauseCommand(perform: {
-            print("Play pause tapped in AssetGridView - starting slideshow")
-            startSlideshow()
-        })
-        .onAppear {
-            print("Appared")
-            if assets.isEmpty {
-                loadAssets()
-            }
+        .sheet(isPresented: $showingSortModal) {
+            SortSettingsView(
+                sortField: $allPhotosSortField,
+                sortOrder: $allPhotosSortOrder,
+                onApply: {
+                    showingSortModal = false
+                    loadAssets()
+                }
+            )
         }
-        .onDisappear {
-            // Cancel any pending load more tasks when view disappears
-            loadMoreTask?.cancel()
-        }
+        .onPlayPauseCommand(perform: { startSlideshow() })
+        .onAppear { if assets.isEmpty { loadAssets() } }
+        .onDisappear { loadMoreTask?.cancel() }
         .onChange(of: showingFullScreen) { _, isShowing in
-            print("AssetGridView: showingFullScreen changed to \(isShowing)")
-            // When fullscreen is dismissed, highlight the current asset
             if !isShowing && currentAssetIndex < assets.count {
                 let currentAsset = assets[currentAssetIndex]
-                print("AssetGridView: Fullscreen dismissed, currentAssetIndex: \(currentAssetIndex), asset ID: \(currentAsset.id)")
-                
-                // Use a more robust approach with proper state management
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                    // First, trigger the scroll
-                    print("AssetGridView: Setting shouldScrollToAsset to \(currentAsset.id)")
                     shouldScrollToAsset = currentAsset.id
-                    
-                    // Then set the focus after a short delay to ensure scroll starts
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        print("AssetGridView: Setting focusedAssetId to \(currentAsset.id)")
-                        print("AssetGridView: Setting isProgrammaticFocusChange to true")
                         isProgrammaticFocusChange = true
                         focusedAssetId = currentAsset.id
-                        print("AssetGridView: focusedAssetId set to \(currentAsset.id)")
                     }
                 }
             }
         }
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name(NotificationNames.startAutoSlideshow))) { notification in
-            startSlideshow()
-        }
     }
     
     private func loadAssets() {
-        guard authService.isAuthenticated else {
-            errorMessage = "Not authenticated. Please check your credentials."
-            return
-        }
-        
+        guard authService.isAuthenticated else { return }
         isLoading = true
         errorMessage = nil
         nextPage = nil
@@ -275,14 +215,9 @@ struct AssetGridView: View {
                     self.assets = searchResult.assets
                     self.nextPage = searchResult.nextPage
                     self.isLoading = false
-                    // If there's no nextPage, we've reached the end
                     self.hasMoreAssets = searchResult.nextPage != nil
-                    
-                    // Notify parent view about loaded assets
                     onAssetsLoaded?(searchResult.assets)
                 }
-                
-                // Preload thumbnails for better performance
                 ThumbnailCache.shared.preloadThumbnails(for: searchResult.assets)
             } catch {
                 await MainActor.run {
@@ -294,134 +229,193 @@ struct AssetGridView: View {
     }
     
     private func debouncedLoadMore() {
-        // Immediately set loading state to prevent multiple triggers
         guard !isLoadingMore && hasMoreAssets else { return }
-        
         isLoadingMore = true
-        
-        // Cancel any existing load more task
         loadMoreTask?.cancel()
-        
-        // Create a new debounced task
         loadMoreTask = Task {
-            try? await Task.sleep(nanoseconds: 300_000_000) // 300ms delay
-            
-            // Check if task was cancelled during sleep
-            if Task.isCancelled {
-                await MainActor.run {
-                    isLoadingMore = false
-                }
-                return
-            }
-            
-            await MainActor.run {
-                loadMoreAssets()
-            }
+            try? await Task.sleep(nanoseconds: 300_000_000)
+            if !Task.isCancelled { await MainActor.run { loadMoreAssets() } }
         }
     }
     
     private func loadMoreAssets() {
-        guard hasMoreAssets && nextPage != nil else { 
+        guard hasMoreAssets && nextPage != nil else {
             isLoadingMore = false
-            return 
+            return
         }
-        
         Task {
             do {
-                // Extract page number from nextPage string
                 let pageNumber = extractPageFromNextPage(nextPage!)
                 let searchResult = try await assetProvider.fetchAssets(page: pageNumber, limit: 200)
-                
                 await MainActor.run {
                     if !searchResult.assets.isEmpty {
                         self.assets.append(contentsOf: searchResult.assets)
                         self.nextPage = searchResult.nextPage
-                        
-                        // If there's no nextPage, we've reached the end
                         self.hasMoreAssets = searchResult.nextPage != nil
                     } else {
                         self.hasMoreAssets = false
                     }
                     self.isLoadingMore = false
                 }
-                
-                // Preload thumbnails for newly loaded assets
                 ThumbnailCache.shared.preloadThumbnails(for: searchResult.assets)
             } catch {
-                await MainActor.run {
-                    print("Failed to load more assets: \(error)")
-                    self.isLoadingMore = false
-                }
+                await MainActor.run { self.isLoadingMore = false }
             }
         }
     }
     
     private func extractPageFromNextPage(_ nextPageString: String) -> Int {
-        // Optimized page extraction with caching
-        if let pageNumber = Int(nextPageString) {
-            return pageNumber
-        }
-        
-        // Try to extract from URL parameters more efficiently
-        if nextPageString.contains("page="),
-           let url = URL(string: nextPageString),
-           let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
-           let pageParam = components.queryItems?.first(where: { $0.name == "page" }),
-           let pageNumber = Int(pageParam.value ?? "2") {
-            return pageNumber
-        }
-        
-        // Default fallback - calculate based on current assets count
+        if let pageNumber = Int(nextPageString) { return pageNumber }
         return (assets.count / 100) + 2
     }
     
     private func getEmptyStateTitle() -> String {
-        if personId != nil {
-            return "No Photos of Person"
-        } else if albumId != nil {
-            return "No Photos in Album"
-        } else {
+        if personId != nil { return "No Photos of Person" }
+        if albumId != nil { return "No Photos in Album" }
         return "No Photos Found"
-        }
     }
     
     private func getEmptyStateMessage() -> String {
-        if personId != nil {
-            return "This person has no photos"
-        } else if albumId != nil {
-            return "This album is empty"
-        } else {
+        if personId != nil { return "This person has no photos" }
+        if albumId != nil { return "This album is empty" }
         return "Your photos will appear here"
-        }
     }
     
     private func startSlideshow() {
-        // Stop auto-slideshow timer before starting slideshow
         NotificationCenter.default.post(name: NSNotification.Name("stopAutoSlideshowTimer"), object: nil)
         showingSlideshow = true
     }
+}
+
+// MARK: - Main Sort Settings View
+struct SortSettingsView: View {
+    @Binding var sortField: String
+    @Binding var sortOrder: String
+    var onApply: () -> Void
     
-    private func handleDeepLinkAsset(_ assetId: String) {
-        // Check if the asset is already loaded
-        if assets.contains(where: { $0.id == assetId }) {
-            print("AssetGridView: Asset \(assetId) found in loaded assets, scrolling and focusing")
-            focusedAssetId = assetId
-            isProgrammaticFocusChange = true
-        } else {
-            print("AssetGridView: Asset \(assetId) not found in current loaded assets")
-            // For now, just load the first page and hope the asset is there
-            // In a more complex implementation, we could search for the asset across pages
-            if assets.isEmpty {
-                loadAssets()
-                // After loading, try to find the asset again
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                    if let foundAsset = assets.first(where: { $0.id == assetId }) {
-                        focusedAssetId = foundAsset.id
-                        isProgrammaticFocusChange = true
+    // Internal state to hold changes until "Apply" is pressed
+    @State private var localField: String
+    @State private var localOrder: String
+
+    init(sortField: Binding<String>, sortOrder: Binding<String>, onApply: @escaping () -> Void) {
+        self._sortField = sortField
+        self._sortOrder = sortOrder
+        self.onApply = onApply
+        self._localField = State(initialValue: sortField.wrappedValue)
+        self._localOrder = State(initialValue: sortOrder.wrappedValue)
+    }
+    
+    var body: some View {
+        ZStack {
+            // Background
+            Rectangle()
+                .fill(.ultraThinMaterial)
+                .ignoresSafeArea()
+            
+            LinearGradient(
+                colors: [Color.black.opacity(0.4), Color.blue.opacity(0.15)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+
+            VStack(spacing: 0) {
+                // Header
+                VStack(spacing: 15) {
+                    Text("Sort Settings")
+                        .font(.system(size: 80, weight: .bold))
+                        .foregroundColor(.white)
+                    
+                    Text("Select an option and press the center button to confirm")
+                        .font(.title3)
+                        .foregroundColor(.gray)
+                }
+                .padding(.top, 80)
+                .padding(.bottom, 60)
+                
+                // Selection Area
+                HStack(alignment: .top, spacing: 100) {
+                    
+                    // Column 1: Sort Field
+                    VStack(alignment: .leading, spacing: 25) {
+                        Label("Sort By", systemImage: "arrow.up.arrow.down")
+                            .font(.headline)
+                            .foregroundColor(.white.opacity(0.7))
+                            .padding(.leading, 30)
+                        
+                        VStack(spacing: 20) {
+                            SortOptionButton(label: "Date Taken", value: "localDateTime", currentSelection: $localField)
+                            SortOptionButton(label: "Date Added", value: "createdAt", currentSelection: $localField)
+                            SortOptionButton(label: "File Name", value: "originalFileName", currentSelection: $localField)
+                        }
+                        .frame(width: 750)
+                    }
+                    
+                    // Column 2: Sort Order
+                    VStack(alignment: .leading, spacing: 25) {
+                        Label("Order", systemImage: "list.number")
+                            .font(.headline)
+                            .foregroundColor(.white.opacity(0.7))
+                            .padding(.leading, 30)
+                        
+                        VStack(spacing: 20) {
+                            SortOptionButton(label: "Descending", value: "desc", currentSelection: $localOrder)
+                            SortOptionButton(label: "Ascending", value: "asc", currentSelection: $localOrder)
+                        }
+                        .frame(width: 750)
                     }
                 }
+                .padding(.horizontal, 100) // This creates the "gutter" at the edges
+                
+                Spacer()
+
+                // Footer / Action Button
+                Button(action: {
+                    sortField = localField
+                    sortOrder = localOrder
+                    onApply()
+                }) {
+                    HStack {
+                        Image(systemName: "checkmark.circle.fill")
+                        Text("Apply Settings")
+                    }
+                    .font(.title3)
+                    .padding(.horizontal, 80)
+                    .padding(.vertical, 15)
+                }
+                .buttonStyle(.borderedProminent)
+                .padding(.bottom, 100)
             }
         }
     }
 }
 
+// MARK: - Supporting View: SortOptionButton
+// This replaces the native Picker to prevent the "hover-to-select" bug
+struct SortOptionButton: View {
+    let label: String
+    let value: String
+    @Binding var currentSelection: String
+    
+    var body: some View {
+        Button(action: {
+            // This only triggers when the user CLICKs the remote
+            currentSelection = value
+        }) {
+            HStack {
+                Text(label)
+                    .font(.title2)
+                Spacer()
+                if currentSelection == value {
+                    Image(systemName: "checkmark")
+                        .foregroundColor(.blue)
+                        .font(.system(size: 30, weight: .bold))
+                }
+            }
+            .padding(.horizontal, 50)
+            .frame(maxWidth: .infinity)
+            .frame(height: 100)
+        }
+        .buttonStyle(.card) // Provides the native Apple TV focus effect
+    }
+}

@@ -70,13 +70,12 @@ struct SettingsView: View {
     @AppStorage("showTagsTab") private var showTagsTab = false
     @AppStorage("showFoldersTab") private var showFoldersTab = false
     @AppStorage("defaultStartupTab") private var defaultStartupTab = "photos"
-    @AppStorage("assetSortOrder") private var assetSortOrder = "desc"
     @AppStorage("use24HourClock") private var use24HourClock = true
     @AppStorage("enableReflectionsInSlideshow") private var enableReflectionsInSlideshow = true
     @AppStorage("enableKenBurnsEffect") private var enableKenBurnsEffect = false
     @AppStorage("enableThumbnailAnimation") private var enableThumbnailAnimation = false
     @AppStorage("enableSlideshowShuffle") private var enableSlideshowShuffle = false
-    @AppStorage("allPhotosSortOrder") private var allPhotosSortOrder = "desc"
+    @AppStorage("collectionsSortOrder") private var collectionsSortOrder = "desc"
     @AppStorage("navigationStyle") private var navigationStyle = NavigationStyle.tabs.rawValue
     @AppStorage("timeZone") private var timeZone = TimeZone.current.identifier
     @AppStorage("enableTopShelf", store: UserDefaults(suiteName: AppConstants.appGroupIdentifier)) private var enableTopShelf = true
@@ -403,25 +402,11 @@ struct SettingsView: View {
                         SettingsSection(title: "Sorting") {
                             AnyView(VStack(spacing: 12) {
                                 SettingsRow(
-                                    icon: "photo.on.rectangle",
-                                    title: "All Photos Sort Order",
-                                    subtitle: "Order photos in the All Photos tab",
-                                    content: AnyView(
-                                        Picker("All Photos Sort Order", selection: $allPhotosSortOrder) {
-                                            Text("Newest First").tag("desc")
-                                            Text("Oldest First").tag("asc")
-                                        }
-                                            .pickerStyle(.menu)
-                                            .frame(width: 300, alignment: .trailing)
-                                    )
-                                )
-                                
-                                SettingsRow(
                                     icon: "arrow.up.arrow.down",
                                     title: "Albums & Collections Sort Order",
                                     subtitle: "Order photos in Albums, People, and Tags",
                                     content: AnyView(
-                                        Picker("Collections Sort Order", selection: $assetSortOrder) {
+                                        Picker("Collections Sort Order", selection: $collectionsSortOrder) {
                                             Text("Newest First").tag("desc")
                                             Text("Oldest First").tag("asc")
                                         }

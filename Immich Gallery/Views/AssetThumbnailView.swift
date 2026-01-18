@@ -157,6 +157,7 @@ struct AssetThumbnailView: View {
         resized: false,
         thumbhash: nil,
         fileModifiedAt: "2023-01-01 00:00:00",
+        createdAt: "2023-12-31T14:30:00Z",
         fileCreatedAt: "2023-12-25T14:30:00Z",
         localDateTime: "2023-01-01",
         updatedAt: "2023-01-01",
