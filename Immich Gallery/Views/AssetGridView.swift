@@ -1,6 +1,8 @@
 //
-//  AssetGridView.swift
+//  ImmichModels.swift
 //  Immich Gallery
+//
+//  Created by mensadi-labs on 2025-06-29.
 //
 
 import SwiftUI
@@ -17,25 +19,25 @@ struct AssetGridView: View {
     @State private var showingSortModal = false
 
     // Slideshow attributes
-    let albumId: String?
-    let personId: String?
-    let tagId: String?
-    let city: String?
-    let isAllPhotos: Bool
-    let isFavorite: Bool
+    let albumId: String? // Optional album ID to filter assets
+    let personId: String? // Optional person ID to filter assets
+    let tagId: String? // Optional tag ID to filter assets
+    let city: String? // Optional city to filter assets
+    let isAllPhotos: Bool // Whether this is the All Photos tab
+    let isFavorite: Bool // Whether this is showing favorite assets
     
-    let onAssetsLoaded: (([ImmichAsset]) -> Void)?
-    let deepLinkAssetId: String?
+    let onAssetsLoaded: (([ImmichAsset]) -> Void)? // Callback for when assets are loaded
+    let deepLinkAssetId: String? // Asset ID to highlight from deep link
     @State private var assets: [ImmichAsset] = []
     @State private var isLoading = false
     @State private var isLoadingMore = false
     @State private var errorMessage: String?
     @State private var selectedAsset: ImmichAsset?
     @State private var showingFullScreen = false
-    @State private var currentAssetIndex: Int = 0
+    @State private var currentAssetIndex: Int = 0 // Track current asset index for highlighting
     @FocusState private var focusedAssetId: String?
-    @State private var isProgrammaticFocusChange = false
-    @State private var shouldScrollToAsset: String?
+    @State private var isProgrammaticFocusChange = false // Flag to track programmatic focus changes
+    @State private var shouldScrollToAsset: String? // Asset ID to scroll to
     @State private var nextPage: String?
     @State private var hasMoreAssets = true
     @State private var loadMoreTask: Task<Void, Never>?
@@ -60,6 +62,7 @@ struct AssetGridView: View {
     
     var body: some View {
         ZStack {
+            // Background
             SharedGradientBackground()
             
             if isLoading {
