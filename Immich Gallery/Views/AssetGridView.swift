@@ -1,5 +1,5 @@
 //
-//  ImmichModels.swift
+//  AssetGridView.swift
 //  Immich Gallery
 //
 //  Created by mensadi-labs on 2025-06-29.
@@ -13,31 +13,36 @@ struct AssetGridView: View {
     @ObservedObject private var thumbnailCache = ThumbnailCache.shared
     let assetProvider: AssetProvider
     
-    // Sorting
     @AppStorage("allPhotosSortField") private var allPhotosSortField = "localDateTime"
     @AppStorage("allPhotosSortOrder") private var allPhotosSortOrder = "desc"
-    @State private var showingSortModal = false
-
-    // Slideshow attributes
-    let albumId: String? // Optional album ID to filter assets
-    let personId: String? // Optional person ID to filter assets
-    let tagId: String? // Optional tag ID to filter assets
-    let city: String? // Optional city to filter assets
-    let isAllPhotos: Bool // Whether this is the All Photos tab
-    let isFavorite: Bool // Whether this is showing favorite assets
     
-    let onAssetsLoaded: (([ImmichAsset]) -> Void)? // Callback for when assets are loaded
-    let deepLinkAssetId: String? // Asset ID to highlight from deep link
+    @State private var filterYears: Set<Int> = UserDefaults.standard.allPhotosFilteredYears
+    @State private var filterLocations: Set<String> = UserDefaults.standard.allPhotosFilteredLocations
+    @State private var filterDevices: Set<String> = UserDefaults.standard.allPhotosFilteredDevices
+
+    @State private var showingSortModal = false
+    @State private var showingFilterModal = false
+
+    // Context attributes
+    let albumId: String?
+    let personId: String?
+    let tagId: String?
+    let city: String?
+    let isAllPhotos: Bool
+    let isFavorite: Bool
+    
+    let onAssetsLoaded: (([ImmichAsset]) -> Void)?
+    let deepLinkAssetId: String?
+    
     @State private var assets: [ImmichAsset] = []
     @State private var isLoading = false
     @State private var isLoadingMore = false
     @State private var errorMessage: String?
     @State private var selectedAsset: ImmichAsset?
     @State private var showingFullScreen = false
-    @State private var currentAssetIndex: Int = 0 // Track current asset index for highlighting
+    @State private var currentAssetIndex: Int = 0
     @FocusState private var focusedAssetId: String?
-    @State private var isProgrammaticFocusChange = false // Flag to track programmatic focus changes
-    @State private var shouldScrollToAsset: String? // Asset ID to scroll to
+    @State private var isProgrammaticFocusChange = false
     @State private var nextPage: String?
     @State private var hasMoreAssets = true
     @State private var loadMoreTask: Task<Void, Never>?
@@ -51,54 +56,20 @@ struct AssetGridView: View {
         GridItem(.fixed(300), spacing: 50),
     ]
     
-    private func formatSortLabel(_ field: String) -> String {
-        switch field {
-        case "localDateTime": return "Date Taken"
-        case "originalFileName": return "File Name"
-        case "createdAt": return "Date Added" // Added display label for the new attribute
-        default: return field.capitalized
-        }
-    }
-    
     var body: some View {
         ZStack {
-            // Background
             SharedGradientBackground()
             
             if isLoading {
-                ProgressView("Loading photos...")
-                    .foregroundColor(.white)
-                    .scaleEffect(1.5)
+                loadingOverlay
             } else if let errorMessage = errorMessage {
-                VStack {
-                    Image(systemName: "exclamationmark.triangle")
-                        .font(.system(size: 60))
-                        .foregroundColor(.orange)
-                    Text("Error").font(.title).foregroundColor(.white)
-                    Text(errorMessage).foregroundColor(.gray).multilineTextAlignment(.center).padding()
-                    Button("Retry") { loadAssets() }.buttonStyle(.borderedProminent)
-                }
+                errorView(message: errorMessage)
             } else if assets.isEmpty {
-                VStack {
-                    Image(systemName: "photo.on.rectangle.angled").font(.system(size: 60)).foregroundColor(.gray)
-                    Text(getEmptyStateTitle()).font(.title).foregroundColor(.white)
-                    Text(getEmptyStateMessage()).foregroundColor(.gray)
-                }
+                emptyStateView
             } else {
                 VStack(spacing: 0) {
                     if isAllPhotos {
-                        HStack {
-                            Spacer()
-                            Button(action: { showingSortModal = true }) {
-                                HStack {
-                                    Image(systemName: "line.3.horizontal.decrease.circle")
-                                    Text("Sort: \(formatSortLabel(allPhotosSortField)) (\(allPhotosSortOrder.uppercased()))")
-                                }
-                            }
-                            .buttonStyle(.bordered)
-                            .padding(.trailing, 60)
-                            .padding(.top, 20)
-                        }
+                        topToolbar
                     }
 
                     ScrollViewReader { proxy in
@@ -106,11 +77,7 @@ struct AssetGridView: View {
                             LazyVGrid(columns: columns, spacing: 50) {
                                 ForEach(assets) { asset in
                                     Button(action: {
-                                        selectedAsset = asset
-                                        if let index = assets.firstIndex(of: asset) {
-                                            currentAssetIndex = index
-                                        }
-                                        showingFullScreen = true
+                                        openAsset(asset)
                                     }) {
                                         AssetThumbnailView(
                                             asset: asset,
@@ -121,42 +88,22 @@ struct AssetGridView: View {
                                     .frame(width: 300, height: 360)
                                     .id(asset.id)
                                     .focused($focusedAssetId, equals: asset.id)
-                                    .animation(.easeInOut(duration: 0.2), value: focusedAssetId)
                                     .onAppear {
-                                        if let index = assets.firstIndex(of: asset) {
-                                            let threshold = max(assets.count - 100, 0)
-                                            if index >= threshold && hasMoreAssets && !isLoadingMore {
-                                                debouncedLoadMore()
-                                            }
-                                        }
+                                        checkForLoadMore(item: asset)
                                     }
                                     .buttonStyle(CardButtonStyle())
                                 }
                                 
                                 if isLoadingMore {
-                                    HStack {
-                                        Spacer()
-                                        ProgressView("Loading more...")
-                                            .foregroundColor(.white)
-                                            .scaleEffect(1.2)
-                                        Spacer()
-                                    }
-                                    .frame(height: 100)
-                                    .padding()
+                                    bottomLoadingIndicator
                                 }
                             }
-                            .padding(.horizontal).padding(.top, 20).padding(.bottom, 40)
+                            .padding(.horizontal)
+                            .padding(.top, 20)
+                            .padding(.bottom, 40)
                         }
-                        .onChange(of: focusedAssetId) { newFocusedId in
-                            if let focusedId = newFocusedId,
-                               let focusedAsset = assets.first(where: { $0.id == focusedId }),
-                               let index = assets.firstIndex(of: focusedAsset) {
-                                currentAssetIndex = index
-                            }
-                            if let focusedId = newFocusedId, isProgrammaticFocusChange {
-                                withAnimation(.easeInOut(duration: 0.5)) { proxy.scrollTo(focusedId, anchor: .center) }
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { isProgrammaticFocusChange = false }
-                            }
+                        .onChange(of: focusedAssetId) { _, newId in
+                            handleFocusChange(proxy: proxy, newId: newId)
                         }
                     }
                 }
@@ -165,17 +112,26 @@ struct AssetGridView: View {
         .fullScreenCover(isPresented: $showingFullScreen) {
             if let selectedAsset = selectedAsset {
                 FullScreenImageView(
-                    asset: selectedAsset, assets: assets, currentIndex: assets.firstIndex(of: selectedAsset) ?? 0,
-                    assetService: assetService, authenticationService: authService, currentAssetIndex: $currentAssetIndex
+                    asset: selectedAsset,
+                    assets: assets,
+                    currentIndex: currentAssetIndex,
+                    assetService: assetService,
+                    authenticationService: authService,
+                    currentAssetIndex: $currentAssetIndex
                 )
             }
         }
-        .fullScreenCover(isPresented: $showingSlideshow) {
-            let imageAssets = assets.filter { $0.type == .image }
-            if !imageAssets.isEmpty {
-                let startingIndex = currentAssetIndex < assets.count ? (imageAssets.firstIndex(of: assets[currentAssetIndex]) ?? 0) : 0
-                SlideshowView(albumId: albumId, personId: personId, tagId: tagId, city: city, startingIndex: startingIndex, isFavorite: isFavorite)
-            }
+        .sheet(isPresented: $showingFilterModal) {
+            FilterSettingsView(
+                allAssets: assets,
+                assetProvider: assetProvider, // Pass the provider
+                selectedYears: $filterYears,
+                selectedLocations: $filterLocations,
+                selectedDevices: $filterDevices,
+                onApply: {
+                    applyFilters()
+                }
+            )
         }
         .sheet(isPresented: $showingSortModal) {
             SortSettingsView(
@@ -187,23 +143,107 @@ struct AssetGridView: View {
                 }
             )
         }
-        .onPlayPauseCommand(perform: { startSlideshow() })
+        .onPlayPauseCommand(perform: startSlideshow)
         .onAppear { if assets.isEmpty { loadAssets() } }
         .onDisappear { loadMoreTask?.cancel() }
-        .onChange(of: showingFullScreen) { _, isShowing in
-            if !isShowing && currentAssetIndex < assets.count {
-                let currentAsset = assets[currentAssetIndex]
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                    shouldScrollToAsset = currentAsset.id
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        isProgrammaticFocusChange = true
-                        focusedAssetId = currentAsset.id
-                    }
+    }
+
+    // MARK: - Subviews
+    
+    private var loadingOverlay: some View {
+        ProgressView("Loading photos...")
+            .foregroundColor(.white)
+            .scaleEffect(1.5)
+    }
+    
+    private func errorView(message: String) -> some View {
+        VStack(spacing: 20) {
+            Image(systemName: "exclamationmark.triangle").font(.system(size: 60)).foregroundColor(.orange)
+            Text("Error").font(.title).foregroundColor(.white)
+            Text(message).foregroundColor(.gray).multilineTextAlignment(.center).padding()
+            Button("Retry") { loadAssets() }.buttonStyle(.borderedProminent)
+        }
+    }
+    
+    private var emptyStateView: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "photo.on.rectangle.angled").font(.system(size: 60)).foregroundColor(.gray)
+            Text(getEmptyStateTitle()).font(.title).foregroundColor(.white)
+            Text(getEmptyStateMessage()).foregroundColor(.gray)
+            
+            if !filterYears.isEmpty || !filterLocations.isEmpty || !filterDevices.isEmpty {
+                Button("Clear All Filters") {
+                    clearFilters()
                 }
+                .buttonStyle(.bordered)
             }
         }
     }
     
+    private var topToolbar: some View {
+        HStack(spacing: 30) {
+            Spacer()
+            
+            // Filter Button
+            Button(action: { showingFilterModal = true }) {
+                let count = filterYears.count + filterLocations.count + filterDevices.count
+                Label {
+                    Text("Filter \(count > 0 ? "(\(count))" : "")")
+                } icon: {
+                    Image(systemName: count > 0 ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
+                }
+            }
+            .buttonStyle(.bordered)
+            
+            // Sort Button
+            Button(action: { showingSortModal = true }) {
+                Label {
+                    Text("Sort: \(formatSortLabel(allPhotosSortField)) (\(allPhotosSortOrder.uppercased()))")
+                } icon: {
+                    Image(systemName: "arrow.up.arrow.down")
+                }
+            }
+            .buttonStyle(.bordered)
+            .padding(.trailing, 60)
+        }
+        .padding(.top, 20)
+    }
+    
+    private var bottomLoadingIndicator: some View {
+        HStack {
+            Spacer()
+            ProgressView().foregroundColor(.white).scaleEffect(1.2)
+            Spacer()
+        }
+        .frame(height: 100)
+    }
+
+    // MARK: - Logic & Actions
+
+    private func openAsset(_ asset: ImmichAsset) {
+        selectedAsset = asset
+        currentAssetIndex = assets.firstIndex(of: asset) ?? 0
+        showingFullScreen = true
+    }
+
+    private func applyFilters() {
+        UserDefaults.standard.allPhotosFilteredYears = filterYears
+        UserDefaults.standard.allPhotosFilteredLocations = filterLocations
+        UserDefaults.standard.allPhotosFilteredDevices = filterDevices
+        showingFilterModal = false
+        loadAssets()
+    }
+
+    private func clearFilters() {
+        filterYears.removeAll()
+        filterLocations.removeAll()
+        filterDevices.removeAll()
+        UserDefaults.standard.allPhotosFilteredYears = []
+        UserDefaults.standard.allPhotosFilteredLocations = []
+        UserDefaults.standard.allPhotosFilteredDevices = []
+        loadAssets()
+    }
+
     private func loadAssets() {
         guard authService.isAuthenticated else { return }
         isLoading = true
@@ -230,17 +270,23 @@ struct AssetGridView: View {
             }
         }
     }
-    
-    private func debouncedLoadMore() {
+
+    private func checkForLoadMore(item: ImmichAsset) {
         guard !isLoadingMore && hasMoreAssets else { return }
-        isLoadingMore = true
+        if let index = assets.firstIndex(of: item), index >= assets.count - 40 {
+            debouncedLoadMore()
+        }
+    }
+
+    private func debouncedLoadMore() {
         loadMoreTask?.cancel()
+        isLoadingMore = true
         loadMoreTask = Task {
             try? await Task.sleep(nanoseconds: 300_000_000)
             if !Task.isCancelled { await MainActor.run { loadMoreAssets() } }
         }
     }
-    
+
     private func loadMoreAssets() {
         guard hasMoreAssets && nextPage != nil else {
             isLoadingMore = false
@@ -271,154 +317,42 @@ struct AssetGridView: View {
         if let pageNumber = Int(nextPageString) { return pageNumber }
         return (assets.count / 100) + 2
     }
-    
+
+    private func handleFocusChange(proxy: ScrollViewProxy, newId: String?) {
+        if let id = newId, let asset = assets.first(where: { $0.id == id }) {
+            currentAssetIndex = assets.firstIndex(of: asset) ?? 0
+            
+            if isProgrammaticFocusChange {
+                withAnimation(.easeInOut) {
+                    proxy.scrollTo(id, anchor: .center)
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    isProgrammaticFocusChange = false
+                }
+            }
+        }
+    }
+
+    private func formatSortLabel(_ field: String) -> String {
+        switch field {
+        case "localDateTime": return "Date Taken"
+        case "originalFileName": return "File Name"
+        default: return field.capitalized
+        }
+    }
+
     private func getEmptyStateTitle() -> String {
-        if personId != nil { return "No Photos of Person" }
-        if albumId != nil { return "No Photos in Album" }
-        return "No Photos Found"
+        let count = filterYears.count + filterLocations.count + filterDevices.count
+        return count > 0 ? "No Results for Filters" : "No Photos Found"
     }
     
     private func getEmptyStateMessage() -> String {
-        if personId != nil { return "This person has no photos" }
-        if albumId != nil { return "This album is empty" }
-        return "Your photos will appear here"
+        let count = filterYears.count + filterLocations.count + filterDevices.count
+        return count > 0 ? "Try adjusting your filter settings." : "Your photos will appear here."
     }
-    
+
     private func startSlideshow() {
         NotificationCenter.default.post(name: NSNotification.Name("stopAutoSlideshowTimer"), object: nil)
         showingSlideshow = true
-    }
-}
-
-// MARK: - Main Sort Settings View
-struct SortSettingsView: View {
-    @Binding var sortField: String
-    @Binding var sortOrder: String
-    var onApply: () -> Void
-    
-    // Internal state to hold changes until "Apply" is pressed
-    @State private var localField: String
-    @State private var localOrder: String
-
-    init(sortField: Binding<String>, sortOrder: Binding<String>, onApply: @escaping () -> Void) {
-        self._sortField = sortField
-        self._sortOrder = sortOrder
-        self.onApply = onApply
-        self._localField = State(initialValue: sortField.wrappedValue)
-        self._localOrder = State(initialValue: sortOrder.wrappedValue)
-    }
-    
-    var body: some View {
-        ZStack {
-            // Background
-            Rectangle()
-                .fill(.ultraThinMaterial)
-                .ignoresSafeArea()
-            
-            LinearGradient(
-                colors: [Color.black.opacity(0.4), Color.blue.opacity(0.15)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
-
-            VStack(spacing: 0) {
-                // Header
-                VStack(spacing: 15) {
-                    Text("Sort Settings")
-                        .font(.system(size: 80, weight: .bold))
-                        .foregroundColor(.white)
-                    
-                    Text("Select an option and press the center button to confirm")
-                        .font(.title3)
-                        .foregroundColor(.gray)
-                }
-                .padding(.top, 80)
-                .padding(.bottom, 60)
-                
-                // Selection Area
-                HStack(alignment: .top, spacing: 100) {
-                    
-                    // Column 1: Sort Field
-                    VStack(alignment: .leading, spacing: 25) {
-                        Label("Sort By", systemImage: "arrow.up.arrow.down")
-                            .font(.headline)
-                            .foregroundColor(.white.opacity(0.7))
-                            .padding(.leading, 30)
-                        
-                        VStack(spacing: 20) {
-                            SortOptionButton(label: "Date Taken", value: "localDateTime", currentSelection: $localField)
-                            SortOptionButton(label: "Date Added", value: "createdAt", currentSelection: $localField)
-                            SortOptionButton(label: "File Name", value: "originalFileName", currentSelection: $localField)
-                        }
-                        .frame(width: 750)
-                    }
-                    
-                    // Column 2: Sort Order
-                    VStack(alignment: .leading, spacing: 25) {
-                        Label("Order", systemImage: "list.number")
-                            .font(.headline)
-                            .foregroundColor(.white.opacity(0.7))
-                            .padding(.leading, 30)
-                        
-                        VStack(spacing: 20) {
-                            SortOptionButton(label: "Descending", value: "desc", currentSelection: $localOrder)
-                            SortOptionButton(label: "Ascending", value: "asc", currentSelection: $localOrder)
-                        }
-                        .frame(width: 750)
-                    }
-                }
-                .padding(.horizontal, 100) // This creates the "gutter" at the edges
-                
-                Spacer()
-
-                // Footer / Action Button
-                Button(action: {
-                    sortField = localField
-                    sortOrder = localOrder
-                    onApply()
-                }) {
-                    HStack {
-                        Image(systemName: "checkmark.circle.fill")
-                        Text("Apply Settings")
-                    }
-                    .font(.title3)
-                    .padding(.horizontal, 80)
-                    .padding(.vertical, 15)
-                }
-                .buttonStyle(.borderedProminent)
-                .padding(.bottom, 100)
-            }
-        }
-    }
-}
-
-// MARK: - Supporting View: SortOptionButton
-// This replaces the native Picker to prevent the "hover-to-select" bug
-struct SortOptionButton: View {
-    let label: String
-    let value: String
-    @Binding var currentSelection: String
-    
-    var body: some View {
-        Button(action: {
-            // This only triggers when the user CLICKs the remote
-            currentSelection = value
-        }) {
-            HStack {
-                Text(label)
-                    .font(.title2)
-                Spacer()
-                if currentSelection == value {
-                    Image(systemName: "checkmark")
-                        .foregroundColor(.blue)
-                        .font(.system(size: 30, weight: .bold))
-                }
-            }
-            .padding(.horizontal, 50)
-            .frame(maxWidth: .infinity)
-            .frame(height: 100)
-        }
-        .buttonStyle(.card) // Provides the native Apple TV focus effect
     }
 }

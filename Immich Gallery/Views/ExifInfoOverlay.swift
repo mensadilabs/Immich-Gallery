@@ -127,7 +127,6 @@ struct ExifInfoOverlay: View {
         resized: false,
         thumbhash: nil,
         fileModifiedAt: "2024-01-01T00:00:00Z",
-        createdAt: "2024-01-01T00:00:00Z",
         fileCreatedAt: "2024-01-01T00:00:00Z",
         localDateTime: "2024-01-01T00:00:00Z",
         updatedAt: "2024-01-01T00:00:00Z",

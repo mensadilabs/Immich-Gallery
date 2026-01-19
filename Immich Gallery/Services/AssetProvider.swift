@@ -41,6 +41,9 @@ struct AssetProviderFactory {
 protocol AssetProvider {
     func fetchAssets(page: Int, limit: Int) async throws -> SearchResult
     func fetchRandomAssets(limit: Int) async throws -> SearchResult
+    func fetchAllCities() async throws -> [String]
+    func fetchAllYears() async throws -> [Int]
+    func fetchAllDevices() async throws -> [String]
 }
 
 class AlbumAssetProvider: AssetProvider {
@@ -75,7 +78,6 @@ class AlbumAssetProvider: AssetProvider {
             return cachedAssets
         }
 
-        // Fetch the album with full asset list; Immich includes assets unless withoutAssets is true
         let album = try await albumService.getAlbumInfo(albumId: albumId, withoutAssets: false)
         cachedAssets = album.assets
         return album.assets
@@ -124,6 +126,37 @@ class AlbumAssetProvider: AssetProvider {
         )
     }
     
+    func fetchAllCities() async throws -> [String] {
+        let assets = try await loadAlbumAssets()
+        let cities = assets.compactMap { asset in
+            if let city = asset.exifInfo?.city, !city.isEmpty {
+                return city
+            }
+            return nil
+        }
+        return Array(Set(cities)).sorted()
+    }
+
+    func fetchAllYears() async throws -> [Int] {
+        let assets = try await loadAlbumAssets()
+        let years = assets.compactMap { asset -> Int? in
+            let yearString = asset.localDateTime.prefix(4)
+            return Int(yearString)
+        }
+        return Array(Set(years)).sorted(by: >)
+    }
+
+    func fetchAllDevices() async throws -> [String] {
+        let assets = try await loadAlbumAssets()
+        let devices = assets.compactMap { asset in
+            if let model = asset.exifInfo?.model, !model.isEmpty {
+                return model
+            }
+            return nil
+        }
+        return Array(Set(devices)).sorted()
+    }
+    
     private func sortAssets(_ assets: [ImmichAsset]) -> [ImmichAsset] {
         let sortOrder = currentSortOrder()
         return assets.sorted { lhs, rhs in
@@ -144,24 +177,15 @@ class AlbumAssetProvider: AssetProvider {
     }
     
     private func currentSortOrder() -> SortOrder {
-        let storedValue = UserDefaults.standard.string(forKey: UserDefaultsKeys.assetSortOrder) ?? "desc"
+        let storedValue = UserDefaults.standard.string(forKey: "assetSortOrder") ?? "desc"
         return storedValue.lowercased() == "asc" ? .oldestFirst : .newestFirst
     }
     
     private func captureDate(for asset: ImmichAsset) -> Date {
-        if let date = parseDate(asset.exifInfo?.dateTimeOriginal) {
-            return date
-        }
-        if let date = parseDate(asset.fileCreatedAt) {
-            return date
-        }
-        if let date = parseDate(asset.fileModifiedAt) {
-            return date
-        }
-        if let date = parseDate(asset.updatedAt) {
-            return date
-        }
-        
+        if let date = parseDate(asset.exifInfo?.dateTimeOriginal) { return date }
+        if let date = parseDate(asset.fileCreatedAt) { return date }
+        if let date = parseDate(asset.fileModifiedAt) { return date }
+        if let date = parseDate(asset.updatedAt) { return date }
         return .distantPast
     }
     
@@ -196,7 +220,6 @@ class GeneralAssetProvider: AssetProvider {
     }
     
     func fetchAssets(page: Int, limit: Int) async throws -> SearchResult {
-        // If config is provided, use it; otherwise fall back to individual parameters
         if let config = config {
             return try await assetService.fetchAssets(config: config, page: page, limit: limit, isAllPhotos: isAllPhotos)
         } else {
@@ -215,7 +238,6 @@ class GeneralAssetProvider: AssetProvider {
     }
     
     func fetchRandomAssets(limit: Int) async throws -> SearchResult {
-        // If config is provided, use it; otherwise fall back to individual parameters
         if let config = config {
             return try await assetService.fetchRandomAssets(config: config, limit: limit)
         } else {
@@ -227,5 +249,17 @@ class GeneralAssetProvider: AssetProvider {
                 limit: limit
             )
         }
+    }
+    
+    func fetchAllCities() async throws -> [String] {
+        return try await assetService.fetchAllCities()
+    }
+
+    func fetchAllYears() async throws -> [Int] {
+        return try await assetService.fetchAllYears()
+    }
+
+    func fetchAllDevices() async throws -> [String] {
+        return try await assetService.fetchAllDevices()
     }
 }

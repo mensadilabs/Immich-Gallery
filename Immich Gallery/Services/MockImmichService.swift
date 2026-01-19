@@ -58,7 +58,6 @@ class MockAssetService: AssetService {
                 resized: false,
                 thumbhash: nil,
                 fileModifiedAt: "2023-01-\(String(format: "%02d", index))",
-                createdAt: "2023-01-\(String(format: "%02d", index))",
                 fileCreatedAt: "2023-01-\(String(format: "%02d", index))",
                 localDateTime: "2023-01-\(String(format: "%02d", index))",
                 updatedAt: "2023-01-\(String(format: "%02d", index))",

@@ -79,6 +79,38 @@ extension UserDefaults {
         set { set(newValue, forKey: UserDefaultsKeys.navigationStyle) }
     }
     
+    var allPhotosFilteredLocations: Set<String> {
+        get {
+            let array = stringArray(forKey: "allPhotosFilteredLocations") ?? []
+            return Set(array)
+        }
+        set {
+            set(Array(newValue), forKey: "allPhotosFilteredLocations")
+        }
+    }
+    
+    var allPhotosFilteredYears: Set<Int> {
+        get {
+            // Retrieve the array of integers; default to empty if not found
+            let array = array(forKey: "allPhotosFilteredYears") as? [Int] ?? []
+            return Set(array)
+        }
+        set {
+            // Convert Set back to an Array for storage
+            set(Array(newValue), forKey: "allPhotosFilteredYears")
+        }
+    }
+    
+    var allPhotosFilteredDevices: Set<String> {
+        get {
+            let array = stringArray(forKey: "allPhotosFilteredDevices") ?? []
+            return Set(array)
+        }
+        set {
+            set(Array(newValue), forKey: "allPhotosFilteredDevices")
+        }
+    }
+    
     var allPhotosSortField: String {
         get { string(forKey: UserDefaultsKeys.allPhotosSortField) ?? "localDateTime" }
         set { set(newValue, forKey: UserDefaultsKeys.allPhotosSortField) }

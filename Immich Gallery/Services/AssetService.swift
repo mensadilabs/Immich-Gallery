@@ -15,6 +15,12 @@ class AssetService: ObservableObject {
     }
 
     func fetchAssets(page: Int = 1, limit: Int? = nil, albumId: String? = nil, personId: String? = nil, tagId: String? = nil, city: String? = nil, isAllPhotos: Bool = false, isFavorite: Bool = false, folderPath: String? = nil) async throws -> SearchResult {
+        let allPhotosFilteredLocations = UserDefaults.standard.allPhotosFilteredLocations
+        
+        let allPhotosFilteredYears = UserDefaults.standard.allPhotosFilteredYears
+        
+        let allPhotosFilteredDevices = UserDefaults.standard.allPhotosFilteredDevices
+        
         let sortField = isAllPhotos
             ? UserDefaults.standard.allPhotosSortField
             : "localDateTime"
@@ -60,7 +66,10 @@ class AssetService: ObservableObject {
             body: searchRequest,
             responseType: SearchResponse.self
         )
-        let sortedAssets = result.assets.items.sorted(by: sortField, sortOrder: sortOrder)
+        
+        let filteredAssets = result.assets.items.filtered(years: allPhotosFilteredYears, devices : allPhotosFilteredDevices, locations: allPhotosFilteredLocations)
+        
+        let sortedAssets = filteredAssets.sorted(by: sortField, sortOrder: sortOrder)
 
         return SearchResult(
             assets: sortedAssets,
@@ -105,6 +114,75 @@ class AssetService: ObservableObject {
             total: result.assets.total,
             nextPage: result.assets.nextPage
         )
+    }
+    
+    func fetchAllCities() async throws -> [String] {
+        let assets: [ImmichAsset] = try await networkService.makeRequest(
+            endpoint: "/api/search/cities",
+            method: .GET,
+            responseType: [ImmichAsset].self
+        )
+
+        let cities = assets.compactMap { asset in
+            // Only return the city if it's not nil and not an empty string
+            if let city = asset.exifInfo?.city, !city.isEmpty {
+                return city
+            }
+            return nil
+        }
+        
+        return Array(Set(cities)).sorted()
+    }
+    
+    func fetchAllYears() async throws -> [Int] {
+        let endpoint = "/api/timeline/buckets?isTrashed=false"
+        
+        // Change 'Decodable' to 'Codable' to satisfy your NetworkService constraint
+        struct Bucket: Codable {
+            let timeBucket: String
+        }
+
+        let response: [Bucket] = try await networkService.makeRequest(
+            endpoint: endpoint,
+            method: .GET,
+            responseType: [Bucket].self
+        )
+
+        let years = response.compactMap { bucket in
+            let yearString = bucket.timeBucket.prefix(4)
+            return Int(yearString)
+        }
+        
+        return Array(Set(years)).sorted(by: >)
+    }
+    
+    func fetchAllDevices() async throws -> [String] {
+        let body: [String: Any] = [
+            "page": 1,
+            "size": 1000,
+            "withExif": true
+        ]
+
+        // 3. Make the request
+        // We decode into SearchResponse because the JSON starts with {"assets": {...}}
+        let response: SearchResponse = try await networkService.makeRequest(
+            endpoint: "/api/search/metadata",
+            method: .POST,
+            body: body,
+            responseType: SearchResponse.self
+        )
+
+        // 4. Extract device models from exifInfo
+        // We must drill down: response -> assets -> items
+        let devices = response.assets.items.compactMap { asset in
+            if let model = asset.exifInfo?.model, !model.isEmpty {
+                return model
+            }
+            return nil
+        }
+        
+        // 5. Deduplicate and sort alphabetically
+        return Array(Set(devices)).sorted()
     }
 
     func loadImage(assetId: String, size: String = "thumbnail") async throws -> UIImage? {

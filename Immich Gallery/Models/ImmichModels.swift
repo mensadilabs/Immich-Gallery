@@ -22,7 +22,6 @@ struct ImmichAsset: Codable, Identifiable, Equatable {
     let resized: Bool?
     let thumbhash: String?
     let fileModifiedAt: String
-    let createdAt: String // Time added to Immich
     let fileCreatedAt: String // Time media was created
     let localDateTime: String
     let updatedAt: String
@@ -41,7 +40,7 @@ struct ImmichAsset: Codable, Identifiable, Equatable {
     
     enum CodingKeys: String, CodingKey {
         case id, deviceAssetId, deviceId, ownerId, libraryId, type, originalPath, originalFileName
-        case originalMimeType, resized, thumbhash, fileModifiedAt, createdAt, fileCreatedAt, localDateTime, updatedAt
+        case originalMimeType, resized, thumbhash, fileModifiedAt, fileCreatedAt, localDateTime, updatedAt
         case isFavorite, isArchived, isOffline, isTrashed, checksum, duration, hasMetadata, livePhotoVideoId
         case people, visibility, duplicateId, exifInfo
     }
@@ -53,34 +52,52 @@ struct ImmichAsset: Codable, Identifiable, Equatable {
 }
 
 extension Array where Element == ImmichAsset {
-    func sorted(by sortField: String, sortOrder: String = "desc") -> [ImmichAsset] {
-            let ascending = (sortOrder.lowercased() == "asc")
+    func filtered(years: Set<Int>, devices: Set<String>, locations: Set<String>) -> [ImmichAsset] {
+        return self.filter { asset in
+            // 1. Filter by Year (extracted from localDateTime: "YYYY-MM-DD...")
+            let assetYear = Int(asset.localDateTime.prefix(4)) ?? 0
+            let yearMatch = years.isEmpty || years.contains(assetYear)
             
-            return self.sorted { lhs, rhs in
-                var lhsValue = ""
-                var rhsValue = ""
-                
-                if sortField == "localDateTime" {
-                    lhsValue = lhs.localDateTime
-                    rhsValue = rhs.localDateTime
-                } else if sortField == "originalFileName" {
-                    lhsValue = lhs.originalFileName
-                    rhsValue = rhs.originalFileName
-                } else if sortField == "createdAt" {
-                    lhsValue = lhs.createdAt
-                    rhsValue = rhs.createdAt
-                } else {
-                    lhsValue = lhs.localDateTime
-                    rhsValue = rhs.localDateTime
-                }
-                
-                if ascending {
-                    return lhsValue < rhsValue
-                } else {
-                    return lhsValue > rhsValue
-                }
+            // 2. Filter by Device Model (from ExifInfo)
+            let deviceModel = asset.exifInfo?.model ?? "Unknown"
+            let deviceMatch = devices.isEmpty || devices.contains(deviceModel)
+            
+            // 3. Filter by Location (matches City, State, or Country)
+            let city = asset.exifInfo?.city ?? ""
+            
+            let locationMatch = locations.isEmpty ||
+                               locations.contains(city)
+            
+            // Asset must pass all active filters
+            return yearMatch && deviceMatch && locationMatch
+        }
+    }
+
+    func sorted(by sortField: String, sortOrder: String = "desc") -> [ImmichAsset] {
+        let ascending = (sortOrder.lowercased() == "asc")
+        
+        return self.sorted { lhs, rhs in
+            var lhsValue = ""
+            var rhsValue = ""
+            
+            if sortField == "localDateTime" {
+                lhsValue = lhs.localDateTime
+                rhsValue = rhs.localDateTime
+            } else if sortField == "originalFileName" {
+                lhsValue = lhs.originalFileName
+                rhsValue = rhs.originalFileName
+            } else {
+                lhsValue = lhs.localDateTime
+                rhsValue = rhs.localDateTime
+            }
+            
+            if ascending {
+                return lhsValue < rhsValue
+            } else {
+                return lhsValue > rhsValue
             }
         }
+    }
 }
 
 enum AssetType: String, Codable {
