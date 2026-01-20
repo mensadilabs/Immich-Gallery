@@ -14,69 +14,128 @@ class AssetService: ObservableObject {
         self.networkService = networkService
     }
 
-    func fetchAssets(page: Int = 1, limit: Int? = nil, albumId: String? = nil, personId: String? = nil, tagId: String? = nil, city: String? = nil, isAllPhotos: Bool = false, isFavorite: Bool = false, folderPath: String? = nil) async throws -> SearchResult {
+    func fetchAllFilteredAndSortedAssets(albumId: String? = nil, personId: String? = nil, tagId: String? = nil, city: String? = nil, isAllPhotos: Bool = false, isFavorite: Bool = false, folderPath: String? = nil) async throws -> SearchResult {
+        // 1. Setup Filters and Sorting
         let allPhotosFilteredLocations = UserDefaults.standard.allPhotosFilteredLocations
-        
         let allPhotosFilteredYears = UserDefaults.standard.allPhotosFilteredYears
-        
         let allPhotosFilteredDevices = UserDefaults.standard.allPhotosFilteredDevices
+        let sortField = isAllPhotos ? UserDefaults.standard.allPhotosSortField : "localDateTime"
+        let sortOrder = isAllPhotos ? UserDefaults.standard.allPhotosSortOrder : "desc"
         
-        let sortField = isAllPhotos
-            ? UserDefaults.standard.allPhotosSortField
-            : "localDateTime"
-        
-        let sortOrder = isAllPhotos 
-            ? UserDefaults.standard.allPhotosSortOrder
-            : "desc"
-        
-        var searchRequest: [String: Any] = [
-            "page": page,
-            "withPeople": true,
-            "order": sortOrder,
-            "withExif": true,
-        ]
+        var allItems: [ImmichAsset] = []
+        var currentPage = 1
+        var hasMorePages = true
+        let pageSize = 1000 // Use a large page size for efficiency
+        var serverTotal = 0
 
-        if let limit = limit {
-            searchRequest["size"] = limit
+        // 2. Pagination Loop
+        while hasMorePages {
+            var searchRequest: [String: Any] = [
+                "page": currentPage,
+                "size": pageSize,
+                "withPeople": true,
+                "order": sortOrder,
+                "withExif": true,
+            ]
+
+            // Add optional filters to the API request
+            if let albumId = albumId { searchRequest["albumIds"] = [albumId] }
+            if let personId = personId { searchRequest["personIds"] = [personId] }
+            if let tagId = tagId { searchRequest["tagIds"] = [tagId] }
+            if isFavorite { searchRequest["isFavorite"] = true }
+            if let city = city { searchRequest["city"] = city }
+            if let folderPath = folderPath, !folderPath.isEmpty {
+                searchRequest["originalPath"] = folderPath
+                searchRequest["path"] = folderPath
+                searchRequest["originalPathPrefix"] = folderPath
+            }
+
+            let result: SearchResponse = try await networkService.makeRequest(
+                endpoint: "/api/search/metadata",
+                method: .POST,
+                body: searchRequest,
+                responseType: SearchResponse.self
+            )
+
+            // Capture total on first page
+            if currentPage == 1 { serverTotal = result.assets.total }
+
+            // Add raw items from this page
+            allItems.append(contentsOf: result.assets.items)
+
+            // Check if there is a next page
+            if let nextPage = result.assets.nextPage, !nextPage.isEmpty {
+                currentPage += 1
+            } else {
+                hasMorePages = false
+            }
         }
 
-        if let albumId = albumId {
-            searchRequest["albumIds"] = [albumId]
-        }
-        if let personId = personId {
-            searchRequest["personIds"] = [personId]
-        }
-        if let tagId = tagId {
-            searchRequest["tagIds"] = [tagId]
-        }
-        if isFavorite {
-            searchRequest["isFavorite"] = true
-        }
-        if let city = city {
-            searchRequest["city"] = city
-        }
-        if let folderPath = folderPath, !folderPath.isEmpty {
-            searchRequest["originalPath"] = folderPath
-            searchRequest["path"] = folderPath
-            searchRequest["originalPathPrefix"] = folderPath
-        }
-        let result: SearchResponse = try await networkService.makeRequest(
-            endpoint: "/api/search/metadata",
-            method: .POST,
-            body: searchRequest,
-            responseType: SearchResponse.self
+        // 3. Apply Local Filtering to the COMPLETE combined set
+        let filteredAssets = allItems.filtered(
+            years: allPhotosFilteredYears,
+            devices: allPhotosFilteredDevices,
+            locations: allPhotosFilteredLocations
         )
         
-        let filteredAssets = result.assets.items.filtered(years: allPhotosFilteredYears, devices : allPhotosFilteredDevices, locations: allPhotosFilteredLocations)
-        
+        // 4. Apply Sorting to the COMPLETE filtered set
         let sortedAssets = filteredAssets.sorted(by: sortField, sortOrder: sortOrder)
 
         return SearchResult(
             assets: sortedAssets,
-            total: result.assets.total,
-            nextPage: result.assets.nextPage
+            total: sortedAssets.count, // Updated to reflect filtered count
+            nextPage: nil // No next page since we fetched everything
         )
     }
+    
+    func fetchAssets(page: Int = 1, limit: Int? = nil, albumId: String? = nil, personId: String? = nil, tagId: String? = nil, city: String? = nil, isAllPhotos: Bool = false, isFavorite: Bool = false, folderPath: String? = nil) async throws -> SearchResult {
+            // Use separate sort order for All Photos tab vs everything else
+            let sortOrder = isAllPhotos
+                ? UserDefaults.standard.allPhotosSortOrder
+                : (UserDefaults.standard.string(forKey: "assetSortOrder") ?? "desc")
+            var searchRequest: [String: Any] = [
+                "page": page,
+                "withPeople": true,
+                "order": sortOrder,
+                "withExif": true,
+            ]
+
+            if let limit = limit {
+                searchRequest["size"] = limit
+            }
+
+            if let albumId = albumId {
+                searchRequest["albumIds"] = [albumId]
+            }
+            if let personId = personId {
+                searchRequest["personIds"] = [personId]
+            }
+            if let tagId = tagId {
+                searchRequest["tagIds"] = [tagId]
+            }
+            if isFavorite {
+                searchRequest["isFavorite"] = true
+            }
+            if let city = city {
+                searchRequest["city"] = city
+            }
+            if let folderPath = folderPath, !folderPath.isEmpty {
+                searchRequest["originalPath"] = folderPath
+                searchRequest["path"] = folderPath
+                searchRequest["originalPathPrefix"] = folderPath
+            }
+            let result: SearchResponse = try await networkService.makeRequest(
+                endpoint: "/api/search/metadata",
+                method: .POST,
+                body: searchRequest,
+                responseType: SearchResponse.self
+            )
+            return SearchResult(
+                assets: result.assets.items,
+                total: result.assets.total,
+                nextPage: result.assets.nextPage
+            )
+        }
     
     /// Fetches assets using slideshow configuration
     func fetchAssets(config: SlideshowConfig, page: Int = 1, limit: Int = 50, isAllPhotos: Bool = false) async throws -> SearchResult {
@@ -124,7 +183,6 @@ class AssetService: ObservableObject {
         )
 
         let cities = assets.compactMap { asset in
-            // Only return the city if it's not nil and not an empty string
             if let city = asset.exifInfo?.city, !city.isEmpty {
                 return city
             }
@@ -137,7 +195,6 @@ class AssetService: ObservableObject {
     func fetchAllYears() async throws -> [Int] {
         let endpoint = "/api/timeline/buckets?isTrashed=false"
         
-        // Change 'Decodable' to 'Codable' to satisfy your NetworkService constraint
         struct Bucket: Codable {
             let timeBucket: String
         }
@@ -157,32 +214,42 @@ class AssetService: ObservableObject {
     }
     
     func fetchAllDevices() async throws -> [String] {
-        let body: [String: Any] = [
-            "page": 1,
-            "size": 1000,
-            "withExif": true
-        ]
+        var allDeviceModels = Set<String>()
+        var currentPage = 1
+        var hasMorePages = true
+        let pageSize = 1000
 
-        // 3. Make the request
-        // We decode into SearchResponse because the JSON starts with {"assets": {...}}
-        let response: SearchResponse = try await networkService.makeRequest(
-            endpoint: "/api/search/metadata",
-            method: .POST,
-            body: body,
-            responseType: SearchResponse.self
-        )
+        while hasMorePages {
+            let body: [String: Any] = [
+                "page": currentPage,
+                "size": pageSize,
+                "withExif": true
+            ]
 
-        // 4. Extract device models from exifInfo
-        // We must drill down: response -> assets -> items
-        let devices = response.assets.items.compactMap { asset in
-            if let model = asset.exifInfo?.model, !model.isEmpty {
-                return model
+            let response: SearchResponse = try await networkService.makeRequest(
+                endpoint: "/api/search/metadata",
+                method: .POST,
+                body: body,
+                responseType: SearchResponse.self
+            )
+
+            let pageModels = response.assets.items.compactMap { asset in
+                if let model = asset.exifInfo?.model, !model.isEmpty {
+                    return model
+                }
+                return nil
             }
-            return nil
+            
+            allDeviceModels.formUnion(pageModels)
+
+            if response.assets.items.count < pageSize || response.assets.nextPage == nil {
+                hasMorePages = false
+            } else {
+                currentPage += 1
+            }
         }
         
-        // 5. Deduplicate and sort alphabetically
-        return Array(Set(devices)).sorted()
+        return Array(allDeviceModels).sorted()
     }
 
     func loadImage(assetId: String, size: String = "thumbnail") async throws -> UIImage? {

@@ -223,9 +223,7 @@ class GeneralAssetProvider: AssetProvider {
         if let config = config {
             return try await assetService.fetchAssets(config: config, page: page, limit: limit, isAllPhotos: isAllPhotos)
         } else {
-            return try await assetService.fetchAssets(
-                page: page,
-                limit: limit,
+            return try await assetService.fetchAllFilteredAndSortedAssets(
                 albumId: nil,
                 personId: personId,
                 tagId: tagId,

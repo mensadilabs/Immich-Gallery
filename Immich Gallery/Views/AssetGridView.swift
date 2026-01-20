@@ -206,7 +206,7 @@ struct AssetGridView: View {
             .buttonStyle(.bordered)
             .padding(.trailing, 60)
         }
-        .padding(.top, 20)
+        .padding(.bottom, 20)
     }
     
     private var bottomLoadingIndicator: some View {
