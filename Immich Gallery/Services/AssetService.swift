@@ -19,6 +19,8 @@ class AssetService: ObservableObject {
         let sortOrder = isAllPhotos 
             ? UserDefaults.standard.allPhotosSortOrder
             : (UserDefaults.standard.string(forKey: "assetSortOrder") ?? "desc")
+        let selectedCity = isAllPhotos ? UserDefaults.standard.allPhotosFilterCity : city
+        let selectedYear = isAllPhotos ? UserDefaults.standard.allPhotosFilterYear : nil
         var searchRequest: [String: Any] = [
             "page": page,
             "withPeople": true,
@@ -42,8 +44,12 @@ class AssetService: ObservableObject {
         if isFavorite {
             searchRequest["isFavorite"] = true
         }
-        if let city = city {
-            searchRequest["city"] = city
+        if let selectedCity {
+            searchRequest["city"] = selectedCity
+        }
+        if let selectedYear, let yearRange = makeYearRange(year: selectedYear) {
+            searchRequest["takenAfter"] = yearRange.start
+            searchRequest["takenBefore"] = yearRange.end
         }
         if let folderPath = folderPath, !folderPath.isEmpty {
             searchRequest["originalPath"] = folderPath
@@ -61,6 +67,44 @@ class AssetService: ObservableObject {
             total: result.assets.total,
             nextPage: result.assets.nextPage
         )
+    }
+
+    func fetchAllCities() async throws -> [String] {
+        let assets: [ImmichAsset] = try await networkService.makeRequest(
+            endpoint: "/api/search/cities",
+            method: .GET,
+            responseType: [ImmichAsset].self
+        )
+
+        let cities = assets.compactMap { asset in
+            if let city = asset.exifInfo?.city, !city.isEmpty {
+                return city
+            }
+            return nil
+        }
+        
+        return Array(Set(cities)).sorted()
+    }
+
+    func fetchAllYears() async throws -> [Int] {
+        let endpoint = "/api/timeline/buckets?isTrashed=false"
+
+        struct Bucket: Codable {
+            let timeBucket: String
+        }
+
+        let response: [Bucket] = try await networkService.makeRequest(
+            endpoint: endpoint,
+            method: .GET,
+            responseType: [Bucket].self
+        )
+
+        let years = response.compactMap { bucket in
+            let yearString = bucket.timeBucket.prefix(4)
+            return Int(yearString)
+        }
+
+        return Array(Set(years)).sorted(by: >)
     }
     
     /// Fetches assets using slideshow configuration
@@ -172,6 +216,22 @@ class AssetService: ObservableObject {
         }
         
         return nil
+    }
+
+    private func makeYearRange(year: Int) -> (start: String, end: String)? {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .current
+
+        guard let startDate = calendar.date(from: DateComponents(year: year, month: 1, day: 1)),
+              let endDate = calendar.date(from: DateComponents(year: year + 1, month: 1, day: 1)) else {
+            return nil
+        }
+
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+
+        return (formatter.string(from: startDate), formatter.string(from: endDate))
     }
 
     func loadVideoURL(asset: ImmichAsset) async throws -> URL {

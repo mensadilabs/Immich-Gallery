@@ -83,6 +83,28 @@ extension UserDefaults {
         get { string(forKey: UserDefaultsKeys.allPhotosSortOrder) ?? "desc" }
         set { set(newValue, forKey: UserDefaultsKeys.allPhotosSortOrder) }
     }
+
+    var allPhotosFilterCity: String? {
+        get { string(forKey: UserDefaultsKeys.allPhotosFilterCity) }
+        set {
+            if let value = newValue, !value.isEmpty {
+                set(value, forKey: UserDefaultsKeys.allPhotosFilterCity)
+            } else {
+                removeObject(forKey: UserDefaultsKeys.allPhotosFilterCity)
+            }
+        }
+    }
+
+    var allPhotosFilterYear: Int? {
+        get { object(forKey: UserDefaultsKeys.allPhotosFilterYear) as? Int }
+        set {
+            if let value = newValue {
+                set(value, forKey: UserDefaultsKeys.allPhotosFilterYear)
+            } else {
+                removeObject(forKey: UserDefaultsKeys.allPhotosFilterYear)
+            }
+        }
+    }
     
     var artModeLevel: String {
         get { string(forKey: UserDefaultsKeys.artModeLevel) ?? "off" }

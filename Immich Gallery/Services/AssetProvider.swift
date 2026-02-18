@@ -41,6 +41,8 @@ struct AssetProviderFactory {
 protocol AssetProvider {
     func fetchAssets(page: Int, limit: Int) async throws -> SearchResult
     func fetchRandomAssets(limit: Int) async throws -> SearchResult
+    func fetchAllCities() async throws -> [String]
+    func fetchAllYears() async throws -> [Int]
 }
 
 class AlbumAssetProvider: AssetProvider {
@@ -122,6 +124,26 @@ class AlbumAssetProvider: AssetProvider {
             total: assets.count,
             nextPage: nil
         )
+    }
+
+    func fetchAllCities() async throws -> [String] {
+        let assets = try await loadAlbumAssets()
+        let cities = assets.compactMap { asset in
+            if let city = asset.exifInfo?.city, !city.isEmpty {
+                return city
+            }
+            return nil
+        }
+        return Array(Set(cities)).sorted()
+    }
+
+    func fetchAllYears() async throws -> [Int] {
+        let assets = try await loadAlbumAssets()
+        let years = assets.compactMap { asset -> Int? in
+            let yearString = asset.localDateTime.prefix(4)
+            return Int(yearString)
+        }
+        return Array(Set(years)).sorted(by: >)
     }
     
     private func sortAssets(_ assets: [ImmichAsset]) -> [ImmichAsset] {
@@ -227,5 +249,13 @@ class GeneralAssetProvider: AssetProvider {
                 limit: limit
             )
         }
+    }
+
+    func fetchAllCities() async throws -> [String] {
+        return try await assetService.fetchAllCities()
+    }
+
+    func fetchAllYears() async throws -> [Int] {
+        return try await assetService.fetchAllYears()
     }
 }

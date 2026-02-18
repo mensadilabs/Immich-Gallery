@@ -12,6 +12,7 @@ struct AssetGridView: View {
     @ObservedObject var authService: AuthenticationService
     @ObservedObject private var thumbnailCache = ThumbnailCache.shared
     let assetProvider: AssetProvider
+    @AppStorage("allPhotosSortOrder") private var allPhotosSortOrder = "desc"
     let albumId: String? // Optional album ID to filter assets
     let personId: String? // Optional person ID to filter assets
     let tagId: String? // Optional tag ID to filter assets
@@ -34,6 +35,10 @@ struct AssetGridView: View {
     @State private var hasMoreAssets = true
     @State private var loadMoreTask: Task<Void, Never>?
     @State private var showingSlideshow = false
+    @State private var showingFilterModal = false
+    @State private var showingSortModal = false
+    @State private var filterCity: String? = UserDefaults.standard.allPhotosFilterCity
+    @State private var filterYear: Int? = UserDefaults.standard.allPhotosFilterYear
     
     private let columns = [
         GridItem(.fixed(300), spacing: 50),
@@ -71,6 +76,10 @@ struct AssetGridView: View {
                 }
             } else if assets.isEmpty {
                 VStack {
+                    if isAllPhotos {
+                        allPhotosToolbar
+                            .padding(.bottom, 20)
+                    }
                     Image(systemName: "photo.on.rectangle.angled")
                         .font(.system(size: 60))
                         .foregroundColor(.gray)
@@ -82,6 +91,10 @@ struct AssetGridView: View {
                 }
             } else {
                 VStack {
+                    if isAllPhotos {
+                        allPhotosToolbar
+                            .padding(.bottom, 20)
+                    }
                     ScrollViewReader { proxy in
                         ScrollView {
                             LazyVGrid(columns: columns, spacing: 50) {
@@ -218,6 +231,21 @@ struct AssetGridView: View {
             print("Play pause tapped in AssetGridView - starting slideshow")
             startSlideshow()
         })
+        .sheet(isPresented: $showingFilterModal) {
+            FilterSettingsView(
+                assetProvider: assetProvider,
+                selectedCity: $filterCity,
+                selectedYear: $filterYear
+            ) {
+                applyFilters()
+            }
+        }
+        .sheet(isPresented: $showingSortModal) {
+            SortSettingsView(sortOrder: $allPhotosSortOrder) {
+                showingSortModal = false
+                loadAssets()
+            }
+        }
         .onAppear {
             print("Appared")
             if assets.isEmpty {
@@ -256,6 +284,33 @@ struct AssetGridView: View {
             startSlideshow()
         }
     }
+
+    private var allPhotosToolbar: some View {
+        HStack(spacing: 30) {
+            Spacer()
+
+            Button(action: { showingFilterModal = true }) {
+                let count = (filterCity != nil ? 1 : 0) + (filterYear != nil ? 1 : 0)
+                Label {
+                    Text("Filter \(count > 0 ? "(\(count))" : "")")
+                } icon: {
+                    Image(systemName: count > 0 ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
+                }
+            }
+            .buttonStyle(.bordered)
+
+            Button(action: { showingSortModal = true }) {
+                let orderLabel = allPhotosSortOrder == "asc" ? "Oldest" : "Newest"
+                Label {
+                    Text("Sort: Date Taken (\(orderLabel))")
+                } icon: {
+                    Image(systemName: "arrow.up.arrow.down")
+                }
+            }
+            .buttonStyle(.bordered)
+            .padding(.trailing, 60)
+        }
+    }
     
     private func loadAssets() {
         guard authService.isAuthenticated else {
@@ -291,6 +346,13 @@ struct AssetGridView: View {
                 }
             }
         }
+    }
+
+    private func applyFilters() {
+        UserDefaults.standard.allPhotosFilterCity = filterCity
+        UserDefaults.standard.allPhotosFilterYear = filterYear
+        showingFilterModal = false
+        loadAssets()
     }
     
     private func debouncedLoadMore() {
@@ -376,7 +438,9 @@ struct AssetGridView: View {
     }
     
     private func getEmptyStateTitle() -> String {
-        if personId != nil {
+        if isAllPhotos, (filterCity != nil || filterYear != nil) {
+            return "No Results for Filters"
+        } else if personId != nil {
             return "No Photos of Person"
         } else if albumId != nil {
             return "No Photos in Album"
@@ -386,7 +450,9 @@ struct AssetGridView: View {
     }
     
     private func getEmptyStateMessage() -> String {
-        if personId != nil {
+        if isAllPhotos, (filterCity != nil || filterYear != nil) {
+            return "Try adjusting your filter settings."
+        } else if personId != nil {
             return "This person has no photos"
         } else if albumId != nil {
             return "This album is empty"
@@ -424,4 +490,3 @@ struct AssetGridView: View {
         }
     }
 }
-
