@@ -13,6 +13,8 @@ struct AssetProviderFactory {
         personId: String? = nil,
         tagId: String? = nil,
         city: String? = nil,
+        cities: Set<String> = [],
+        years: Set<Int> = [],
         isAllPhotos: Bool = false,
         isFavorite: Bool = false,
         folderPath: String? = nil,
@@ -20,7 +22,7 @@ struct AssetProviderFactory {
         albumService: AlbumService? = nil,
         config: SlideshowConfig? = nil
     ) -> AssetProvider {
-        
+
         if let albumId = albumId, let albumService = albumService {
             return AlbumAssetProvider(albumService: albumService, albumId: albumId)
         } else {
@@ -29,6 +31,8 @@ struct AssetProviderFactory {
                 personId: personId,
                 tagId: tagId,
                 city: city,
+                cities: cities,
+                years: years,
                 isAllPhotos: isAllPhotos,
                 isFavorite: isFavorite,
                 folderPath: folderPath,
@@ -201,39 +205,54 @@ class GeneralAssetProvider: AssetProvider {
     private let personId: String?
     private let tagId: String?
     private let city: String?
+    private let cities: Set<String>
+    private let years: Set<Int>
     private let isAllPhotos: Bool
     private let isFavorite: Bool
     private let config: SlideshowConfig?
     private let folderPath: String?
-    
-    init(assetService: AssetService, personId: String? = nil, tagId: String? = nil, city: String? = nil, isAllPhotos: Bool = false, isFavorite: Bool = false, folderPath: String? = nil, config: SlideshowConfig? = nil) {
+
+    init(assetService: AssetService, personId: String? = nil, tagId: String? = nil, city: String? = nil, cities: Set<String> = [], years: Set<Int> = [], isAllPhotos: Bool = false, isFavorite: Bool = false, folderPath: String? = nil, config: SlideshowConfig? = nil) {
         self.assetService = assetService
         self.personId = personId
         self.tagId = tagId
         self.city = city
+        self.cities = cities
+        self.years = years
         self.isAllPhotos = isAllPhotos
         self.isFavorite = isFavorite
         self.config = config
         self.folderPath = folderPath
     }
-    
+
     func fetchAssets(page: Int, limit: Int) async throws -> SearchResult {
-        // If config is provided, use it; otherwise fall back to individual parameters
+        // If config is provided, use it
         if let config = config {
             return try await assetService.fetchAssets(config: config, page: page, limit: limit, isAllPhotos: isAllPhotos)
-        } else {
-            return try await assetService.fetchAssets(
-                page: page,
-                limit: limit,
-                albumId: nil,
-                personId: personId,
-                tagId: tagId,
-                city: city,
-                isAllPhotos: isAllPhotos,
-                isFavorite: isFavorite,
-                folderPath: folderPath
+        }
+
+        // Multi-filter path for All Photos with sets
+        if isAllPhotos && (!cities.isEmpty || !years.isEmpty) {
+            let sortOrder = UserDefaults.standard.allPhotosSortOrder
+            return try await assetService.fetchAssetsMultiFilter(
+                page: page, limit: limit,
+                cities: cities, years: years,
+                sortOrder: sortOrder
             )
         }
+
+        // Default single-filter path
+        return try await assetService.fetchAssets(
+            page: page,
+            limit: limit,
+            albumId: nil,
+            personId: personId,
+            tagId: tagId,
+            city: city,
+            isAllPhotos: isAllPhotos,
+            isFavorite: isFavorite,
+            folderPath: folderPath
+        )
     }
     
     func fetchRandomAssets(limit: Int) async throws -> SearchResult {

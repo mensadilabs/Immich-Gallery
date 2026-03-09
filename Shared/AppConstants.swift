@@ -34,6 +34,8 @@ struct UserDefaultsKeys {
     static let allPhotosSortOrder = "allPhotosSortOrder"
     static let allPhotosFilterCity = "allPhotosFilterCity"
     static let allPhotosFilterYear = "allPhotosFilterYear"
+    static let allPhotosFilterCities = "allPhotosFilterCities"  // JSON [String]
+    static let allPhotosFilterYears = "allPhotosFilterYears"    // JSON [Int]
     static let hideAllPhotosFilterAndSortButtons = "hideAllPhotosFilterAndSortButtons"
     static let appBackgroundStyle = "appBackgroundStyle"
     static let navigationStyle = "navigationStyle"

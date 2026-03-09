@@ -106,6 +106,44 @@ extension UserDefaults {
         }
     }
 
+    var allPhotosFilterCities: Set<String> {
+        get {
+            guard let data = data(forKey: UserDefaultsKeys.allPhotosFilterCities),
+                  let array = try? JSONDecoder().decode([String].self, from: data) else {
+                return []
+            }
+            return Set(array)
+        }
+        set {
+            if newValue.isEmpty {
+                removeObject(forKey: UserDefaultsKeys.allPhotosFilterCities)
+            } else {
+                if let data = try? JSONEncoder().encode(Array(newValue)) {
+                    set(data, forKey: UserDefaultsKeys.allPhotosFilterCities)
+                }
+            }
+        }
+    }
+
+    var allPhotosFilterYears: Set<Int> {
+        get {
+            guard let data = data(forKey: UserDefaultsKeys.allPhotosFilterYears),
+                  let array = try? JSONDecoder().decode([Int].self, from: data) else {
+                return []
+            }
+            return Set(array)
+        }
+        set {
+            if newValue.isEmpty {
+                removeObject(forKey: UserDefaultsKeys.allPhotosFilterYears)
+            } else {
+                if let data = try? JSONEncoder().encode(Array(newValue)) {
+                    set(data, forKey: UserDefaultsKeys.allPhotosFilterYears)
+                }
+            }
+        }
+    }
+
     var hideAllPhotosFilterAndSortButtons: Bool {
         get { bool(forKey: UserDefaultsKeys.hideAllPhotosFilterAndSortButtons) }
         set { set(newValue, forKey: UserDefaultsKeys.hideAllPhotosFilterAndSortButtons) }

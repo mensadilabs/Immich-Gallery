@@ -6,6 +6,31 @@
 import Foundation
 import UIKit
 
+let maxFilterCombinations = 6
+
+struct FilterCombo: Hashable {
+    let city: String?
+    let takenAfter: String?
+    let takenBefore: String?
+}
+
+/// Returns the number of API combos that would result from the given selections,
+/// accounting for contiguous-year collapse.
+func filterComboCount(cities: Set<String>, years: Set<Int>) -> Int {
+    let cityCount = max(cities.count, 1)
+    guard !years.isEmpty else { return cityCount }
+
+    // Count collapsed year ranges
+    let sorted = years.sorted()
+    var rangeCount = 1
+    for i in 1..<sorted.count {
+        if sorted[i] != sorted[i - 1] + 1 {
+            rangeCount += 1
+        }
+    }
+    return cityCount * rangeCount
+}
+
 /// Service responsible for asset fetching, searching, and image loading
 class AssetService: ObservableObject {
     private let networkService: NetworkService
@@ -19,8 +44,8 @@ class AssetService: ObservableObject {
         let sortOrder = isAllPhotos 
             ? UserDefaults.standard.allPhotosSortOrder
             : (UserDefaults.standard.string(forKey: "assetSortOrder") ?? "desc")
-        let selectedCity = isAllPhotos ? UserDefaults.standard.allPhotosFilterCity : city
-        let selectedYear = isAllPhotos ? UserDefaults.standard.allPhotosFilterYear : nil
+        let selectedCity = city
+        let selectedYear: Int? = nil
         var searchRequest: [String: Any] = [
             "page": page,
             "withPeople": true,
@@ -67,6 +92,164 @@ class AssetService: ObservableObject {
             total: result.assets.total,
             nextPage: result.assets.nextPage
         )
+    }
+
+    func fetchAssetsMultiFilter(
+        page: Int,
+        limit: Int,
+        cities: Set<String>,
+        years: Set<Int>,
+        sortOrder: String
+    ) async throws -> SearchResult {
+        let combos = buildFilterCombos(cities: cities, years: years)
+
+        // Fast path: single combo uses existing fetch directly
+        if combos.count <= 1 {
+            let combo = combos.first
+            return try await fetchAssetsSingleCombo(
+                page: page, limit: limit, city: combo?.city,
+                takenAfter: combo?.takenAfter, takenBefore: combo?.takenBefore,
+                sortOrder: sortOrder
+            )
+        }
+
+        let cappedCombos = Array(combos.prefix(maxFilterCombinations))
+        let perComboLimit = max(limit / cappedCombos.count, 20)
+
+        // Parallel fetch
+        let allResults: [SearchResult] = try await withThrowingTaskGroup(of: SearchResult.self) { group in
+            for combo in cappedCombos {
+                group.addTask {
+                    try await self.fetchAssetsSingleCombo(
+                        page: page, limit: perComboLimit, city: combo.city,
+                        takenAfter: combo.takenAfter, takenBefore: combo.takenBefore,
+                        sortOrder: sortOrder
+                    )
+                }
+            }
+            var results: [SearchResult] = []
+            for try await result in group {
+                results.append(result)
+            }
+            return results
+        }
+
+        // Merge + dedup on current (background) context
+        var seenIds = Set<String>()
+        var merged: [ImmichAsset] = []
+        merged.reserveCapacity(limit)
+        for result in allResults {
+            for asset in result.assets {
+                if seenIds.insert(asset.id).inserted {
+                    merged.append(asset)
+                }
+            }
+        }
+
+        // Sort by date
+        let ascending = sortOrder == "asc"
+        merged.sort { a, b in
+            if ascending { return a.localDateTime < b.localDateTime }
+            return a.localDateTime > b.localDateTime
+        }
+
+        // Aggregate nextPage: non-nil if ANY sub-result has more
+        let hasNext = allResults.contains { $0.nextPage != nil }
+
+        return SearchResult(
+            assets: merged,
+            total: merged.count,
+            nextPage: hasNext ? String(page + 1) : nil
+        )
+    }
+
+    private func fetchAssetsSingleCombo(
+        page: Int, limit: Int, city: String?,
+        takenAfter: String?, takenBefore: String?,
+        sortOrder: String
+    ) async throws -> SearchResult {
+        var searchRequest: [String: Any] = [
+            "page": page,
+            "size": limit,
+            "withPeople": true,
+            "order": sortOrder,
+            "withExif": true,
+        ]
+        if let city { searchRequest["city"] = city }
+        if let takenAfter { searchRequest["takenAfter"] = takenAfter }
+        if let takenBefore { searchRequest["takenBefore"] = takenBefore }
+
+        let result: SearchResponse = try await networkService.makeRequest(
+            endpoint: "/api/search/metadata",
+            method: .POST,
+            body: searchRequest,
+            responseType: SearchResponse.self
+        )
+        return SearchResult(
+            assets: result.assets.items,
+            total: result.assets.total,
+            nextPage: result.assets.nextPage
+        )
+    }
+
+    func buildFilterCombos(cities: Set<String>, years: Set<Int>) -> [FilterCombo] {
+        let yearRanges = collapseContiguousYears(years)
+
+        if cities.isEmpty && yearRanges.isEmpty {
+            return [FilterCombo(city: nil, takenAfter: nil, takenBefore: nil)]
+        }
+        if cities.isEmpty {
+            return yearRanges.map { FilterCombo(city: nil, takenAfter: $0.start, takenBefore: $0.end) }
+        }
+        if yearRanges.isEmpty {
+            return cities.sorted().map { FilterCombo(city: $0, takenAfter: nil, takenBefore: nil) }
+        }
+
+        // Cartesian product
+        var combos: [FilterCombo] = []
+        for city in cities.sorted() {
+            for range in yearRanges {
+                combos.append(FilterCombo(city: city, takenAfter: range.start, takenBefore: range.end))
+            }
+        }
+        return combos
+    }
+
+    private func collapseContiguousYears(_ years: Set<Int>) -> [(start: String, end: String)] {
+        guard !years.isEmpty else { return [] }
+        let sorted = years.sorted()
+        var ranges: [(start: Int, end: Int)] = []
+        var rangeStart = sorted[0]
+        var rangeEnd = sorted[0]
+
+        for i in 1..<sorted.count {
+            if sorted[i] == rangeEnd + 1 {
+                rangeEnd = sorted[i]
+            } else {
+                ranges.append((rangeStart, rangeEnd))
+                rangeStart = sorted[i]
+                rangeEnd = sorted[i]
+            }
+        }
+        ranges.append((rangeStart, rangeEnd))
+
+        return ranges.compactMap { range in
+            guard let yr = makeYearRange(startYear: range.start, endYear: range.end) else { return nil }
+            return yr
+        }
+    }
+
+    private func makeYearRange(startYear: Int, endYear: Int) -> (start: String, end: String)? {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .current
+        guard let startDate = calendar.date(from: DateComponents(year: startYear, month: 1, day: 1)),
+              let endDate = calendar.date(from: DateComponents(year: endYear + 1, month: 1, day: 1)) else {
+            return nil
+        }
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        return (formatter.string(from: startDate), formatter.string(from: endDate))
     }
 
     func fetchAllCities() async throws -> [String] {

@@ -7,28 +7,29 @@ import SwiftUI
 
 struct FilterSettingsView: View {
     let assetProvider: AssetProvider
-    @Binding var selectedCity: String?
-    @Binding var selectedYear: Int?
+    @Binding var selectedCities: Set<String>
+    @Binding var selectedYears: Set<Int>
     var onApply: () -> Void
 
-    @State private var localCity: String?
-    @State private var localYear: Int?
+    @State private var localCities: Set<String>
+    @State private var localYears: Set<Int>
     @State private var availableCities: [String] = []
     @State private var availableYears: [Int] = []
     @State private var isLoading = true
+    @State private var showCapWarning = false
 
     init(
         assetProvider: AssetProvider,
-        selectedCity: Binding<String?>,
-        selectedYear: Binding<Int?>,
+        selectedCities: Binding<Set<String>>,
+        selectedYears: Binding<Set<Int>>,
         onApply: @escaping () -> Void
     ) {
         self.assetProvider = assetProvider
-        self._selectedCity = selectedCity
-        self._selectedYear = selectedYear
+        self._selectedCities = selectedCities
+        self._selectedYears = selectedYears
         self.onApply = onApply
-        _localCity = State(initialValue: selectedCity.wrappedValue)
-        _localYear = State(initialValue: selectedYear.wrappedValue)
+        _localCities = State(initialValue: selectedCities.wrappedValue)
+        _localYears = State(initialValue: selectedYears.wrappedValue)
     }
 
     var body: some View {
@@ -38,60 +39,105 @@ struct FilterSettingsView: View {
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {
-                VStack(spacing: 10) {
+                // Header row: title left, combo counter center, action buttons right
+                HStack {
                     Text("Filter Photos")
-                        .font(.system(size: 70, weight: .bold))
+                        .font(.system(size: 50, weight: .bold))
                         .foregroundColor(.white)
 
-                    Text("Select options to narrow results")
-                        .font(.title3)
+                    Spacer()
+
+                    Text(comboCountText)
+                        .font(.callout)
+                        .foregroundColor(comboCountColor)
+
+                    Spacer()
+
+                    HStack(spacing: 20) {
+                        Button("Reset") {
+                            localYears = []
+                            localCities = []
+                            selectedYears = []
+                            selectedCities = []
+                            onApply()
+                        }
+                        .buttonStyle(.bordered)
+
+                        Button("Apply") {
+                            selectedYears = localYears
+                            selectedCities = localCities
+                            onApply()
+                        }
+                        .buttonStyle(.borderedProminent)
+                    }
+                }
+                .padding(.horizontal, 60)
+                .padding(.top, 40)
+                .padding(.bottom, 15)
+
+                if showCapWarning {
+                    Text("Each city is combined with each year range. Consecutive years (e.g. 2022-2024) count as one range.")
+                        .font(.caption2)
                         .foregroundColor(.gray)
+                        .multilineTextAlignment(.center)
+                        .transition(.opacity)
+                        .padding(.horizontal, 120)
+                        .padding(.bottom, 10)
                 }
-                .padding(.top, 60)
-                .padding(.bottom, 30)
-
-                HStack(spacing: 40) {
-                    Button("Reset All") {
-                        localYear = nil
-                        localCity = nil
-                        selectedYear = nil
-                        selectedCity = nil
-                        onApply()
-                    }
-                    .buttonStyle(.bordered)
-
-                    Button {
-                        selectedYear = localYear
-                        selectedCity = localCity
-                        onApply()
-                    } label: {
-                        Label("Apply Filters", systemImage: "checkmark.circle.fill")
-                            .padding(.horizontal, 40)
-                    }
-                    .buttonStyle(.borderedProminent)
-                }
-                .padding(.bottom, 20)
 
                 if isLoading {
+                    Spacer()
                     ProgressView("Loading filters...")
                         .scaleEffect(1.5)
-                        .padding(.top, 20)
+                    Spacer()
                 } else {
-                    HStack(alignment: .top, spacing: 40) {
+                    HStack(alignment: .top, spacing: 30) {
                         filterColumn(
-                            title: "Years",
+                            title: "Years\(localYears.isEmpty ? "" : " (\(localYears.count))")",
                             items: availableYears.map { String($0) },
-                            selectedValue: localYear.map(String.init)
-                        ) { selection in
-                            localYear = selection.flatMap(Int.init)
+                            selectedValues: Set(localYears.map(String.init))
+                        ) { item in
+                            if let year = Int(item) {
+                                if localYears.contains(year) {
+                                    localYears.remove(year)
+                                    showCapWarning = false
+                                } else {
+                                    var candidate = localYears
+                                    candidate.insert(year)
+                                    if filterComboCount(cities: localCities, years: candidate) <= maxFilterCombinations {
+                                        localYears = candidate
+                                        showCapWarning = false
+                                    } else {
+                                        withAnimation { showCapWarning = true }
+                                    }
+                                }
+                            }
+                        } onClear: {
+                            localYears = []
+                            showCapWarning = false
                         }
 
                         filterColumn(
-                            title: "Cities",
+                            title: "Cities\(localCities.isEmpty ? "" : " (\(localCities.count))")",
                             items: availableCities,
-                            selectedValue: localCity
-                        ) { selection in
-                            localCity = selection
+                            selectedValues: localCities
+                        ) { item in
+                            if localCities.contains(item) {
+                                localCities.remove(item)
+                                showCapWarning = false
+                            } else {
+                                var candidate = localCities
+                                candidate.insert(item)
+                                if filterComboCount(cities: candidate, years: localYears) <= maxFilterCombinations {
+                                    localCities = candidate
+                                    showCapWarning = false
+                                } else {
+                                    withAnimation { showCapWarning = true }
+                                }
+                            }
+                        } onClear: {
+                            localCities = []
+                            showCapWarning = false
                         }
                     }
                     .padding(.horizontal, 60)
@@ -105,33 +151,56 @@ struct FilterSettingsView: View {
         }
     }
 
+    private var currentComboCount: Int {
+        filterComboCount(cities: localCities, years: localYears)
+    }
+
+    private var comboCountText: String {
+        if localCities.isEmpty && localYears.isEmpty {
+            return "0/\(maxFilterCombinations)"
+        }
+        return "\(currentComboCount)/\(maxFilterCombinations)"
+    }
+
+    private var comboCountColor: Color {
+        if localCities.isEmpty && localYears.isEmpty {
+            return .gray
+        }
+        if currentComboCount >= maxFilterCombinations {
+            return .orange
+        }
+        return .green
+    }
+
     private func filterColumn(
         title: String,
         items: [String],
-        selectedValue: String?,
-        onSelect: @escaping (String?) -> Void
+        selectedValues: Set<String>,
+        onToggle: @escaping (String) -> Void,
+        onClear: @escaping () -> Void
     ) -> some View {
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: 10) {
             Text(title)
                 .font(.headline)
                 .foregroundColor(.white.opacity(0.6))
-                .padding(.leading, 20)
+                .padding(.leading, 15)
 
             ScrollView {
-                VStack(spacing: 15) {
-                    filterButton(label: "All", isSelected: selectedValue == nil) {
-                        onSelect(nil)
+                VStack(spacing: 10) {
+                    filterButton(label: "All", isSelected: selectedValues.isEmpty) {
+                        onClear()
                     }
 
                     ForEach(items, id: \.self) { item in
-                        filterButton(label: item, isSelected: selectedValue == item) {
-                            onSelect(item)
+                        filterButton(label: item, isSelected: selectedValues.contains(item)) {
+                            onToggle(item)
                         }
                     }
                 }
-                .padding(10)
+                .padding(20)
             }
-            .frame(width: 550)
+            .frame(maxWidth: .infinity)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
         }
     }
 
@@ -139,7 +208,7 @@ struct FilterSettingsView: View {
         Button(action: action) {
             HStack {
                 Text(label)
-                    .font(.title3)
+                    .font(.body)
 
                 Spacer()
 
@@ -149,9 +218,9 @@ struct FilterSettingsView: View {
                         .fontWeight(.bold)
                 }
             }
-            .padding(.horizontal, 30)
+            .padding(.horizontal, 25)
             .frame(maxWidth: .infinity)
-            .frame(height: 100)
+            .frame(height: 70)
         }
         .buttonStyle(.card)
     }

@@ -38,9 +38,22 @@ struct AssetGridView: View {
     @State private var showingSlideshow = false
     @State private var showingFilterModal = false
     @State private var showingSortModal = false
-    @State private var filterCity: String? = UserDefaults.standard.allPhotosFilterCity
-    @State private var filterYear: Int? = UserDefaults.standard.allPhotosFilterYear
+    @AppStorage(UserDefaultsKeys.navigationStyle) private var navigationStyle = NavigationStyle.tabs.rawValue
+    @State private var filterCities: Set<String> = UserDefaults.standard.allPhotosFilterCities
+    @State private var filterYears: Set<Int> = UserDefaults.standard.allPhotosFilterYears
     
+    private var effectiveProvider: AssetProvider {
+        if isAllPhotos && (!filterCities.isEmpty || !filterYears.isEmpty) {
+            return AssetProviderFactory.createProvider(
+                cities: filterCities,
+                years: filterYears,
+                isAllPhotos: true,
+                assetService: assetService
+            )
+        }
+        return assetProvider
+    }
+
     private let columns = [
         GridItem(.fixed(300), spacing: 50),
         GridItem(.fixed(300), spacing: 50),
@@ -91,13 +104,18 @@ struct AssetGridView: View {
                         .foregroundColor(.gray)
                 }
             } else {
-                VStack {
-                    if shouldShowAllPhotosToolbar {
+                VStack(spacing: 0) {
+                    if shouldShowAllPhotosToolbar && !isSidebarStyle {
                         allPhotosToolbar
                             .padding(.bottom, 20)
                     }
                     ScrollViewReader { proxy in
                         ScrollView {
+                            if shouldShowAllPhotosToolbar && isSidebarStyle {
+                                allPhotosToolbar
+                                    .padding(.top, 20)
+                                    .padding(.bottom, 5)
+                            }
                             LazyVGrid(columns: columns, spacing: 50) {
                             ForEach(assets) { asset in
                                 Button(action: {
@@ -144,7 +162,7 @@ struct AssetGridView: View {
                             }
                         }
                         .padding(.horizontal)
-                        .padding(.top, 20)
+                        .padding(.top, isSidebarStyle ? 25 : 20)
                         .padding(.bottom, 40)
                         .onChange(of: focusedAssetId) { newFocusedId in
                             // Update currentAssetIndex when focus changes
@@ -189,6 +207,7 @@ struct AssetGridView: View {
                         }
                     }
                 }
+                .ignoresSafeArea(.container, edges: isSidebarStyle ? .top : [])
             }
         }
         .fullScreenCover(isPresented: $showingFullScreen) {
@@ -218,8 +237,8 @@ struct AssetGridView: View {
         .sheet(isPresented: $showingFilterModal) {
             FilterSettingsView(
                 assetProvider: assetProvider,
-                selectedCity: $filterCity,
-                selectedYear: $filterYear
+                selectedCities: $filterCities,
+                selectedYears: $filterYears
             ) {
                 applyFilters()
             }
@@ -262,6 +281,10 @@ struct AssetGridView: View {
         }
     }
 
+    private var isSidebarStyle: Bool {
+        NavigationStyle(rawValue: navigationStyle) == .sidebar
+    }
+
     private var shouldShowAllPhotosToolbar: Bool {
         isAllPhotos && !hideAllPhotosFilterAndSortButtons
     }
@@ -271,7 +294,7 @@ struct AssetGridView: View {
             Spacer()
 
             Button(action: { showingFilterModal = true }) {
-                let count = (filterCity != nil ? 1 : 0) + (filterYear != nil ? 1 : 0)
+                let count = filterCities.count + filterYears.count
                 Label {
                     Text("Filter \(count > 0 ? "(\(count))" : "")")
                 } icon: {
@@ -305,7 +328,7 @@ struct AssetGridView: View {
         
         Task {
             do {
-                let searchResult = try await assetProvider.fetchAssets(page: 1, limit: 200)
+                let searchResult = try await effectiveProvider.fetchAssets(page: 1, limit: 200)
                 await MainActor.run {
                     self.assets = searchResult.assets
                     self.nextPage = searchResult.nextPage
@@ -329,8 +352,8 @@ struct AssetGridView: View {
     }
 
     private func applyFilters() {
-        UserDefaults.standard.allPhotosFilterCity = filterCity
-        UserDefaults.standard.allPhotosFilterYear = filterYear
+        UserDefaults.standard.allPhotosFilterCities = filterCities
+        UserDefaults.standard.allPhotosFilterYears = filterYears
         showingFilterModal = false
         loadAssets()
     }
@@ -372,7 +395,7 @@ struct AssetGridView: View {
             do {
                 // Extract page number from nextPage string
                 let pageNumber = extractPageFromNextPage(nextPage!)
-                let searchResult = try await assetProvider.fetchAssets(page: pageNumber, limit: 200)
+                let searchResult = try await effectiveProvider.fetchAssets(page: pageNumber, limit: 200)
                 
                 await MainActor.run {
                     if !searchResult.assets.isEmpty {
@@ -417,7 +440,7 @@ struct AssetGridView: View {
     }
     
     private func getEmptyStateTitle() -> String {
-        if isAllPhotos, (filterCity != nil || filterYear != nil) {
+        if isAllPhotos, (!filterCities.isEmpty || !filterYears.isEmpty) {
             return "No Results for Filters"
         } else if personId != nil {
             return "No Photos of Person"
@@ -427,9 +450,9 @@ struct AssetGridView: View {
         return "No Photos Found"
         }
     }
-    
+
     private func getEmptyStateMessage() -> String {
-        if isAllPhotos, (filterCity != nil || filterYear != nil) {
+        if isAllPhotos, (!filterCities.isEmpty || !filterYears.isEmpty) {
             return "Try adjusting your filter settings."
         } else if personId != nil {
             return "This person has no photos"
