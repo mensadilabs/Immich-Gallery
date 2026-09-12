@@ -460,7 +460,7 @@ class AssetService: ObservableObject {
     }
 
     func loadImage(assetId: String, size: String = "thumbnail") async throws -> UIImage? {
-        let endpoint = "/api/assets/\(assetId)/thumbnail?format=webp&size=\(size)"
+        let endpoint = "/api/assets/\(assetId)/thumbnail?format=webp&size=\(size)&edited=true"
         let data = try await networkService.makeDataRequest(endpoint: endpoint)
         return UIImage(data: data)
     }
@@ -480,7 +480,7 @@ class AssetService: ObservableObject {
         }
         
         // Standard processing for non-RAW formats
-        let originalEndpoint = "/api/assets/\(asset.id)/original"
+        let originalEndpoint = "/api/assets/\(asset.id)/original?edited=true"
         let originalData = try await networkService.makeDataRequest(endpoint: originalEndpoint)
         
         if let image = UIImage(data: originalData) {
