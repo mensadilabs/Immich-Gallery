@@ -34,7 +34,7 @@ private func loadSingleThumbnail(
             )
         }
 
-        guard let asset = searchResult.assets.first(where: { $0.type == .image }) else {
+        guard let asset = searchResult.assets.first else {
             return nil
         }
 
@@ -198,22 +198,13 @@ class FolderThumbnailProvider {
     }
 
     func loadCoverThumbnail(for folder: ImmichFolder) async -> UIImage? {
-        let mode = selectedLockupThumbnailMode()
-        if mode == .random,
-           let randomThumbnail = await loadCoverThumbnail(for: folder.path, mode: .random) {
-            return randomThumbnail
-        }
-
-        return await loadCoverThumbnail(for: folder.path, mode: .current)
+        await loadCoverThumbnail(for: folder, mode: selectedLockupThumbnailMode())
     }
 
-    private func loadCoverThumbnail(for path: String, mode: LockupThumbnailMode) async -> UIImage? {
-        let key = "\(mode.rawValue)-\(path)"
+    func loadCoverThumbnail(for folder: ImmichFolder, mode: LockupThumbnailMode) async -> UIImage? {
+        let key = "\(mode.rawValue)-\(folder.path)"
         if let inFlight = await coordinator.inFlightTask(for: key) {
-            if let thumbnail = await inFlight.value {
-                return thumbnail
-            }
-            return nil
+            return await inFlight.value
         }
 
         let task = Task<UIImage?, Never> {
@@ -221,7 +212,7 @@ class FolderThumbnailProvider {
             let thumbnail = await loadSingleThumbnail(
                 assetService: assetService,
                 thumbnailCache: thumbnailCache,
-                folderPath: path,
+                folderPath: folder.path,
                 mode: mode
             )
             await coordinator.releaseSlot()
@@ -231,7 +222,6 @@ class FolderThumbnailProvider {
         await coordinator.setInFlightTask(task, for: key)
         let thumbnail = await task.value
         await coordinator.clearInFlightTask(for: key)
-
         return thumbnail
     }
 }
