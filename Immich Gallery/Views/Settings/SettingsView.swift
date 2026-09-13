@@ -97,6 +97,7 @@ struct SettingsView: View {
     @AppStorage(UserDefaultsKeys.autoSlideshowTimeout) private var autoSlideshowTimeout: Int = 0 // 0 = off
     @AppStorage(UserDefaultsKeys.launchIntoSlideshow) private var launchIntoSlideshow: Bool = false
     @AppStorage(UserDefaultsKeys.showDiagnosticsOverlay) private var showDiagnosticsOverlay = false
+    @AppStorage(UserDefaultsKeys.preferTranscodedVideoStreaming) private var preferTranscodedVideoStreaming = true
     @AppStorage("artModeLevel") private var artModeLevel = "off"
     @AppStorage("artModeDayStart") private var artModeDayStart = 7
     @AppStorage("artModeNightStart") private var artModeNightStart = 20
@@ -443,6 +444,26 @@ struct SettingsView: View {
                             })
                         }
                         
+                        // Video Playback Settings Section
+                        SettingsSection(title: "Video Playback") {
+                            AnyView(VStack(spacing: 12) {
+                                SettingsRow(
+                                    icon: "film",
+                                    title: "Transcoded Streaming",
+                                    subtitle: "Stream videos through the server's real-time transcoding (HLS) when the server has it enabled, so high-bitrate videos play smoothly. Turn off to always play the stored video file",
+                                    content: AnyView(
+                                        Picker("Transcoded Streaming", selection: $preferTranscodedVideoStreaming) {
+                                            Text("On").tag(true)
+                                            Text("Off").tag(false)
+                                        }
+                                            .pickerStyle(.menu)
+                                            .frame(width: 300, alignment: .trailing)
+                                    ),
+                                    isOn: preferTranscodedVideoStreaming
+                                )
+                            })
+                        }
+
                         // Slideshow Settings Section
                         SettingsSection(title: "Slideshow") {
                             AnyView(VStack(spacing: 12) {

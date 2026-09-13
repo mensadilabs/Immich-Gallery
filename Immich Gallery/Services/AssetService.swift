@@ -558,6 +558,27 @@ class AssetService: ObservableObject {
         // Optionally: check HEAD request for video availability
         return url
     }
+
+    /// Immich's real-time HLS stream for a video (server v3+ with real-time transcoding enabled).
+    func loadVideoStreamURL(asset: ImmichAsset) throws -> URL {
+        guard asset.type == .video else { throw ImmichError.clientError(400) }
+        guard let url = URL(string: "\(networkService.baseURL)\(HLSStreamSession.mainPlaylistEndpoint(assetId: asset.id))") else {
+            throw ImmichError.invalidURL
+        }
+        return url
+    }
+
+    func fetchServerFeatures() async throws -> ServerFeatures {
+        try await networkService.makeRequest(endpoint: "/api/server/features", responseType: ServerFeatures.self)
+    }
+
+    /// Releases the server resources held by an HLS streaming session.
+    func endVideoStreamSession(assetId: String, sessionId: String) async throws {
+        try await networkService.makeVoidRequest(
+            endpoint: HLSStreamSession.sessionEndpoint(assetId: assetId, sessionId: sessionId),
+            method: .DELETE
+        )
+    }
     
     func fetchRandomAssets(albumIds: [String]? = nil, personIds: [String]? = nil, tagIds: [String]? = nil, folderPath: String? = nil, limit: Int = 50) async throws -> SearchResult {
         var searchRequest: [String: Any] = [
