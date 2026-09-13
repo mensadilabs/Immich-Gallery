@@ -460,7 +460,7 @@ class AssetService: ObservableObject {
     }
 
     func loadImage(assetId: String, size: String = "thumbnail") async throws -> UIImage? {
-        let endpoint = "/api/assets/\(assetId)/thumbnail?format=webp&size=\(size)"
+        let endpoint = "/api/assets/\(assetId)/thumbnail?format=webp&size=\(size)&edited=true"
         let data = try await networkService.makeDataRequest(endpoint: endpoint)
         return UIImage(data: data)
     }
@@ -480,7 +480,7 @@ class AssetService: ObservableObject {
         }
         
         // Standard processing for non-RAW formats
-        let originalEndpoint = "/api/assets/\(asset.id)/original"
+        let originalEndpoint = "/api/assets/\(asset.id)/original?edited=true"
         let originalData = try await networkService.makeDataRequest(endpoint: originalEndpoint)
         
         if let image = UIImage(data: originalData) {
@@ -560,24 +560,13 @@ class AssetService: ObservableObject {
     }
     
     func fetchRandomAssets(albumIds: [String]? = nil, personIds: [String]? = nil, tagIds: [String]? = nil, folderPath: String? = nil, limit: Int = 50) async throws -> SearchResult {
-        var searchRequest: [String: Any] = [
-            "size": limit,
-            "withPeople": true,
-            "withExif": true,
-        ]
-        
-        if let albumIds = albumIds {
-            searchRequest["albumIds"] = albumIds
-        }
-        if let personIds = personIds {
-            searchRequest["personIds"] = personIds
-        }
-        if let tagIds = tagIds {
-            searchRequest["tagIds"] = tagIds
-        }
-        if let folderPath = folderPath, !folderPath.isEmpty {
-            searchRequest["originalPath"] = folderPath
-        }
+        let searchRequest = Self.randomSearchRequest(
+            albumIds: albumIds,
+            personIds: personIds,
+            tagIds: tagIds,
+            folderPath: folderPath,
+            limit: limit
+        )
         
         let assets: [ImmichAsset] = try await networkService.makeRequest(
             endpoint: "/api/search/random",
@@ -593,6 +582,31 @@ class AssetService: ObservableObject {
         )
     }
     
+    static func randomSearchRequest(
+        albumIds: [String]? = nil,
+        personIds: [String]? = nil,
+        tagIds: [String]? = nil,
+        folderPath: String? = nil,
+        limit: Int
+    ) -> [String: Any] {
+        var request: [String: Any] = [
+            "size": limit,
+            "withPeople": true,
+            "withExif": true,
+        ]
+        var filter: [String: Any] = [:]
+        if let albumIds { filter["albumIds"] = ["any": albumIds] }
+        if let personIds { filter["personIds"] = ["any": personIds] }
+        if let tagIds { filter["tagIds"] = ["any": tagIds] }
+        if let folderPath, !folderPath.isEmpty {
+            filter["originalPath"] = ["startsWith": folderPath]
+        }
+        if !filter.isEmpty {
+            request["filter"] = filter
+        }
+        return request
+    }
+
     /// Fetches random assets using slideshow configuration
     func fetchRandomAssets(config: SlideshowConfig, limit: Int = 50) async throws -> SearchResult {
         let albumIds = config.albumIds.isEmpty ? nil : config.albumIds
