@@ -8,9 +8,7 @@
 import SwiftUI
 
 struct FullScreenImageView: View {
-    let asset: ImmichAsset
     let assets: [ImmichAsset]
-    let currentIndex: Int
     @ObservedObject var assetService: AssetService
     @ObservedObject var authenticationService: AuthenticationService
     @Binding var currentAssetIndex: Int // Add binding to track current index
@@ -31,11 +29,8 @@ struct FullScreenImageView: View {
     @State private var loadedStackId: String?
     @State private var showingStackPicker = false
     
-    init(asset: ImmichAsset, assets: [ImmichAsset], currentIndex: Int, assetService: AssetService, authenticationService: AuthenticationService, currentAssetIndex: Binding<Int>) {
-        print("FullScreenImageView: Initializing with currentIndex: \(currentIndex)")
-        self.asset = asset
+    init(asset: ImmichAsset, assets: [ImmichAsset], assetService: AssetService, authenticationService: AuthenticationService, currentAssetIndex: Binding<Int>) {
         self.assets = assets
-        self.currentIndex = currentIndex
         self.assetService = assetService
         self.authenticationService = authenticationService
         self._currentAssetIndex = currentAssetIndex
@@ -225,7 +220,6 @@ struct FullScreenImageView: View {
             showingStackPicker: $showingStackPicker,
             canShowStackPicker: stackAssets.count > 1,
             onNavigate: navigateToImage,
-            onDismiss: { dismiss() },
             onLoadImage: loadDisplayImage,
             showingVideoPlayer: showingVideoPlayer,
             onPlayButtonTapped: {
@@ -436,7 +430,6 @@ struct ContentAwareModifier: ViewModifier {
     @Binding var showingStackPicker: Bool
     let canShowStackPicker: Bool
     let onNavigate: (Int) -> Void
-    let onDismiss: () -> Void
     let onLoadImage: () -> Void
     let showingVideoPlayer: Bool
     let onPlayButtonTapped: () -> Void
@@ -774,7 +767,6 @@ struct VideoThumbnailView: View {
     FullScreenImageView(
         asset: sampleAsset,
         assets: sampleAssets,
-        currentIndex: 0,
         assetService: assetService,
         authenticationService: authenticationService,
         currentAssetIndex: .constant(0)
