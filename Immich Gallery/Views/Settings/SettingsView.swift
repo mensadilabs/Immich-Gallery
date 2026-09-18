@@ -67,6 +67,10 @@ struct SettingsView: View {
     @State private var showingSignIn = false
     @State private var showingWhatsNew = false
     @State private var showingVisibleTabs = false
+    @State private var isValidatingSlideshowConfig = false
+    @State private var slideshowConfigValidationMessage = ""
+    @State private var showingSlideshowConfigValidation = false
+    @State private var slideshowConfigSummary = "Loading configuration…"
     @AppStorage("hideImageOverlay") private var hideImageOverlay = true
     @AppStorage(UserDefaultsKeys.showCurrentTimeWidget) private var showCurrentTimeWidget = true
     @AppStorage(UserDefaultsKeys.photoDateDisplayMode) private var photoDateDisplayMode = "dateAndTime"
@@ -547,10 +551,23 @@ struct SettingsView: View {
                                 
                                 SettingsRow(
                                     icon: "gearshape.fill",
-                                    title: "Auto Start Slideshow customization",
-                                    subtitle: "No setting available here, to customize which **album**, **person**, or **both** are used, create an empty album with **0 photos** and set its description as shown below.\nname: \(AppConstants.configAlbumName)\nDescription: albumIds:[\"album uuid 1\"] | personIds:[\"personUuid 1\"] ",
-                                    content: AnyView(Text("")),
-                                    isOn: artModeLevel != "off"
+                                    title: "Auto-Start Slideshow Configuration",
+                                    subtitle: "Create an empty \(AppConstants.configAlbumName) album. Its description accepts albumIds:[\"UUID\"] | personIds:[\"UUID\"].",
+                                    content: AnyView(
+                                        VStack(alignment: .trailing, spacing: 10) {
+                                            Text(slideshowConfigSummary)
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                                .multilineTextAlignment(.trailing)
+                                                .frame(maxWidth: 360, alignment: .trailing)
+                                            Button(isValidatingSlideshowConfig ? "Validating…" : "Validate Config") {
+                                                validateSlideshowConfig()
+                                            }
+                                            .buttonStyle(.bordered)
+                                            .disabled(isValidatingSlideshowConfig)
+                                        }
+                                    ),
+                                    isOn: autoSlideshowTimeout > 0 || launchIntoSlideshow
                                 )
                             })
                         }
@@ -717,6 +734,14 @@ struct SettingsView: View {
                     applyVisibleTabs(selection, defaultTab: defaultTab)
                 }
             }
+            .task {
+                await refreshSlideshowConfigSummary()
+            }
+            .alert("Slideshow Configuration", isPresented: $showingSlideshowConfigValidation) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(slideshowConfigValidationMessage)
+            }
             .alert("Clear Cache", isPresented: $showingClearCacheAlert) {
                 Button("Cancel", role: .cancel) { }
                 Button("Clear All", role: .destructive) {
@@ -831,6 +856,30 @@ struct SettingsView: View {
     
     
     
+    private func validateSlideshowConfig() {
+        isValidatingSlideshowConfig = true
+        Task {
+            let summary = await SlideshowConfigSummaryService(
+                networkService: authService.authenticatedNetworkService
+            ).load()
+            await MainActor.run {
+                slideshowConfigSummary = summary.displayText
+                slideshowConfigValidationMessage = summary.result.validationMessage
+                isValidatingSlideshowConfig = false
+                showingSlideshowConfigValidation = true
+            }
+        }
+    }
+
+    private func refreshSlideshowConfigSummary() async {
+        let summary = await SlideshowConfigSummaryService(
+            networkService: authService.authenticatedNetworkService
+        ).load()
+        await MainActor.run {
+            slideshowConfigSummary = summary.displayText
+        }
+    }
+
     private func refreshServerConnection() {
         Task {
             do {

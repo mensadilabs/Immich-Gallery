@@ -78,4 +78,39 @@ struct SlideshowSourceResolutionTests {
         #expect(source == .selection(selection))
     }
 
+    @Test func slideshowConfigParserAcceptsWhitespaceCaseAndNewlines() {
+        let config = SlideshowConfigService.parseConfigDescription(
+            "  ALBUMids : [\"album-1\", \"album-2\"]\nPERSONids:['person-1']"
+        )
+
+        #expect(config == SlideshowConfig(albumIds: ["album-1", "album-2"], personIds: ["person-1"]))
+    }
+
+    @Test func slideshowConfigParserRejectsMalformedConfiguration() {
+        #expect(SlideshowConfigService.parseConfigDescription("albumIds:[\"album-1\"") == nil)
+    }
+
+    @Test func slideshowConfigRejectsInvalidUUIDs() {
+        let config = SlideshowConfig(albumIds: ["c7e09884-c687-4ca3-8820 -a5be692b1f37"], personIds: [])
+
+        #expect(!SlideshowConfigService.hasValidImmichIdentifiers(config))
+    }
+
+    @Test func slideshowConfigValidationReportsInvalidIdentifiers() {
+        #expect(
+            SlideshowConfigLoadResult.invalidIdentifier.userFacingMessage
+                == "Album and person IDs must be valid UUIDs."
+        )
+    }
+
+    @Test func slideshowConfigSummaryUsesResolvedSourceNames() {
+        let config = SlideshowConfig(albumIds: ["album-id"], personIds: [])
+        let summary = SlideshowConfigSummary(
+            result: .configured(config),
+            sourceNames: ["Album: Family"]
+        )
+
+        #expect(summary.displayText == "Album: Family")
+    }
+
 }
