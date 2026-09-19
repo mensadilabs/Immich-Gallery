@@ -552,7 +552,7 @@ struct SettingsView: View {
                                 SettingsRow(
                                     icon: "gearshape.fill",
                                     title: "Auto-Start Slideshow Configuration",
-                                    subtitle: "Create an empty \(AppConstants.configAlbumName) album. Its description accepts albumIds:[\"UUID\"] | personIds:[\"UUID\"].",
+                                    subtitle: "Create an empty album with 0 photos, then set:\nName: \(AppConstants.configAlbumName)\nDescription: albumIds:[\"album UUID\"] | personIds:[\"person UUID\"]",
                                     content: AnyView(
                                         VStack(alignment: .trailing, spacing: 10) {
                                             Text(slideshowConfigSummary)
