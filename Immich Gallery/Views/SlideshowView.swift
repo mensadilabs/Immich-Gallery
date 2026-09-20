@@ -16,6 +16,7 @@ struct SlideshowView: View {
     let startingIndex: Int
     let isFavorite: Bool
     let isLocked: Bool
+    let launchContext: SlideshowLaunchContext?
     @Environment(\.dismiss) private var dismiss
 
     // Services created internally
@@ -27,14 +28,15 @@ struct SlideshowView: View {
     @State private var slideshowConfig: SlideshowConfig?
     @State private var slideshowConfigurationError: String?
 
-    init(albumId: String? = nil, personId: String? = nil, tagId: String? = nil, city: String? = nil, startingIndex: Int = 0, isFavorite: Bool = false, isLocked: Bool = false) {
+    init(albumId: String? = nil, personId: String? = nil, tagId: String? = nil, city: String? = nil, startingIndex: Int = 0, isFavorite: Bool = false, isLocked: Bool = false, launchContext: SlideshowLaunchContext? = nil) {
         self.albumId = albumId
         self.personId = personId
         self.tagId = tagId
         self.city = city
-        self.startingIndex = startingIndex
+        self.startingIndex = launchContext.map { $0.startingIndex % 100 } ?? startingIndex
         self.isFavorite = isFavorite
         self.isLocked = isLocked
+        self.launchContext = launchContext
 
         // Create services internally
         let userManager = UserManager()
@@ -56,6 +58,10 @@ struct SlideshowView: View {
             config: nil
         )
         _assetProvider = State(initialValue: initialProvider)
+        _enableShuffle = State(initialValue: launchContext == nil && UserDefaults.standard.enableSlideshowShuffle)
+        if let launchContext {
+            _currentPage = State(initialValue: launchContext.startingIndex / 100 + 1)
+        }
     }
     
 
@@ -450,11 +456,28 @@ struct SlideshowView: View {
         let tagId: String?
         let city: String?
         let isFavorite: Bool
+        let isAllPhotosContext: Bool
+
+        init(
+            albumId: String?,
+            personId: String?,
+            tagId: String?,
+            city: String?,
+            isFavorite: Bool,
+            isAllPhotosContext: Bool = false
+        ) {
+            self.albumId = albumId
+            self.personId = personId
+            self.tagId = tagId
+            self.city = city
+            self.isFavorite = isFavorite
+            self.isAllPhotosContext = isAllPhotosContext
+        }
 
         /// True when the slideshow was launched against a specific target rather
         /// than the generic all-photos / auto-slideshow entry point.
         var isExplicit: Bool {
-            albumId != nil || personId != nil || tagId != nil || city != nil || isFavorite
+            albumId != nil || personId != nil || tagId != nil || city != nil || isFavorite || isAllPhotosContext
         }
     }
 
@@ -490,7 +513,8 @@ struct SlideshowView: View {
                 isAllPhotos: false,
                 isFavorite: selection.isFavorite,
                 assetService: assetService,
-                albumService: albumService
+                albumService: albumService,
+                slideshowContext: launchContext
             )
         case .config(let config):
             return AssetProviderFactory.createProvider(
@@ -512,7 +536,8 @@ struct SlideshowView: View {
             personId: personId,
             tagId: tagId,
             city: city,
-            isFavorite: isFavorite
+            isFavorite: isFavorite,
+            isAllPhotosContext: launchContext != nil
         )
 
         guard let albumService = albumService else {

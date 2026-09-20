@@ -80,6 +80,7 @@ struct TimelineView: View {
 
     @State private var selectedAsset: ImmichAsset?
     @State private var showingFullScreen = false
+    @State private var showingSlideshow = false
     @State private var currentAssetIndex: Int = 0
     @FocusState private var focusedAssetId: String?
     @FocusState private var focusedToolbarButton: ToolbarButton?
@@ -162,6 +163,13 @@ struct TimelineView: View {
         buckets.flatMap { bucketAssets[$0.timeBucket] ?? [] }
     }
 
+    /// `currentAssetIndex` includes videos, while a photo slideshow only queues
+    /// images. Convert the focused position into the matching image offset.
+    private var slideshowStartingIndex: Int {
+        let precedingAssets = loadedAssetsInOrder.prefix(currentAssetIndex + 1)
+        return max(0, precedingAssets.filter { $0.type == .image }.count - 1)
+    }
+
     var body: some View {
         let _ = PerformanceDiagnostics.updateTimeline {
             PerformanceDiagnostics.TimelineSnapshot(
@@ -240,6 +248,25 @@ struct TimelineView: View {
                 // reattach the same shared diagnostics monitor here.
                 .diagnosticsOverlay()
             }
+        }
+        .fullScreenCover(isPresented: $showingSlideshow) {
+            SlideshowView(
+                launchContext: SlideshowLaunchContext(
+                    startingIndex: slideshowStartingIndex,
+                    filters: filters,
+                    favoritesOnly: favoritesOnly,
+                    assetType: mediaFilter.assetType,
+                    sortOrder: allPhotosSortOrder
+                )
+            )
+        }
+        .onPlayPauseCommand {
+            guard loadedAssetsInOrder.contains(where: { $0.type == .image }) else { return }
+            NotificationCenter.default.post(
+                name: NSNotification.Name(NotificationNames.pauseInactivityMonitoring),
+                object: nil
+            )
+            showingSlideshow = true
         }
         .fullScreenCover(isPresented: $showingCalendar, onDismiss: restoreCalendarButtonFocus) {
             CalendarMonthGridView(

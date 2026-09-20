@@ -270,7 +270,19 @@ struct AssetGridView: View {
                 // Find the index of the current asset in the filtered image assets
                 let startingIndex = currentAssetIndex < assets.count ? 
                     (imageAssets.firstIndex(of: assets[currentAssetIndex]) ?? 0) : 0
-                SlideshowView(albumId: albumId, personId: personId, tagId: tagId, city: city, startingIndex: startingIndex, isFavorite: isFavorite, isLocked: isLocked)
+                if isAllPhotos {
+                    SlideshowView(
+                        launchContext: SlideshowLaunchContext(
+                            startingIndex: startingIndex,
+                            filters: filters,
+                            favoritesOnly: isFavorite,
+                            assetType: mediaFilter.assetType,
+                            sortOrder: allPhotosSortOrder
+                        )
+                    )
+                } else {
+                    SlideshowView(albumId: albumId, personId: personId, tagId: tagId, city: city, startingIndex: startingIndex, isFavorite: isFavorite, isLocked: isLocked)
+                }
             }
         }
         .onPlayPauseCommand(perform: {
