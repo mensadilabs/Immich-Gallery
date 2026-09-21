@@ -635,9 +635,16 @@ struct SlideshowView: View {
 
             await MainActor.run {
                 let imageAssets = searchResult.assets.filter { $0.type == .image }
-                // Handle starting index - drop assets before the starting point\n
                 let actualStartingIndex = fromStartingIndex ? min(startingIndex, max(0, imageAssets.count - 1)) : 0
-                self.assetQueue = Array(imageAssets.dropFirst(actualStartingIndex))
+                var queue = Array(imageAssets.dropFirst(actualStartingIndex))
+
+                // Timeline buckets and metadata search can order boundary assets
+                // differently. Always queue the exact focused asset first.
+                if fromStartingIndex, let startingAsset = launchContext?.startingAsset {
+                    queue.removeAll { $0.id == startingAsset.id }
+                    queue.insert(startingAsset, at: 0)
+                }
+                self.assetQueue = queue
                 self.hasMoreAssets = searchResult.nextPage != nil || (enableShuffle && !isSharedAlbum)
                 print("SlideshowView: Loaded \(imageAssets.count) assets, starting at index \(startingIndex)")
             }

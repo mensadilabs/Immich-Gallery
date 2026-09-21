@@ -56,6 +56,7 @@ struct AssetGridView: View {
     @State private var hasMoreAssets = true
     @State private var loadMoreTask: Task<Void, Never>?
     @State private var showingSlideshow = false
+    @State private var slideshowLaunchAsset: ImmichAsset?
     @State private var showingFilterModal = false
     @State private var filters = PhotoFilterSelection.saved
     @State private var isScrolling = false
@@ -203,10 +204,7 @@ struct AssetGridView: View {
                         .padding(.top, 20)
                         .padding(.bottom, 40)
                         .onChange(of: focusedAssetId) { newFocusedId in
-                            // Update currentAssetIndex when focus changes
-                            if let focusedId = newFocusedId,
-                               let focusedAsset = assets.first(where: { $0.id == focusedId }),
-                               let index = assets.firstIndex(of: focusedAsset) {
+                            if let index = assets.index(forFocusedAssetID: newFocusedId) {
                                 currentAssetIndex = index
                             }
                             
@@ -266,13 +264,12 @@ struct AssetGridView: View {
         }
         .fullScreenCover(isPresented: $showingSlideshow) {
             let imageAssets = assets.filter { $0.type == .image }
-            if !imageAssets.isEmpty {
-                // Find the index of the current asset in the filtered image assets
-                let startingIndex = currentAssetIndex < assets.count ? 
-                    (imageAssets.firstIndex(of: assets[currentAssetIndex]) ?? 0) : 0
+            if let slideshowLaunchAsset {
+                let startingIndex = imageAssets.firstIndex(of: slideshowLaunchAsset) ?? 0
                 if isAllPhotos {
                     SlideshowView(
                         launchContext: SlideshowLaunchContext(
+                            startingAsset: slideshowLaunchAsset,
                             startingIndex: startingIndex,
                             filters: filters,
                             favoritesOnly: isFavorite,
@@ -590,6 +587,12 @@ struct AssetGridView: View {
     }
     
     private func startSlideshow() {
+        guard
+            let focusedAsset = assets.first(where: { $0.id == focusedAssetId }),
+            focusedAsset.type == .image
+        else { return }
+
+        slideshowLaunchAsset = focusedAsset
         debugLog("AutoSlideshow: starting slideshow (pausing inactivity monitoring)")
         NotificationCenter.default.post(name: NSNotification.Name(NotificationNames.pauseInactivityMonitoring), object: nil)
         showingSlideshow = true
