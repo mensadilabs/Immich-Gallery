@@ -81,7 +81,7 @@ struct TimelineView: View {
     @State private var selectedAsset: ImmichAsset?
     @State private var showingFullScreen = false
     @State private var showingSlideshow = false
-    @State private var slideshowLaunchAsset: ImmichAsset?
+    @State private var slideshowLaunchContext: SlideshowLaunchContext?
     @State private var currentAssetIndex: Int = 0
     @FocusState private var focusedAssetId: String?
     @FocusState private var focusedToolbarButton: ToolbarButton?
@@ -164,17 +164,6 @@ struct TimelineView: View {
         buckets.flatMap { bucketAssets[$0.timeBucket] ?? [] }
     }
 
-    /// `currentAssetIndex` includes videos, while a photo slideshow only queues
-    /// images. Convert the focused position into the matching image offset.
-    private var slideshowStartingIndex: Int {
-        // Resolve focus at launch time as well as maintaining currentAssetIndex.
-        // Play/Pause can arrive immediately after a focus move, before its
-        // onChange handler has committed the new index.
-        let focusedIndex = loadedAssetsInOrder.index(forFocusedAssetID: focusedAssetId) ?? currentAssetIndex
-        let precedingAssets = loadedAssetsInOrder.prefix(focusedIndex + 1)
-        return max(0, precedingAssets.filter { $0.type == .image }.count - 1)
-    }
-
     var body: some View {
         let _ = PerformanceDiagnostics.updateTimeline {
             PerformanceDiagnostics.TimelineSnapshot(
@@ -255,22 +244,20 @@ struct TimelineView: View {
             }
         }
         .fullScreenCover(isPresented: $showingSlideshow) {
-            if let slideshowLaunchAsset {
-                SlideshowView(
-                    launchContext: SlideshowLaunchContext(
-                        startingAsset: slideshowLaunchAsset,
-                        startingIndex: slideshowStartingIndex,
-                        filters: filters,
-                        favoritesOnly: favoritesOnly,
-                        assetType: mediaFilter.assetType,
-                        sortOrder: allPhotosSortOrder
-                    )
-                )
+            if let slideshowLaunchContext {
+                SlideshowView(launchContext: slideshowLaunchContext)
             }
         }
         .onPlayPauseCommand {
-            guard let focusedAsset = loadedAssetsInOrder.first(where: { $0.id == focusedAssetId }), focusedAsset.type == .image else { return }
-            slideshowLaunchAsset = focusedAsset
+            guard let context = SlideshowLaunchContext.focused(
+                focusedAssetID: focusedAssetId,
+                in: loadedAssetsInOrder,
+                filters: filters,
+                favoritesOnly: favoritesOnly,
+                assetType: mediaFilter.assetType,
+                sortOrder: allPhotosSortOrder
+            ) else { return }
+            slideshowLaunchContext = context
             NotificationCenter.default.post(
                 name: NSNotification.Name(NotificationNames.pauseInactivityMonitoring),
                 object: nil

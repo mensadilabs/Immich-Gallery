@@ -11,4 +11,30 @@ struct SlideshowLaunchContext: Equatable {
     let favoritesOnly: Bool
     let assetType: AssetType?
     let sortOrder: String
+
+    /// Creates an All Photos launch request from the exact tvOS-focused image.
+    static func focused(
+        focusedAssetID: String?,
+        in assets: [ImmichAsset],
+        filters: PhotoFilterSelection,
+        favoritesOnly: Bool,
+        assetType: AssetType?,
+        sortOrder: String
+    ) -> Self? {
+        guard
+            let focusedIndex = assets.index(forFocusedAssetID: focusedAssetID),
+            assets[focusedIndex].type == .image
+        else { return nil }
+
+        let startingAsset = assets[focusedIndex]
+        let imageIndex = assets.prefix(focusedIndex + 1).filter { $0.type == .image }.count - 1
+        return Self(
+            startingAsset: startingAsset,
+            startingIndex: imageIndex,
+            filters: filters,
+            favoritesOnly: favoritesOnly,
+            assetType: assetType,
+            sortOrder: sortOrder
+        )
+    }
 }

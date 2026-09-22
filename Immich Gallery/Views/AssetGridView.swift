@@ -57,6 +57,7 @@ struct AssetGridView: View {
     @State private var loadMoreTask: Task<Void, Never>?
     @State private var showingSlideshow = false
     @State private var slideshowLaunchAsset: ImmichAsset?
+    @State private var allPhotosSlideshowContext: SlideshowLaunchContext?
     @State private var showingFilterModal = false
     @State private var filters = PhotoFilterSelection.saved
     @State private var isScrolling = false
@@ -266,17 +267,8 @@ struct AssetGridView: View {
             let imageAssets = assets.filter { $0.type == .image }
             if let slideshowLaunchAsset {
                 let startingIndex = imageAssets.firstIndex(of: slideshowLaunchAsset) ?? 0
-                if isAllPhotos {
-                    SlideshowView(
-                        launchContext: SlideshowLaunchContext(
-                            startingAsset: slideshowLaunchAsset,
-                            startingIndex: startingIndex,
-                            filters: filters,
-                            favoritesOnly: isFavorite,
-                            assetType: mediaFilter.assetType,
-                            sortOrder: allPhotosSortOrder
-                        )
-                    )
+                if isAllPhotos, let allPhotosSlideshowContext {
+                    SlideshowView(launchContext: allPhotosSlideshowContext)
                 } else {
                     SlideshowView(albumId: albumId, personId: personId, tagId: tagId, city: city, startingIndex: startingIndex, isFavorite: isFavorite, isLocked: isLocked)
                 }
@@ -587,12 +579,24 @@ struct AssetGridView: View {
     }
     
     private func startSlideshow() {
-        guard
-            let focusedAsset = assets.first(where: { $0.id == focusedAssetId }),
-            focusedAsset.type == .image
-        else { return }
-
-        slideshowLaunchAsset = focusedAsset
+        if isAllPhotos {
+            guard let context = SlideshowLaunchContext.focused(
+                focusedAssetID: focusedAssetId,
+                in: assets,
+                filters: filters,
+                favoritesOnly: isFavorite,
+                assetType: mediaFilter.assetType,
+                sortOrder: allPhotosSortOrder
+            ) else { return }
+            allPhotosSlideshowContext = context
+            slideshowLaunchAsset = context.startingAsset
+        } else {
+            guard
+                let focusedAsset = assets.first(where: { $0.id == focusedAssetId }),
+                focusedAsset.type == .image
+            else { return }
+            slideshowLaunchAsset = focusedAsset
+        }
         debugLog("AutoSlideshow: starting slideshow (pausing inactivity monitoring)")
         NotificationCenter.default.post(name: NSNotification.Name(NotificationNames.pauseInactivityMonitoring), object: nil)
         showingSlideshow = true
