@@ -33,7 +33,7 @@ struct SlideshowView: View {
         self.personId = personId
         self.tagId = tagId
         self.city = city
-        self.startingIndex = launchContext.map { $0.startingIndex % 100 } ?? startingIndex
+        self.startingIndex = startingIndex
         self.isFavorite = isFavorite
         self.isLocked = isLocked
         self.launchContext = launchContext
@@ -59,9 +59,6 @@ struct SlideshowView: View {
         )
         _assetProvider = State(initialValue: initialProvider)
         _enableShuffle = State(initialValue: launchContext == nil && UserDefaults.standard.enableSlideshowShuffle)
-        if let launchContext {
-            _currentPage = State(initialValue: launchContext.startingIndex / 100 + 1)
-        }
     }
     
 
@@ -622,7 +619,25 @@ struct SlideshowView: View {
 
         do {
             let searchResult: SearchResult
-            if enableShuffle && !isSharedAlbum {
+            var locatedOffset: Int?
+            if fromStartingIndex, let launchContext {
+                var page = 1
+                var result: SearchResult
+                while true {
+                    result = try await assetProvider.fetchAssets(page: page, limit: 100)
+                    let imageAssets = result.assets.filter { $0.type == .image }
+                    if let offset = imageAssets.firstIndex(where: { $0.id == launchContext.startingAsset.id }) {
+                        locatedOffset = offset
+                        await MainActor.run { self.currentPage = page }
+                        break
+                    }
+                    guard result.nextPage != nil else {
+                        throw SlideshowStartAssetNotFound()
+                    }
+                    page += 1
+                }
+                searchResult = result
+            } else if enableShuffle && !isSharedAlbum {
                 // Use random assets for non-shared albums when shuffle is enabled
                 searchResult = try await assetProvider.fetchRandomAssets(limit: 100)
             } else {
@@ -635,15 +650,8 @@ struct SlideshowView: View {
 
             await MainActor.run {
                 let imageAssets = searchResult.assets.filter { $0.type == .image }
-                let actualStartingIndex = fromStartingIndex ? min(startingIndex, max(0, imageAssets.count - 1)) : 0
-                var queue = Array(imageAssets.dropFirst(actualStartingIndex))
-
-                // Timeline buckets and metadata search can order boundary assets
-                // differently. Always queue the exact focused asset first.
-                if fromStartingIndex, let startingAsset = launchContext?.startingAsset {
-                    queue.removeAll { $0.id == startingAsset.id }
-                    queue.insert(startingAsset, at: 0)
-                }
+                let actualStartingIndex = fromStartingIndex ? (locatedOffset ?? min(startingIndex, max(0, imageAssets.count - 1))) : 0
+                let queue = Array(imageAssets.dropFirst(actualStartingIndex))
                 self.assetQueue = queue
                 self.hasMoreAssets = searchResult.nextPage != nil || (enableShuffle && !isSharedAlbum)
                 print("SlideshowView: Loaded \(imageAssets.count) assets, starting at index \(startingIndex)")
@@ -651,7 +659,10 @@ struct SlideshowView: View {
         } catch {
             await MainActor.run {
                 print("SlideshowView: Failed to load initial assets: \(error)")
-                if let message = configurationRequestErrorMessage(for: error) {
+                if error is SlideshowStartAssetNotFound {
+                    self.slideshowConfigurationError = "The focused photo is no longer in the current filtered results."
+                    self.assetProvider = nil
+                } else if let message = configurationRequestErrorMessage(for: error) {
                     self.slideshowConfigurationError = message
                     self.assetProvider = nil
                 }
@@ -659,6 +670,8 @@ struct SlideshowView: View {
             }
         }
     }
+
+    private struct SlideshowStartAssetNotFound: Error {}
 
     private func configurationRequestErrorMessage(for error: Error) -> String? {
         guard slideshowConfig != nil else { return nil }

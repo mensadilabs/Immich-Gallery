@@ -3,10 +3,8 @@ import Foundation
 /// The complete All Photos query to continue when a user starts a slideshow.
 /// It is intentionally separate from the auto-slideshow configuration album.
 struct SlideshowLaunchContext: Equatable {
-    /// The exact focused asset is queued first instead of relying solely on a
-    /// cross-endpoint index calculation.
+    /// The exact focused asset to locate in the slideshow's own query results.
     let startingAsset: ImmichAsset
-    let startingIndex: Int
     let filters: PhotoFilterSelection
     let favoritesOnly: Bool
     let assetType: AssetType?
@@ -26,15 +24,24 @@ struct SlideshowLaunchContext: Equatable {
             assets[focusedIndex].type == .image
         else { return nil }
 
-        let startingAsset = assets[focusedIndex]
-        let imageIndex = assets.prefix(focusedIndex + 1).filter { $0.type == .image }.count - 1
         return Self(
-            startingAsset: startingAsset,
-            startingIndex: imageIndex,
+            startingAsset: assets[focusedIndex],
             filters: filters,
             favoritesOnly: favoritesOnly,
             assetType: assetType,
             sortOrder: sortOrder
         )
+    }
+}
+
+/// Finds the focused item in the slideshow's own paginated query results.
+enum SlideshowStartPosition {
+    static func locate(assetID: String, pages: [[String]]) -> (page: Int, offset: Int)? {
+        for (page, ids) in pages.enumerated() {
+            if let offset = ids.firstIndex(of: assetID) {
+                return (page: page + 1, offset: offset)
+            }
+        }
+        return nil
     }
 }

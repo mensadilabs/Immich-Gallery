@@ -31,13 +31,13 @@ class AssetService: ObservableObject {
         let sortOrder = explicitSortOrder ?? (isAllPhotos
             ? UserDefaults.standard.allPhotosSortOrder
             : UserDefaults.standard.assetSortOrder)
-        let selectedCity = filters?.city ?? (isAllPhotos ? UserDefaults.standard.allPhotosFilterCity : city)
-        let selectedState = filters?.state ?? (isAllPhotos ? UserDefaults.standard.allPhotosFilterState : nil)
-        let selectedCountry = filters?.country ?? (isAllPhotos ? UserDefaults.standard.allPhotosFilterCountry : nil)
-        let selectedCameraMake = filters?.cameraMake ?? (isAllPhotos ? UserDefaults.standard.allPhotosFilterCameraMake : nil)
-        let selectedCameraModel = filters?.cameraModel ?? (isAllPhotos ? UserDefaults.standard.allPhotosFilterCameraModel : nil)
-        let selectedLensModel = filters?.lensModel ?? (isAllPhotos ? UserDefaults.standard.allPhotosFilterLensModel : nil)
-        let selectedYear = filters?.year ?? (isAllPhotos ? UserDefaults.standard.allPhotosFilterYear : nil)
+        let selectedCity = filters.map { $0.city } ?? (isAllPhotos ? UserDefaults.standard.allPhotosFilterCity : city)
+        let selectedState = filters.map { $0.state } ?? (isAllPhotos ? UserDefaults.standard.allPhotosFilterState : nil)
+        let selectedCountry = filters.map { $0.country } ?? (isAllPhotos ? UserDefaults.standard.allPhotosFilterCountry : nil)
+        let selectedCameraMake = filters.map { $0.cameraMake } ?? (isAllPhotos ? UserDefaults.standard.allPhotosFilterCameraMake : nil)
+        let selectedCameraModel = filters.map { $0.cameraModel } ?? (isAllPhotos ? UserDefaults.standard.allPhotosFilterCameraModel : nil)
+        let selectedLensModel = filters.map { $0.lensModel } ?? (isAllPhotos ? UserDefaults.standard.allPhotosFilterLensModel : nil)
+        let selectedYear = filters.map { $0.year } ?? (isAllPhotos ? UserDefaults.standard.allPhotosFilterYear : nil)
         var searchRequest: [String: Any] = [
             "page": page,
             "withPeople": true,

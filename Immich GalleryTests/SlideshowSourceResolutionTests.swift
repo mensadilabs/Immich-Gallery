@@ -78,6 +78,20 @@ struct SlideshowSourceResolutionTests {
         #expect(source == .selection(selection))
     }
 
+    @Test func slideshowStartPositionUsesSlideshowPageResultsNotGridIndex() {
+        let position = SlideshowStartPosition.locate(
+            assetID: "focused",
+            pages: [["a", "b"], ["c", "focused", "e"]]
+        )
+
+        #expect(position?.page == 2)
+        #expect(position?.offset == 1)
+    }
+
+    @Test func slideshowStartPositionReturnsNilWhenFocusedAssetIsNotInQuery() {
+        #expect(SlideshowStartPosition.locate(assetID: "missing", pages: [["a"], ["b"]]) == nil)
+    }
+
     @Test func slideshowConfigParserAcceptsWhitespaceCaseAndNewlines() {
         let config = SlideshowConfigService.parseConfigDescription(
             "  ALBUMids : [\"album-1\", \"album-2\"]\nPERSONids:['person-1']"
