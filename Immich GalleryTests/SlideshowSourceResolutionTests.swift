@@ -78,18 +78,47 @@ struct SlideshowSourceResolutionTests {
         #expect(source == .selection(selection))
     }
 
-    @Test func slideshowStartPositionUsesSlideshowPageResultsNotGridIndex() {
-        let position = SlideshowStartPosition.locate(
+    @Test func slideshowStartPositionFetchesPagesUntilFocusedAssetIsFound() async throws {
+        let pages = [
+            1: SlideshowAssetPage(items: ["a", "b"], hasMore: true),
+            2: SlideshowAssetPage(items: ["c", "focused", "e"], hasMore: true)
+        ]
+        var requestedPages: [Int] = []
+
+        let result = try await SlideshowStartPosition.find(
             assetID: "focused",
-            pages: [["a", "b"], ["c", "focused", "e"]]
+            fetchPage: { page in
+                requestedPages.append(page)
+                return pages[page]!
+            },
+            id: { $0 }
         )
 
-        #expect(position?.page == 2)
-        #expect(position?.offset == 1)
+        #expect(requestedPages == [1, 2])
+        #expect(result?.page == 2)
+        #expect(result?.offset == 1)
+        #expect(result?.items == ["c", "focused", "e"])
+        #expect(result?.hasMore == true)
     }
 
-    @Test func slideshowStartPositionReturnsNilWhenFocusedAssetIsNotInQuery() {
-        #expect(SlideshowStartPosition.locate(assetID: "missing", pages: [["a"], ["b"]]) == nil)
+    @Test func slideshowStartPositionStopsWhenFocusedAssetIsAbsent() async throws {
+        let pages = [
+            1: SlideshowAssetPage(items: ["a"], hasMore: true),
+            2: SlideshowAssetPage(items: ["b"], hasMore: false)
+        ]
+        var requestedPages: [Int] = []
+
+        let result = try await SlideshowStartPosition.find(
+            assetID: "missing",
+            fetchPage: { page in
+                requestedPages.append(page)
+                return pages[page]!
+            },
+            id: { $0 }
+        )
+
+        #expect(requestedPages == [1, 2])
+        #expect(result.map { $0.page } == nil)
     }
 
     @Test func slideshowConfigParserAcceptsWhitespaceCaseAndNewlines() {

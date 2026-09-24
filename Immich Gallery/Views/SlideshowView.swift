@@ -618,43 +618,44 @@ struct SlideshowView: View {
         guard !Task.isCancelled, let assetProvider = assetProvider else { return }
 
         do {
-            let searchResult: SearchResult
+            let imageAssets: [ImmichAsset]
+            let hasMore: Bool
             var locatedOffset: Int?
             if fromStartingIndex, let launchContext {
-                var page = 1
-                var result: SearchResult
-                while true {
-                    result = try await assetProvider.fetchAssets(page: page, limit: 100)
-                    let imageAssets = result.assets.filter { $0.type == .image }
-                    if let offset = imageAssets.firstIndex(where: { $0.id == launchContext.startingAsset.id }) {
-                        locatedOffset = offset
-                        await MainActor.run { self.currentPage = page }
-                        break
-                    }
-                    guard result.nextPage != nil else {
-                        throw SlideshowStartAssetNotFound()
-                    }
-                    page += 1
+                guard let located = try await SlideshowStartPosition.find(
+                    assetID: launchContext.startingAsset.id,
+                    fetchPage: { page in
+                        let result = try await assetProvider.fetchAssets(page: page, limit: 100)
+                        return SlideshowAssetPage(
+                            items: result.assets.filter { $0.type == .image },
+                            hasMore: result.nextPage != nil
+                        )
+                    },
+                    id: \.id
+                ) else {
+                    throw SlideshowStartAssetNotFound()
                 }
-                searchResult = result
-            } else if enableShuffle && !isSharedAlbum {
-                // Use random assets for non-shared albums when shuffle is enabled
-                searchResult = try await assetProvider.fetchRandomAssets(limit: 100)
+                imageAssets = located.items
+                locatedOffset = located.offset
+                hasMore = located.hasMore
+                await MainActor.run { self.currentPage = located.page }
             } else {
-                // Use regular asset fetching for shared albums or when shuffle is disabled
-                searchResult = try await assetProvider.fetchAssets(
-                    page: currentPage,
-                    limit: 100
-                )
+                let result: SearchResult
+                if enableShuffle && !isSharedAlbum {
+                    // Use random assets for non-shared albums when shuffle is enabled
+                    result = try await assetProvider.fetchRandomAssets(limit: 100)
+                } else {
+                    result = try await assetProvider.fetchAssets(page: currentPage, limit: 100)
+                }
+                imageAssets = result.assets.filter { $0.type == .image }
+                hasMore = result.nextPage != nil || (enableShuffle && !isSharedAlbum)
             }
 
             await MainActor.run {
-                let imageAssets = searchResult.assets.filter { $0.type == .image }
                 let actualStartingIndex = fromStartingIndex ? (locatedOffset ?? min(startingIndex, max(0, imageAssets.count - 1))) : 0
-                let queue = Array(imageAssets.dropFirst(actualStartingIndex))
-                self.assetQueue = queue
-                self.hasMoreAssets = searchResult.nextPage != nil || (enableShuffle && !isSharedAlbum)
-                print("SlideshowView: Loaded \(imageAssets.count) assets, starting at index \(startingIndex)")
+                self.assetQueue = Array(imageAssets.dropFirst(actualStartingIndex))
+                self.hasMoreAssets = hasMore
+                print("SlideshowView: Loaded \(imageAssets.count) assets, starting at index \(actualStartingIndex)")
             }
         } catch {
             await MainActor.run {

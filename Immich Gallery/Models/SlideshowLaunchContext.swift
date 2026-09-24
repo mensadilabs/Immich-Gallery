@@ -34,14 +34,34 @@ struct SlideshowLaunchContext: Equatable {
     }
 }
 
-/// Finds the focused item in the slideshow's own paginated query results.
+struct SlideshowAssetPage<Element> {
+    let items: [Element]
+    let hasMore: Bool
+}
+
+struct LocatedSlideshowAssetPage<Element> {
+    let page: Int
+    let offset: Int
+    let items: [Element]
+    let hasMore: Bool
+}
+
+/// Searches the slideshow's own paginated results for its focused asset.
 enum SlideshowStartPosition {
-    static func locate(assetID: String, pages: [[String]]) -> (page: Int, offset: Int)? {
-        for (page, ids) in pages.enumerated() {
-            if let offset = ids.firstIndex(of: assetID) {
-                return (page: page + 1, offset: offset)
+    static func find<Element>(
+        assetID: String,
+        fetchPage: (Int) async throws -> SlideshowAssetPage<Element>,
+        id: (Element) -> String
+    ) async throws -> LocatedSlideshowAssetPage<Element>? {
+        var pageNumber = 1
+        while true {
+            try Task.checkCancellation()
+            let page = try await fetchPage(pageNumber)
+            if let offset = page.items.firstIndex(where: { id($0) == assetID }) {
+                return LocatedSlideshowAssetPage(page: pageNumber, offset: offset, items: page.items, hasMore: page.hasMore)
             }
+            guard page.hasMore else { return nil }
+            pageNumber += 1
         }
-        return nil
     }
 }
