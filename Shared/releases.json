@@ -1,5 +1,27 @@
 [
   {
+    "version": "1.3.7",
+    "changes": [
+      {
+        "type": "new_feature",
+        "title": "A smoother slideshow experience",
+        "items": [
+          "Start a slideshow from the focused photo, including filtered All Photos results.",
+          "Slideshow startup now finds the selected photo more reliably when browsing search results."
+        ]
+      },
+      {
+        "type": "bug_fix",
+        "title": "Timeline and fullscreen improvements",
+        "items": [
+          "Timeline month labels now display correctly across time zones.",
+          "Improved fullscreen photo transitions to eliminate flicker."
+        ]
+      }
+    ],
+    "releaseDate": "2026-09-25T00:00:00"
+  },
+  {
     "version": "1.3.6",
     "changes": [
       {
