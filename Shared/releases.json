@@ -4,16 +4,16 @@
     "changes": [
       {
         "type": "new_feature",
-        "title": "A smoother slideshow experience",
+        "title": "Filtered All Photos slideshows",
         "items": [
-          "Start a slideshow from the focused photo, including filtered All Photos results.",
-          "Slideshow startup now finds the selected photo more reliably when browsing search results."
+          "Start a slideshow from filtered All Photos results."
         ]
       },
       {
         "type": "bug_fix",
-        "title": "Timeline and fullscreen improvements",
+        "title": "Slideshow, Timeline, and fullscreen fixes",
         "items": [
+          "Slideshow startup now begins from the focused photo and finds it more reliably in search results.",
           "Timeline month labels now display correctly across time zones.",
           "Improved fullscreen photo transitions to eliminate flicker."
         ]
