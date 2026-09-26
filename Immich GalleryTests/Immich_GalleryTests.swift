@@ -229,6 +229,19 @@ struct Immich_GalleryTests {
         #expect(years == [2026])
     }
 
+    @Test func timelineMonthLabelUsesServerBucketWithoutTimezoneConversion() {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+
+        #expect(TimelineView.monthLabel(for: "2024-01-01T00:00:00.000Z") == "\(formatter.monthSymbols[0]) 2024")
+        #expect(TimelineView.monthLabel(for: "2024-12-01T00:00:00.000Z") == "\(formatter.monthSymbols[11]) 2024")
+    }
+
+    @Test func timelineMonthLabelPreservesInvalidServerBucketPrefix() {
+        #expect(TimelineView.monthLabel(for: "2024-13-01T00:00:00.000Z") == "2024-13")
+        #expect(TimelineView.monthLabel(for: "invalid") == "invalid")
+    }
+
     @Test func timelineBucketsApplyYearAndDateOrderLocally() {
         let buckets = [
             TimelineBucket(timeBucket: "2025-12-01T00:00:00.000Z", count: 1),
@@ -417,7 +430,9 @@ private final class PaginatedAlbumAssetService: AssetService {
         isAllPhotos: Bool = false,
         isFavorite: Bool = false,
         folderPath: String? = nil,
-        assetType: AssetType? = nil
+        assetType: AssetType? = nil,
+        filters: PhotoFilterSelection? = nil,
+        sortOrder explicitSortOrder: String? = nil
     ) async throws -> SearchResult {
         requestedPages.append(page)
         requestedAssetTypes.append(assetType)

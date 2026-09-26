@@ -16,6 +16,7 @@ struct SlideshowView: View {
     let startingIndex: Int
     let isFavorite: Bool
     let isLocked: Bool
+    let launchContext: SlideshowLaunchContext?
     @Environment(\.dismiss) private var dismiss
 
     // Services created internally
@@ -25,8 +26,9 @@ struct SlideshowView: View {
     // Asset provider created using factory - will be recreated with config if needed
     @State private var assetProvider: AssetProvider?
     @State private var slideshowConfig: SlideshowConfig?
+    @State private var slideshowConfigurationError: String?
 
-    init(albumId: String? = nil, personId: String? = nil, tagId: String? = nil, city: String? = nil, startingIndex: Int = 0, isFavorite: Bool = false, isLocked: Bool = false) {
+    init(albumId: String? = nil, personId: String? = nil, tagId: String? = nil, city: String? = nil, startingIndex: Int = 0, isFavorite: Bool = false, isLocked: Bool = false, launchContext: SlideshowLaunchContext? = nil) {
         self.albumId = albumId
         self.personId = personId
         self.tagId = tagId
@@ -34,6 +36,7 @@ struct SlideshowView: View {
         self.startingIndex = startingIndex
         self.isFavorite = isFavorite
         self.isLocked = isLocked
+        self.launchContext = launchContext
 
         // Create services internally
         let userManager = UserManager()
@@ -55,6 +58,7 @@ struct SlideshowView: View {
             config: nil
         )
         _assetProvider = State(initialValue: initialProvider)
+        _enableShuffle = State(initialValue: launchContext == nil && UserDefaults.standard.enableSlideshowShuffle)
     }
     
 
@@ -205,13 +209,19 @@ struct SlideshowView: View {
                 .animation(.easeInOut(duration: 0.6), value: dominantColor)
 
             if currentImageData == nil && !isLoading {
-                VStack {
-                    Image(systemName: "photo.on.rectangle.angled")
+                VStack(spacing: 16) {
+                    Image(systemName: slideshowConfigurationError == nil ? "photo.on.rectangle.angled" : "exclamationmark.triangle")
                         .font(.system(size: 60))
-                        .foregroundColor(.gray)
-                    Text("No images to display")
+                        .foregroundColor(slideshowConfigurationError == nil ? .gray : .orange)
+                    Text(slideshowConfigurationError == nil ? "No images to display" : "Slideshow configuration error")
                         .font(.title)
                         .foregroundColor(.white)
+                    if let slideshowConfigurationError {
+                        Text(slideshowConfigurationError)
+                            .font(.body)
+                            .foregroundColor(.white.opacity(0.8))
+                            .multilineTextAlignment(.center)
+                    }
                 }
             } else {
                 // Main image display
@@ -427,7 +437,7 @@ struct SlideshowView: View {
     private func initializeSlideshow() {
         loadAssetsTask = Task {
             // Always fetch config first
-            await fetchConfigAndUpdateProvider()
+            guard await fetchConfigAndUpdateProvider() else { return }
             await checkIfAlbumIsShared()
             await loadInitialAssets()
             await loadInitialImages()
@@ -443,11 +453,28 @@ struct SlideshowView: View {
         let tagId: String?
         let city: String?
         let isFavorite: Bool
+        let isAllPhotosContext: Bool
+
+        init(
+            albumId: String?,
+            personId: String?,
+            tagId: String?,
+            city: String?,
+            isFavorite: Bool,
+            isAllPhotosContext: Bool = false
+        ) {
+            self.albumId = albumId
+            self.personId = personId
+            self.tagId = tagId
+            self.city = city
+            self.isFavorite = isFavorite
+            self.isAllPhotosContext = isAllPhotosContext
+        }
 
         /// True when the slideshow was launched against a specific target rather
         /// than the generic all-photos / auto-slideshow entry point.
         var isExplicit: Bool {
-            albumId != nil || personId != nil || tagId != nil || city != nil || isFavorite
+            albumId != nil || personId != nil || tagId != nil || city != nil || isFavorite || isAllPhotosContext
         }
     }
 
@@ -483,7 +510,8 @@ struct SlideshowView: View {
                 isAllPhotos: false,
                 isFavorite: selection.isFavorite,
                 assetService: assetService,
-                albumService: albumService
+                albumService: albumService,
+                slideshowContext: launchContext
             )
         case .config(let config):
             return AssetProviderFactory.createProvider(
@@ -499,28 +527,42 @@ struct SlideshowView: View {
         }
     }
 
-    private func fetchConfigAndUpdateProvider() async {
+    private func fetchConfigAndUpdateProvider() async -> Bool {
         let selection = SlideshowSelection(
             albumId: albumId,
             personId: personId,
             tagId: tagId,
             city: city,
-            isFavorite: isFavorite
+            isFavorite: isFavorite,
+            isAllPhotosContext: launchContext != nil
         )
 
         guard let albumService = albumService else {
             // No album service available: fall back to the explicit selection.
             await MainActor.run {
-                self.assetProvider = makeProvider(for: .selection(selection))
+                if !selection.isExplicit {
+                    slideshowConfigurationError = "Could not load the slideshow configuration."
+                    isLoading = false
+                } else {
+                    self.assetProvider = makeProvider(for: .selection(selection))
+                }
             }
-            return
+            return selection.isExplicit
         }
 
         let configService = SlideshowConfigService(albumService: albumService)
-        let config = await configService.fetchSlideshowConfig()
+        let configResult = await configService.fetchSlideshowConfig()
+        let config = configResult.config
 
+        let shouldBlockAutoSlideshow = !selection.isExplicit && configResult.blocksAutoSlideshow
         await MainActor.run {
             self.slideshowConfig = config
+            if shouldBlockAutoSlideshow {
+                slideshowConfigurationError = configResult.userFacingMessage
+                isLoading = false
+                assetProvider = nil
+                return
+            }
             let source = SlideshowView.resolveSlideshowSource(selection: selection, config: config)
             switch source {
             case .config(let cfg):
@@ -530,6 +572,7 @@ struct SlideshowView: View {
             }
             self.assetProvider = makeProvider(for: source)
         }
+        return !shouldBlockAutoSlideshow
     }
 
     private func checkIfAlbumIsShared() async {
@@ -575,32 +618,71 @@ struct SlideshowView: View {
         guard !Task.isCancelled, let assetProvider = assetProvider else { return }
 
         do {
-            let searchResult: SearchResult
-            if enableShuffle && !isSharedAlbum {
-                // Use random assets for non-shared albums when shuffle is enabled
-                searchResult = try await assetProvider.fetchRandomAssets(limit: 100)
+            let imageAssets: [ImmichAsset]
+            let hasMore: Bool
+            var locatedOffset: Int?
+            if fromStartingIndex, let launchContext {
+                guard let located = try await SlideshowStartPosition.find(
+                    assetID: launchContext.startingAsset.id,
+                    fetchPage: { page in
+                        let result = try await assetProvider.fetchAssets(page: page, limit: 100)
+                        return SlideshowAssetPage(
+                            items: result.assets.filter { $0.type == .image },
+                            hasMore: result.nextPage != nil
+                        )
+                    },
+                    id: \.id
+                ) else {
+                    throw SlideshowStartAssetNotFound()
+                }
+                imageAssets = located.items
+                locatedOffset = located.offset
+                hasMore = located.hasMore
+                await MainActor.run { self.currentPage = located.page }
             } else {
-                // Use regular asset fetching for shared albums or when shuffle is disabled
-                searchResult = try await assetProvider.fetchAssets(
-                    page: currentPage,
-                    limit: 100
-                )
+                let result: SearchResult
+                if enableShuffle && !isSharedAlbum {
+                    // Use random assets for non-shared albums when shuffle is enabled
+                    result = try await assetProvider.fetchRandomAssets(limit: 100)
+                } else {
+                    result = try await assetProvider.fetchAssets(page: currentPage, limit: 100)
+                }
+                imageAssets = result.assets.filter { $0.type == .image }
+                hasMore = result.nextPage != nil || (enableShuffle && !isSharedAlbum)
             }
 
             await MainActor.run {
-                let imageAssets = searchResult.assets.filter { $0.type == .image }
-                // Handle starting index - drop assets before the starting point\n
-                let actualStartingIndex = fromStartingIndex ? min(startingIndex, max(0, imageAssets.count - 1)) : 0
+                let actualStartingIndex = fromStartingIndex ? (locatedOffset ?? min(startingIndex, max(0, imageAssets.count - 1))) : 0
                 self.assetQueue = Array(imageAssets.dropFirst(actualStartingIndex))
-                self.hasMoreAssets = searchResult.nextPage != nil || (enableShuffle && !isSharedAlbum)
-                print("SlideshowView: Loaded \(imageAssets.count) assets, starting at index \(startingIndex)")
+                self.hasMoreAssets = hasMore
+                print("SlideshowView: Loaded \(imageAssets.count) assets, starting at index \(actualStartingIndex)")
             }
         } catch {
             await MainActor.run {
                 print("SlideshowView: Failed to load initial assets: \(error)")
+                if error is SlideshowStartAssetNotFound {
+                    self.slideshowConfigurationError = "The focused photo is no longer in the current filtered results."
+                    self.assetProvider = nil
+                } else if let message = configurationRequestErrorMessage(for: error) {
+                    self.slideshowConfigurationError = message
+                    self.assetProvider = nil
+                }
                 self.isLoading = false
             }
         }
+    }
+
+    private struct SlideshowStartAssetNotFound: Error {}
+
+    private func configurationRequestErrorMessage(for error: Error) -> String? {
+        guard slideshowConfig != nil else { return nil }
+        guard case let ImmichError.httpError(statusCode, message) = error else { return nil }
+
+        let serverMessage = message?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let serverMessage, !serverMessage.isEmpty {
+            return "Immich returned HTTP \(statusCode): \(serverMessage)"
+        }
+        return "Immich returned HTTP \(statusCode)."
     }
 
     private func loadInitialImages() async {

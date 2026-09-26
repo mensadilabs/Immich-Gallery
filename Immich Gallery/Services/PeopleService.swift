@@ -32,6 +32,13 @@ class PeopleService: ObservableObject {
         return response
     }
 
+    func getPersonInfo(personId: String) async throws -> Person {
+        try await networkService.makeRequest(
+            endpoint: "/api/people/\(personId)",
+            responseType: Person.self
+        )
+    }
+
     func loadPersonThumbnail(personId: String) async throws -> UIImage? {
         let endpoint = "/api/people/\(personId)/thumbnail"
         let data = try await networkService.makeDataRequest(endpoint: endpoint)

@@ -25,18 +25,19 @@ class AssetService: ObservableObject {
         self.networkService = networkService
     }
 
-    func fetchAssets(page: Int = 1, limit: Int? = nil, albumId: String? = nil, personId: String? = nil, tagId: String? = nil, city: String? = nil, isAllPhotos: Bool = false, isFavorite: Bool = false, folderPath: String? = nil, assetType: AssetType? = nil) async throws -> SearchResult {
-        // Use separate sort order for All Photos tab vs everything else
-        let sortOrder = isAllPhotos 
+    func fetchAssets(page: Int = 1, limit: Int? = nil, albumId: String? = nil, personId: String? = nil, tagId: String? = nil, city: String? = nil, isAllPhotos: Bool = false, isFavorite: Bool = false, folderPath: String? = nil, assetType: AssetType? = nil, filters: PhotoFilterSelection? = nil, sortOrder explicitSortOrder: String? = nil) async throws -> SearchResult {
+        // A slideshow passes an explicit All Photos query so its source cannot
+        // drift if settings change after Play/Pause is pressed.
+        let sortOrder = explicitSortOrder ?? (isAllPhotos
             ? UserDefaults.standard.allPhotosSortOrder
-            : UserDefaults.standard.assetSortOrder
-        let selectedCity = isAllPhotos ? UserDefaults.standard.allPhotosFilterCity : city
-        let selectedState = isAllPhotos ? UserDefaults.standard.allPhotosFilterState : nil
-        let selectedCountry = isAllPhotos ? UserDefaults.standard.allPhotosFilterCountry : nil
-        let selectedCameraMake = isAllPhotos ? UserDefaults.standard.allPhotosFilterCameraMake : nil
-        let selectedCameraModel = isAllPhotos ? UserDefaults.standard.allPhotosFilterCameraModel : nil
-        let selectedLensModel = isAllPhotos ? UserDefaults.standard.allPhotosFilterLensModel : nil
-        let selectedYear = isAllPhotos ? UserDefaults.standard.allPhotosFilterYear : nil
+            : UserDefaults.standard.assetSortOrder)
+        let selectedCity = filters.map { $0.city } ?? (isAllPhotos ? UserDefaults.standard.allPhotosFilterCity : city)
+        let selectedState = filters.map { $0.state } ?? (isAllPhotos ? UserDefaults.standard.allPhotosFilterState : nil)
+        let selectedCountry = filters.map { $0.country } ?? (isAllPhotos ? UserDefaults.standard.allPhotosFilterCountry : nil)
+        let selectedCameraMake = filters.map { $0.cameraMake } ?? (isAllPhotos ? UserDefaults.standard.allPhotosFilterCameraMake : nil)
+        let selectedCameraModel = filters.map { $0.cameraModel } ?? (isAllPhotos ? UserDefaults.standard.allPhotosFilterCameraModel : nil)
+        let selectedLensModel = filters.map { $0.lensModel } ?? (isAllPhotos ? UserDefaults.standard.allPhotosFilterLensModel : nil)
+        let selectedYear = filters.map { $0.year } ?? (isAllPhotos ? UserDefaults.standard.allPhotosFilterYear : nil)
         var searchRequest: [String: Any] = [
             "page": page,
             "withPeople": true,

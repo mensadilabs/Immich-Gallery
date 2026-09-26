@@ -8,9 +8,7 @@
 import SwiftUI
 
 struct FullScreenImageView: View {
-    let asset: ImmichAsset
     let assets: [ImmichAsset]
-    let currentIndex: Int
     @ObservedObject var assetService: AssetService
     @ObservedObject var authenticationService: AuthenticationService
     @Binding var currentAssetIndex: Int // Add binding to track current index
@@ -23,7 +21,6 @@ struct FullScreenImageView: View {
     @State private var currentAsset: ImmichAsset
     @State private var showingSwipeHint = false
     @FocusState private var isFocused: Bool
-    @State private var refreshToggle = false
     @State private var showingVideoPlayer = false
     @State private var showingExifInfo = false
     @State private var hydratedAssets: [String: ImmichAsset] = [:]
@@ -32,11 +29,8 @@ struct FullScreenImageView: View {
     @State private var loadedStackId: String?
     @State private var showingStackPicker = false
     
-    init(asset: ImmichAsset, assets: [ImmichAsset], currentIndex: Int, assetService: AssetService, authenticationService: AuthenticationService, currentAssetIndex: Binding<Int>) {
-        print("FullScreenImageView: Initializing with currentIndex: \(currentIndex)")
-        self.asset = asset
+    init(asset: ImmichAsset, assets: [ImmichAsset], assetService: AssetService, authenticationService: AuthenticationService, currentAssetIndex: Binding<Int>) {
         self.assets = assets
-        self.currentIndex = currentIndex
         self.assetService = assetService
         self.authenticationService = authenticationService
         self._currentAssetIndex = currentAssetIndex
@@ -205,7 +199,6 @@ struct FullScreenImageView: View {
             }
 
         }
-        .id(refreshToggle)
         .onExitCommand {
             print("FullScreenImageView: Exit command triggered")
             if showingStackPicker {
@@ -227,7 +220,6 @@ struct FullScreenImageView: View {
             showingStackPicker: $showingStackPicker,
             canShowStackPicker: stackAssets.count > 1,
             onNavigate: navigateToImage,
-            onDismiss: { dismiss() },
             onLoadImage: loadDisplayImage,
             showingVideoPlayer: showingVideoPlayer,
             onPlayButtonTapped: {
@@ -310,12 +302,13 @@ struct FullScreenImageView: View {
     }
 
     private func display(asset: ImmichAsset) {
+        imageLoadTask?.cancel()
         currentAsset = asset
-        refreshToggle.toggle()
         showingExifInfo = false
         showingVideoPlayer = false
-        image = nil
-        isLoading = asset.type == .image
+        // Retain the current image while the next asset loads. Only an initial
+        // presentation should expose the loading indicator.
+        isLoading = asset.type == .image && image == nil
         isLoadingPreviewImage = false
         if asset.type == .image {
             loadDisplayImage()
@@ -437,7 +430,6 @@ struct ContentAwareModifier: ViewModifier {
     @Binding var showingStackPicker: Bool
     let canShowStackPicker: Bool
     let onNavigate: (Int) -> Void
-    let onDismiss: () -> Void
     let onLoadImage: () -> Void
     let showingVideoPlayer: Bool
     let onPlayButtonTapped: () -> Void
@@ -512,18 +504,14 @@ struct ContentAwareModifier: ViewModifier {
                     case .left:
                         print("FullScreenImageView: Left navigation triggered (current: \(currentAssetIndex), total: \(assets.count))")
                         if let nextIndex = navigatedIndex(for: direction), assets.indices.contains(nextIndex) {
-                            withAnimation(.easeInOut(duration: 0.3)) {
-                                onNavigate(nextIndex)
-                            }
+                            onNavigate(nextIndex)
                         } else {
                             print("FullScreenImageView: No navigable asset for left command")
                         }
                     case .right:
                         print("FullScreenImageView: Right navigation triggered (current: \(currentAssetIndex), total: \(assets.count))")
                         if let nextIndex = navigatedIndex(for: direction), assets.indices.contains(nextIndex) {
-                            withAnimation(.easeInOut(duration: 0.3)) {
-                                onNavigate(nextIndex)
-                            }
+                            onNavigate(nextIndex)
                         } else {
                             print("FullScreenImageView: No navigable asset for right command")
                         }
@@ -779,7 +767,6 @@ struct VideoThumbnailView: View {
     FullScreenImageView(
         asset: sampleAsset,
         assets: sampleAssets,
-        currentIndex: 0,
         assetService: assetService,
         authenticationService: authenticationService,
         currentAssetIndex: .constant(0)
