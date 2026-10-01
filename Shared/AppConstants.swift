@@ -71,6 +71,7 @@ struct UserDefaultsKeys {
     static let lastSeenVersion = "lastSeenVersion"
     static let assetSortOrder = "assetSortOrder"
     static let showDiagnosticsOverlay = "showDiagnosticsOverlay"
+    static let preferTranscodedVideoStreaming = "preferTranscodedVideoStreaming"
 
     // Art Mode settings
     static let artModeLevel = "artModeLevel"
