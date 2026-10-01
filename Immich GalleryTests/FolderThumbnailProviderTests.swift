@@ -118,7 +118,9 @@ private final class FolderThumbnailAssetService: AssetService {
         isAllPhotos: Bool = false,
         isFavorite: Bool = false,
         folderPath: String? = nil,
-        assetType: AssetType? = nil
+        assetType: AssetType? = nil,
+        filters: PhotoFilterSelection? = nil,
+        sortOrder explicitSortOrder: String? = nil
     ) async throws -> SearchResult {
         requests.append(Request(page: page, folderPath: folderPath))
         return SearchResult(assets: [defaultAsset], total: 1, nextPage: nil)

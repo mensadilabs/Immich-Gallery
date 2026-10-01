@@ -23,6 +23,12 @@ class AuthenticationService: ObservableObject {
     var accessToken: String? {
         return networkService.accessToken
     }
+
+    /// The authenticated API client shared by app features that need services
+    /// beyond authentication itself.
+    var authenticatedNetworkService: NetworkService {
+        networkService
+    }
     
     /// Returns the appropriate authentication headers based on current user's auth type
     func getAuthHeaders() -> [String: String] {

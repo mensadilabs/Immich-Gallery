@@ -19,7 +19,8 @@ struct AssetProviderFactory {
         folderPath: String? = nil,
         assetService: AssetService,
         albumService: AlbumService? = nil,
-        config: SlideshowConfig? = nil
+        config: SlideshowConfig? = nil,
+        slideshowContext: SlideshowLaunchContext? = nil
     ) -> AssetProvider {
         if isLocked {
             return LockedAssetProvider(assetService: assetService)
@@ -36,7 +37,8 @@ struct AssetProviderFactory {
                 isAllPhotos: isAllPhotos,
                 isFavorite: isFavorite,
                 folderPath: folderPath,
-                config: config
+                config: config,
+                slideshowContext: slideshowContext
             )
         }
     }
@@ -219,8 +221,9 @@ class GeneralAssetProvider: AssetProvider {
     private let isFavorite: Bool
     private let config: SlideshowConfig?
     private let folderPath: String?
+    private let slideshowContext: SlideshowLaunchContext?
     
-    init(assetService: AssetService, personId: String? = nil, tagId: String? = nil, city: String? = nil, isAllPhotos: Bool = false, isFavorite: Bool = false, folderPath: String? = nil, config: SlideshowConfig? = nil) {
+    init(assetService: AssetService, personId: String? = nil, tagId: String? = nil, city: String? = nil, isAllPhotos: Bool = false, isFavorite: Bool = false, folderPath: String? = nil, config: SlideshowConfig? = nil, slideshowContext: SlideshowLaunchContext? = nil) {
         self.assetService = assetService
         self.personId = personId
         self.tagId = tagId
@@ -229,6 +232,7 @@ class GeneralAssetProvider: AssetProvider {
         self.isFavorite = isFavorite
         self.config = config
         self.folderPath = folderPath
+        self.slideshowContext = slideshowContext
     }
     
     func fetchAssets(page: Int, limit: Int, assetType: AssetType?) async throws -> SearchResult {
@@ -242,6 +246,16 @@ class GeneralAssetProvider: AssetProvider {
                 assetType: assetType
             )
             return result
+        } else if let slideshowContext {
+            return try await assetService.fetchAssets(
+                page: page,
+                limit: limit,
+                isAllPhotos: true,
+                isFavorite: slideshowContext.favoritesOnly,
+                assetType: slideshowContext.assetType,
+                filters: slideshowContext.filters,
+                sortOrder: slideshowContext.sortOrder
+            )
         } else {
             return try await assetService.fetchAssets(
                 page: page,

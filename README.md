@@ -1,9 +1,7 @@
 ![Platform](https://img.shields.io/badge/platform-TvOS-blue) ![Language](https://img.shields.io/github/languages/top/mensadilabs/Immich-Gallery) [![Unit Tests](https://github.com/mensadilabs/Immich-Gallery/actions/workflows/unit-tests.yml/badge.svg?branch=dev)](https://github.com/mensadilabs/Immich-Gallery/actions/workflows/unit-tests.yml)
 
 
-<a href="https://www.buymeacoffee.com/zzpr69dnqtr" target="_blank">☕️ Buy me a coffee, Help cover app store fee ☕️ </a>  or <a href="https://mensadilabs.github.io/Immich-Gallery/#finances" target="_blank"> See supporters list hee </a>
-
-Ok, ok, I'm no wordsmith, don't judge my rhymes!
+> **This project needs your help.** Immich Gallery is built and maintained in my spare time. Your support helps cover ongoing development and App Store costs. [Support the project](https://www.buymeacoffee.com/zzpr69dnqtr) or [see project finances](https://mensadilabs.github.io/Immich-Gallery/#finances).
 
 <a href="https://apps.apple.com/ca/app/immich-gallery/id6748482378?itscg=30200&itsct=apps_box_badge&mttnsubad=6748482378" style="display: inline-block;">     <img src="https://toolbox.marketingtools.apple.com/api/v2/badges/download-on-the-app-store/black/en-us?releaseDate=1754092800" alt="Download on the App Store" style="width: 123; height: 41px; vertical-align: middle; object-fit: contain;" />     </a> 
 

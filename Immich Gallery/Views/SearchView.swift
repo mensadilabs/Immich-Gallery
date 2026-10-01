@@ -79,7 +79,6 @@ struct SearchView: View {
                 FullScreenImageView(
                     asset: selectedAsset,
                     assets: assets,
-                    currentIndex: assets.firstIndex(of: selectedAsset) ?? 0,
                     assetService: assetService,
                     authenticationService: authService,
                     currentAssetIndex: $currentAssetIndex

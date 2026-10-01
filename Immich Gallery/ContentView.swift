@@ -344,7 +344,6 @@ struct ContentView: View {
             FullScreenImageView(
                 asset: asset,
                 assets: [asset],
-                currentIndex: 0,
                 assetService: assetService,
                 authenticationService: authService,
                 currentAssetIndex: $deepLinkedAssetIndex

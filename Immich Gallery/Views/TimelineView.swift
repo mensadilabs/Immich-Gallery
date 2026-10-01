@@ -80,6 +80,8 @@ struct TimelineView: View {
 
     @State private var selectedAsset: ImmichAsset?
     @State private var showingFullScreen = false
+    @State private var showingSlideshow = false
+    @State private var slideshowLaunchContext: SlideshowLaunchContext?
     @State private var currentAssetIndex: Int = 0
     @FocusState private var focusedAssetId: String?
     @FocusState private var focusedToolbarButton: ToolbarButton?
@@ -232,7 +234,6 @@ struct TimelineView: View {
                 FullScreenImageView(
                     asset: selectedAsset,
                     assets: assets,
-                    currentIndex: assets.firstIndex(of: selectedAsset) ?? 0,
                     assetService: assetService,
                     authenticationService: authService,
                     currentAssetIndex: $currentAssetIndex
@@ -240,6 +241,32 @@ struct TimelineView: View {
                 // A fullScreenCover doesn't inherit the presenter's overlay, so
                 // reattach the same shared diagnostics monitor here.
                 .diagnosticsOverlay()
+            }
+        }
+        .fullScreenCover(isPresented: $showingSlideshow) {
+            if let slideshowLaunchContext {
+                SlideshowView(launchContext: slideshowLaunchContext)
+            }
+        }
+        .onPlayPauseCommand {
+            guard let context = SlideshowLaunchContext.focused(
+                focusedAssetID: focusedAssetId,
+                in: loadedAssetsInOrder,
+                filters: filters,
+                favoritesOnly: favoritesOnly,
+                assetType: mediaFilter.assetType,
+                sortOrder: allPhotosSortOrder
+            ) else { return }
+            slideshowLaunchContext = context
+            NotificationCenter.default.post(
+                name: NSNotification.Name(NotificationNames.pauseInactivityMonitoring),
+                object: nil
+            )
+            showingSlideshow = true
+        }
+        .onChange(of: focusedAssetId) { _, focusedAssetID in
+            if let index = loadedAssetsInOrder.index(forFocusedAssetID: focusedAssetID) {
+                currentAssetIndex = index
             }
         }
         .fullScreenCover(isPresented: $showingCalendar, onDismiss: restoreCalendarButtonFocus) {
@@ -815,26 +842,24 @@ struct TimelineView: View {
         return result
     }
 
-    private static let bucketParser: DateFormatter = {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.timeZone = TimeZone(secondsFromGMT: 0)
-        f.dateFormat = "yyyy-MM"
-        return f
+    private static let monthNames: [String] = {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        return formatter.monthSymbols
     }()
 
-    private static let monthDisplay: DateFormatter = {
-        let f = DateFormatter()
-        f.dateFormat = "MMMM yyyy"
-        return f
-    }()
-
-    /// "2024-03-01T00:00:00.000Z" -> "March 2024".
+    /// Treats the server's bucket as a month identifier, not an instant that
+    /// should be shifted into the device's time zone.
     static func monthLabel(for timeBucket: String) -> String {
         let prefix = String(timeBucket.prefix(7)) // "yyyy-MM"
-        if let date = bucketParser.date(from: prefix) {
-            return monthDisplay.string(from: date)
+        let components = prefix.split(separator: "-", omittingEmptySubsequences: false)
+        guard components.count == 2,
+              components[0].count == 4,
+              Int(components[0]) != nil,
+              let month = Int(components[1]),
+              (1...12).contains(month) else {
+            return prefix
         }
-        return prefix
+        return "\(monthNames[month - 1]) \(components[0])"
     }
 }
