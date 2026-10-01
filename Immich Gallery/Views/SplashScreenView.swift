@@ -112,6 +112,10 @@ struct WhatsNewView: View {
             ZStack {
                 Color.black.ignoresSafeArea()
 
+                GitHubMilestoneStarfield()
+                    .ignoresSafeArea()
+                    .accessibilityHidden(true)
+
                 HStack(alignment: .top, spacing: 0) {
                     brandPanel
                         .frame(width: geo.size.width * 0.34)
@@ -127,9 +131,124 @@ struct WhatsNewView: View {
     }
 }
 
+// MARK: - GitHub Milestone Celebration
+
+private struct GitHubMilestoneStarfield: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var isAnimating = false
+
+    private let stars = MilestoneStar.all
+
+    var body: some View {
+        GeometryReader { geometry in
+            ZStack {
+                ForEach(stars) { star in
+                    Image(systemName: star.usesSparkles ? "sparkles" : "star.fill")
+                        .font(.system(size: star.size, weight: .semibold))
+                        .foregroundColor(.yellow)
+                        .opacity(isAnimating && !reduceMotion ? star.opacity : 0.18)
+                        .scaleEffect(isAnimating && !reduceMotion ? star.endScale : star.startScale)
+                        .rotationEffect(.degrees(isAnimating && !reduceMotion ? star.rotation : 0))
+                        .position(
+                            x: geometry.size.width * star.x,
+                            y: geometry.size.height * star.y
+                        )
+                        .offset(y: isAnimating && !reduceMotion ? -star.travel : star.travel * 0.25)
+                        .animation(
+                            reduceMotion
+                                ? nil
+                                : .easeInOut(duration: star.duration)
+                                    .repeatForever(autoreverses: true)
+                                    .delay(star.delay),
+                            value: isAnimating
+                        )
+                }
+            }
+        }
+        .onAppear { isAnimating = true }
+    }
+}
+
+private struct MilestoneStar: Identifiable {
+    let id: Int
+    let x: CGFloat
+    let y: CGFloat
+    let size: CGFloat
+    let startScale: CGFloat
+    let endScale: CGFloat
+    let opacity: Double
+    let travel: CGFloat
+    let rotation: Double
+    let duration: Double
+    let delay: Double
+    let usesSparkles: Bool
+
+    static let all: [MilestoneStar] = (0..<28).map(makeStar)
+
+    private static func makeStar(index: Int) -> MilestoneStar {
+        let x = CGFloat(0.03) + CGFloat((index * 37 + 11) % 95) / CGFloat(100)
+        let y = CGFloat(0.05) + CGFloat((index * 53 + 7) % 90) / CGFloat(100)
+        let startScale = CGFloat(0.55) + CGFloat(index % 4) * CGFloat(0.08)
+        let endScale = CGFloat(0.95) + CGFloat(index % 3) * CGFloat(0.16)
+
+        return MilestoneStar(
+            id: index,
+            x: x,
+            y: y,
+            size: CGFloat(14 + (index * 11) % 24),
+            startScale: startScale,
+            endScale: endScale,
+            opacity: 0.18 + Double(index % 5) * 0.08,
+            travel: CGFloat(12 + (index * 7) % 34),
+            rotation: Double(index.isMultiple(of: 2) ? 22 : -22),
+            duration: 2.2 + Double(index % 6) * 0.35,
+            delay: Double(index % 8) * 0.12,
+            usesSparkles: index.isMultiple(of: 5)
+        )
+    }
+}
+
 // MARK: - Brand Panel
 
 private extension WhatsNewView {
+    var milestoneBadge: some View {
+        Group {
+            if #available(tvOS 26.0, *) {
+                milestoneBadgeContent
+                    .glassEffect(
+                        .regular.tint(Color.yellow.opacity(0.08)),
+                        in: Capsule()
+                    )
+            } else {
+                milestoneBadgeContent
+                    .background(
+                        Capsule().fill(Color.white.opacity(0.1))
+                    )
+            }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Celebrating 200 GitHub stars. Thank you for your support!")
+    }
+
+    var milestoneBadgeContent: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "star.fill")
+                .foregroundColor(.yellow)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("200 GitHub Stars")
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundColor(.white)
+
+                Text("Thank you for your support!")
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundColor(.white.opacity(0.72))
+            }
+        }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 12)
+    }
+
     var brandPanel: some View {
         let latest = versions.first
 
@@ -162,6 +281,8 @@ private extension WhatsNewView {
                             )
                     }
                 }
+
+                milestoneBadge
                 
             }.padding(.leading, 10)
 
