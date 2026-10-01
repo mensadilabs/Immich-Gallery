@@ -19,11 +19,34 @@ jobs:
       - name: Verify Xcode
         run: xcodebuild -version
 
+      - name: Install tvOS simulator runtime
+        run: |
+          if ! xcrun simctl list runtimes available | grep -q "tvOS"; then
+            xcodebuild -downloadPlatform tvOS
+          fi
+
+      - name: Create tvOS simulator
+        id: simulator
+        run: |
+          runtime_id="$(xcrun simctl list runtimes available -j | python3 -c '
+          import json, sys
+          runtimes = [runtime for runtime in json.load(sys.stdin)["runtimes"] if runtime["identifier"].startswith("com.apple.CoreSimulator.SimRuntime.tvOS-")]
+          if not runtimes:
+              raise SystemExit("No available tvOS simulator runtime was found")
+          print(runtimes[-1]["identifier"])
+          ')"
+          simulator_id="$(xcrun simctl create \
+            "Immich Gallery CI" \
+            "com.apple.CoreSimulator.SimDeviceType.Apple-TV-4K-3rd-generation-4K" \
+            "$runtime_id")"
+          echo "id=$simulator_id" >> "$GITHUB_OUTPUT"
+
       - name: Run unit tests
         run: |
           set -o pipefail
           xcodebuild test \
             -project "Immich Gallery.xcodeproj" \
             -scheme "Immich Gallery" \
-            -destination 'platform=tvOS Simulator,name=Apple TV 4K (3rd generation)' \
+            -destination 'platform=tvOS Simulator,id=${{ steps.simulator.outputs.id }}' \
+            -destination-timeout 120 \
             -only-testing:"Immich GalleryTests"
