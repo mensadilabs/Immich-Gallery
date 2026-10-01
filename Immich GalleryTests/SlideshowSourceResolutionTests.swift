@@ -139,6 +139,15 @@ struct SlideshowSourceResolutionTests {
         #expect(!SlideshowConfigService.hasValidImmichIdentifiers(config))
     }
 
+    @Test func slideshowConfigAcceptsAnyUUIDVersion() {
+        let config = SlideshowConfig(
+            albumIds: ["c7e09884-c687-4ca3-8820-a5be692b1f37"],
+            personIds: ["01980f3a-2b4c-7d5e-8f60-718293a4b5c6"]
+        )
+
+        #expect(SlideshowConfigService.hasValidImmichIdentifiers(config))
+    }
+
     @Test func slideshowConfigValidationReportsInvalidIdentifiers() {
         #expect(
             SlideshowConfigLoadResult.invalidIdentifier.userFacingMessage

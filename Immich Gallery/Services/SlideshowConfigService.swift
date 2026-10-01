@@ -137,10 +137,10 @@ class SlideshowConfigService {
         return SlideshowConfig(albumIds: albumIds, personIds: personIds)
     }
 
-    /// Immich validates asset search IDs as version-4 UUIDs. Mirror that
-    /// validation locally so a typo becomes a configuration error, not HTTP 400.
+    /// Accept any well-formed UUID (newer Immich servers issue v7 IDs) so a
+    /// typo becomes a configuration error, not HTTP 400.
     static func hasValidImmichIdentifiers(_ config: SlideshowConfig) -> Bool {
-        let pattern = #"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"#
+        let pattern = #"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"#
         return (config.albumIds + config.personIds).allSatisfy {
             $0.range(of: pattern, options: .regularExpression) != nil
         }
