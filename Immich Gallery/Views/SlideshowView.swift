@@ -73,6 +73,7 @@ struct SlideshowView: View {
     @State private var slideDirection: SlideDirection = .right
     @State private var dominantColor: Color = getBackgroundColor(UserDefaults.standard.slideshowBackgroundColor)
     @State private var isLoadingAssets = false
+    @State private var isLocatingStartingPosition = false
     @State private var hasMoreAssets = true
     @State private var currentPage = 1
     @State private var loadAssetsTask: Task<Void, Never>?
@@ -436,12 +437,34 @@ struct SlideshowView: View {
 
     private func initializeSlideshow() {
         loadAssetsTask = Task {
-            // Always fetch config first
             guard await fetchConfigAndUpdateProvider() else { return }
             await checkIfAlbumIsShared()
-            await loadInitialAssets()
-            await loadInitialImages()
-            await showFirstImage()
+
+            if let launchContext {
+                // Show the exact focused asset first. Finding its page is only
+                // needed to continue with the following assets, so do that after
+                // the first frame is visible.
+                await MainActor.run { self.isLocatingStartingPosition = true }
+                let focusedImageLoaded = await loadImageIntoQueue(asset: launchContext.startingAsset)
+
+                if focusedImageLoaded {
+                    await showFirstImage()
+                    await loadInitialAssets(startingAssetAlreadyDisplayed: true)
+                    await MainActor.run { self.isLocatingStartingPosition = false }
+                    await maintainImageQueue()
+                } else {
+                    // If the focused original cannot be loaded, fall back to the
+                    // normal path so another nearby image can start the slideshow.
+                    await loadInitialAssets()
+                    await loadInitialImages()
+                    await MainActor.run { self.isLocatingStartingPosition = false }
+                    await showFirstImage()
+                }
+            } else {
+                await loadInitialAssets()
+                await loadInitialImages()
+                await showFirstImage()
+            }
         }
     }
     
@@ -537,6 +560,16 @@ struct SlideshowView: View {
             isAllPhotosContext: launchContext != nil
         )
 
+        // Explicit launches already define their slideshow source. Avoid fetching
+        // the auto-slideshow album configuration before loading those assets.
+        if selection.isExplicit {
+            await MainActor.run {
+                self.slideshowConfig = nil
+                self.assetProvider = makeProvider(for: .selection(selection))
+            }
+            return true
+        }
+
         guard let albumService = albumService else {
             // No album service available: fall back to the explicit selection.
             await MainActor.run {
@@ -614,7 +647,10 @@ struct SlideshowView: View {
     /// Fetches the first page of assets. `fromStartingIndex` only applies to the
     /// first play-through: a loop restart replays the source from its very first
     /// asset, no matter which photo the user launched the slideshow from.
-    private func loadInitialAssets(fromStartingIndex: Bool = true) async {
+    private func loadInitialAssets(
+        fromStartingIndex: Bool = true,
+        startingAssetAlreadyDisplayed: Bool = false
+    ) async {
         guard !Task.isCancelled, let assetProvider = assetProvider else { return }
 
         do {
@@ -653,7 +689,12 @@ struct SlideshowView: View {
 
             await MainActor.run {
                 let actualStartingIndex = fromStartingIndex ? (locatedOffset ?? min(startingIndex, max(0, imageAssets.count - 1))) : 0
-                self.assetQueue = Array(imageAssets.dropFirst(actualStartingIndex))
+                var assetsToQueue = Array(imageAssets.dropFirst(actualStartingIndex))
+                if startingAssetAlreadyDisplayed,
+                   assetsToQueue.first?.id == launchContext?.startingAsset.id {
+                    assetsToQueue.removeFirst()
+                }
+                self.assetQueue = assetsToQueue
                 self.hasMoreAssets = hasMore
                 print("SlideshowView: Loaded \(imageAssets.count) assets, starting at index \(actualStartingIndex)")
             }
@@ -686,29 +727,31 @@ struct SlideshowView: View {
     }
 
     private func loadInitialImages() async {
-        guard !assetQueue.isEmpty else {
-            await MainActor.run {
-                self.isLoading = false
-            }
-            return
+        // Try assets in order until one is ready to display. The remaining images
+        // are preloaded by maintainImageQueue after showFirstImage, so a slow
+        // second or third original can't delay the slideshow's first frame.
+        let initialAttemptCount = await MainActor.run {
+            min(3, self.assetQueue.count)
         }
 
-        // Load first 2-3 images
-        let imagesToLoad = min(3, assetQueue.count)
-        var failedAssets: [ImmichAsset] = []
-        for i in 0..<imagesToLoad {
-            guard i < assetQueue.count else { break }
-            let asset = assetQueue[i]
+        for _ in 0..<initialAttemptCount {
+            guard let asset = await MainActor.run(body: { self.assetQueue.first }) else {
+                break
+            }
+
             let loaded = await loadImageIntoQueue(asset: asset)
-            if !loaded {
-                failedAssets.append(asset)
+            await MainActor.run {
+                if self.assetQueue.first?.id == asset.id {
+                    self.assetQueue.removeFirst()
+                }
+                if !loaded {
+                    self.requeueFailedAssets([asset])
+                }
             }
-        }
 
-        // Remove the assets we attempted, then requeue the failures for one retry
-        await MainActor.run {
-            self.assetQueue.removeFirst(min(imagesToLoad, self.assetQueue.count))
-            self.requeueFailedAssets(failedAssets)
+            if loaded {
+                return
+            }
         }
     }
 
@@ -836,7 +879,7 @@ struct SlideshowView: View {
         guard shouldPreload else { return }
 
         let shouldLoadAssets = await MainActor.run {
-            return self.assetQueue.count <= 2 && self.hasMoreAssets && !self.isLoadingAssets
+            return self.assetQueue.count <= 2 && self.hasMoreAssets && !self.isLoadingAssets && !self.isLocatingStartingPosition
         }
 
         if shouldLoadAssets {
