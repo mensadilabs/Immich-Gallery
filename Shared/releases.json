@@ -1,5 +1,23 @@
 [
   {
+    "version": "1.3.8",
+    "changes": [
+      {
+        "type": "experimental",
+        "title": "Privacy screen",
+        "items": [
+          "Add an optional 4-digit PIN screen when you return to the app. This does not protect your data."
+        ]
+      },
+      {
+        "type": "improvement",
+        "title": "Faster slideshow startup",
+        "items": []
+      }
+    ],
+    "releaseDate": "2026-10-10T00:00:00"
+  },
+  {
     "version": "1.3.7",
     "changes": [
       {
