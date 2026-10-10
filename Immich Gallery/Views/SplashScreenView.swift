@@ -142,14 +142,10 @@ private extension WhatsNewView {
                 .padding(.top, 60)
 
             VStack(alignment: .leading, spacing: 20) {
-                Text("What's New")
-                    .font(.system(size: 52, weight: .bold))
-                    .foregroundColor(.white)
-
                 Text("Immich Gallery")
                     .font(.system(size: 26, weight: .medium))
                     .foregroundColor(.gray)
-                
+
                 if let latest {
                     HStack(spacing: 10) {
                         Text("Version \(latest.version)")
@@ -162,22 +158,27 @@ private extension WhatsNewView {
                             )
                     }
                 }
+            }
+            .padding(.leading, 10)
 
-            }.padding(.leading, 10)
+            VStack(alignment: .leading, spacing: 12) {
+                Image("GitHubRepositoryQRCode")
+                    .resizable()
+                    .interpolation(.none)
+                    .scaledToFit()
+                    .frame(width: 280, height: 280)
+                    .background(.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .accessibilityLabel("QR code for the Immich Gallery GitHub repository")
 
-            
-
-            Spacer()
-
-            VStack(alignment: .leading, spacing: 6) {
                 Text("Be a star - leave a star, or five.")
                     .font(.system(size: 22, weight: .medium))
                     .foregroundColor(.gray)
-
-                Text("Press the Back button to close")
-                    .font(.system(size: 18))
-                    .foregroundColor(.gray.opacity(0.7))
+                    .frame(width: 280, alignment: .leading)
+                    .multilineTextAlignment(.leading)
             }
+            .padding(.leading, 10)
+            .padding(.top, 60)
         }
         .padding(.leading, 80)
         .padding(.trailing, 50)
@@ -250,10 +251,16 @@ private extension WhatsNewView {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline, spacing: 14) {
                 Text(version.versionDisplayText)
-                .font(.system(size: isPrimary ? 30 : 24, weight: .bold))
-                .foregroundColor(isPrimary ? .white : .gray)
-                
+                    .font(.system(size: isPrimary ? 30 : 24, weight: .bold))
+                    .foregroundColor(isPrimary ? .white : .gray)
+
                 Spacer(minLength: 16)
+
+                if isPrimary {
+                    Text("Press the Back button to close")
+                        .font(.system(size: 18))
+                        .foregroundColor(.gray.opacity(0.7))
+                }
             }
             Rectangle()
                 .fill(Color.gray.opacity(0.3))
