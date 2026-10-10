@@ -114,7 +114,7 @@ struct WhatsNewView: View {
 
                 HStack(alignment: .top, spacing: 0) {
                     brandPanel
-                        .frame(width: geo.size.width * 0.34)
+                        .frame(width: geo.size.width * 0.37)
 
                     changesPanel
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -174,14 +174,14 @@ private extension WhatsNewView {
                 Text("Be a star - leave a star, or five.")
                     .font(.system(size: 22, weight: .medium))
                     .foregroundColor(.gray)
-                    .frame(width: 280, alignment: .leading)
+                    .frame(width: 360, alignment: .leading)
                     .multilineTextAlignment(.leading)
             }
             .padding(.leading, 10)
             .padding(.top, 60)
         }
-        .padding(.leading, 80)
-        .padding(.trailing, 50)
+        .padding(.leading, 70)
+        .padding(.trailing, 40)
         .padding(.vertical, 80)
     }
 }
