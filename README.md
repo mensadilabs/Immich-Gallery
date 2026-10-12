@@ -57,6 +57,18 @@ Immich Gallery is a native Apple TV app for browsing, searching, and enjoying yo
 - **Flexible Authentication**: Sign in with a password or Immich API key
 - **EXIF Data**: Inspect camera details and location metadata
 
+## Coming soon
+
+Preview features currently in development:
+
+<table>
+  <tr>
+    <td align="center"><strong>Photo Wall</strong><br><video src="coming-soon/photo-wall.mov" controls muted playsinline preload="metadata" width="320"></video></td>
+    <td align="center"><strong>Photo Shuffle</strong><br><video src="coming-soon/photo-shuffle-trimmed.mov" controls muted playsinline preload="metadata" width="320"></video></td>
+    <td align="center"><strong>Album Covers</strong><br><video src="coming-soon/album-cover.mov" controls muted playsinline preload="metadata" width="320"></video></td>
+  </tr>
+</table>
+
 ## Private by Design
 
 Your photos stay on your own Immich server. Immich Gallery connects directly to your existing Immich instance and does not upload, store, or process your photo library on third-party servers. The app includes zero telemetry.
