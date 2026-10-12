@@ -61,13 +61,14 @@ Immich Gallery is a native Apple TV app for browsing, searching, and enjoying yo
 
 Preview features currently in development:
 
-<table>
-  <tr>
-    <td align="center"><strong>Photo Wall</strong><br><video src="coming-soon/photo-wall.mp4" controls muted playsinline preload="metadata" width="320"></video></td>
-    <td align="center"><strong>Photo Shuffle</strong><br><video src="coming-soon/photo-shuffle-trimmed.mp4" controls muted playsinline preload="metadata" width="320"></video></td>
-    <td align="center"><strong>Album Covers</strong><br><video src="coming-soon/album-cover.mp4" controls muted playsinline preload="metadata" width="320"></video></td>
-  </tr>
-</table>
+
+https://github.com/user-attachments/assets/8e163b5d-0d62-45d4-930e-256b28dc6ba3
+
+https://github.com/user-attachments/assets/98458d38-06c9-448c-8d5c-62eeb8f549d9
+
+https://github.com/user-attachments/assets/10dc77c6-24d6-451a-b622-589aaa544229
+
+
 
 ## Private by Design
 
