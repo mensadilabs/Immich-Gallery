@@ -472,8 +472,13 @@ class AssetService: ObservableObject {
             return nil
         }
 
-        // Check if it's a RAW format before loading
-        if let mimeType = asset.originalMimeType, isRawFormat(mimeType) {
+        // Server preview (screen-sized, resampled by Immich) when chosen in Settings
+        if FullscreenImageSource(rawValue: UserDefaults.standard.fullscreenImageSource) == .preview {
+            if let previewImage = try await loadConvertedImage(asset: asset) {
+                return previewImage
+            }
+        } else if let mimeType = asset.originalMimeType, isRawFormat(mimeType) {
+            // Check if it's a RAW format before loading
             print("AssetService: Detected RAW format (\(mimeType)), using server-converted version")
             if let convertedImage = try await loadConvertedImage(asset: asset) {
                 return convertedImage
@@ -484,7 +489,8 @@ class AssetService: ObservableObject {
         let originalEndpoint = "/api/assets/\(asset.id)/original?edited=true"
         let originalData = try await networkService.makeDataRequest(endpoint: originalEndpoint)
         
-        if let image = UIImage(data: originalData) {
+        // Decode at screen size so large originals are filtered properly instead of aliasing
+        if let image = ImageDownsampler.downsampledImage(from: originalData) {
             print("AssetService: Successfully loaded image for asset \(asset.id)")
             return image
         }
@@ -522,17 +528,17 @@ class AssetService: ObservableObject {
     }
     
     private func loadConvertedImage(asset: ImmichAsset) async throws -> UIImage? {
-        // Use preview size for best quality RAW conversion
-        let endpoint = "/api/assets/\(asset.id)/thumbnail?format=webp&size=preview"
+        // Server-generated preview: used for RAW files and the "Server preview" image source
+        let endpoint = "/api/assets/\(asset.id)/thumbnail?format=webp&size=preview&edited=true"
         
         do {
             let data = try await networkService.makeDataRequest(endpoint: endpoint)
-            if let image = UIImage(data: data) {
-                print("AssetService: Loaded converted RAW image: \(image.size)")
+            if let image = ImageDownsampler.downsampledImage(from: data) {
+                print("AssetService: Loaded server preview image: \(image.size)")
                 return image
             }
         } catch {
-            print("AssetService: Failed to load converted RAW image: \(error)")
+            print("AssetService: Failed to load server preview image: \(error)")
         }
         
         return nil

@@ -93,6 +93,7 @@ struct SettingsView: View {
     @AppStorage(UserDefaultsKeys.reverseFullscreenHorizontalNavigation) private var reverseFullscreenHorizontalNavigation = false
     @AppStorage(UserDefaultsKeys.photosViewMode) private var photosViewMode = "timeline"
     @AppStorage(UserDefaultsKeys.lockupThumbnailMode) private var lockupThumbnailMode = LockupThumbnailMode.current.rawValue
+    @AppStorage(UserDefaultsKeys.fullscreenImageSource) private var fullscreenImageSource = FullscreenImageSource.original.rawValue
     @AppStorage(UserDefaultsKeys.appBackgroundStyle) private var appBackgroundStyle = AppBackgroundStyle.graphite.rawValue
     @AppStorage("navigationStyle") private var navigationStyle = NavigationStyle.tabs.rawValue
     @AppStorage("enableTopShelf", store: UserDefaults(suiteName: AppConstants.appGroupIdentifier)) private var enableTopShelf = true
@@ -492,6 +493,20 @@ struct SettingsView: View {
                                 .onChange(of: slideshowInterval) { _, newValue in
                                     UserDefaults.standard.set(newValue, forKey: "slideshowInterval")
                                 }
+
+                                SettingsRow(
+                                    icon: "photo",
+                                    title: "Full-screen Image Source",
+                                    subtitle: "Image used in slideshow and fullscreen view. Original downloads the full file and scales it to your screen. Server preview uses Immich's smaller preview, which loads faster over Wi-Fi.",
+                                    content: AnyView(
+                                        Picker("Full-screen Image Source", selection: $fullscreenImageSource) {
+                                            Text("Original").tag(FullscreenImageSource.original.rawValue)
+                                            Text("Server preview").tag(FullscreenImageSource.preview.rawValue)
+                                        }
+                                            .pickerStyle(.menu)
+                                            .frame(width: 300, alignment: .trailing)
+                                    )
+                                )
                             })
                         }
                         

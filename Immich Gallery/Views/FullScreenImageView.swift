@@ -381,6 +381,12 @@ struct FullScreenImageView: View {
                     self.isLoading = false
                 }
 
+                // With the "Server preview" image source, the preview is the final image
+                if previewImage != nil,
+                   FullscreenImageSource(rawValue: UserDefaults.standard.fullscreenImageSource) == .preview {
+                    return
+                }
+
                 do {
                     guard currentAsset.id == assetToLoad.id else { return }
                     print("FullScreenImageView: Loading original image for asset \(assetToLoad.id)")

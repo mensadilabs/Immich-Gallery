@@ -109,6 +109,11 @@ extension UserDefaults {
         set { set(newValue, forKey: UserDefaultsKeys.lockupThumbnailMode) }
     }
 
+    var fullscreenImageSource: String {
+        get { string(forKey: UserDefaultsKeys.fullscreenImageSource) ?? FullscreenImageSource.original.rawValue }
+        set { set(newValue, forKey: UserDefaultsKeys.fullscreenImageSource) }
+    }
+
     var allPhotosSortOrder: String {
         get { string(forKey: UserDefaultsKeys.allPhotosSortOrder) ?? "desc" }
         set { set(newValue, forKey: UserDefaultsKeys.allPhotosSortOrder) }
