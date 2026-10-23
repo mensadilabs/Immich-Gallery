@@ -54,6 +54,7 @@ struct UserDefaultsKeys {
     static let reverseFullscreenHorizontalNavigation = "reverseFullscreenHorizontalNavigation"
     static let photosViewMode = "photosViewMode" // "grid" | "timeline"
     static let lockupThumbnailMode = "lockupThumbnailMode" // "current" | "random"
+    static let fullscreenImageSource = "fullscreenImageSource" // "original" | "preview"
     static let allPhotosSortOrder = "allPhotosSortOrder"
     static let allPhotosFilterCity = "allPhotosFilterCity"
     static let allPhotosFilterState = "allPhotosFilterState"
