@@ -101,6 +101,77 @@ private enum ChangelogRepository {
 
 // MARK: - View
 
+private struct FlyingGhostView: View {
+    @State private var flightPath = (0..<9).map { _ in
+        CGPoint(x: CGFloat.random(in: 0.06...0.94), y: CGFloat.random(in: 0.08...0.92))
+    }
+    @State private var legDurations = (0..<9).map { _ in Double.random(in: 6.0...10.5) }
+
+    var body: some View {
+        SwiftUI.TimelineView(.animation(minimumInterval: 1 / 30)) { timeline in
+            GeometryReader { geometry in
+                let totalDuration = legDurations.reduce(0, +)
+                let elapsed = timeline.date.timeIntervalSinceReferenceDate
+                    .truncatingRemainder(dividingBy: totalDuration)
+                let leg = currentLeg(at: elapsed)
+                let from = flightPath[leg.index]
+                let to = flightPath[(leg.index + 1) % flightPath.count]
+                let progress = leg.progress * leg.progress * (3 - 2 * leg.progress)
+                let normalizedX = from.x + (to.x - from.x) * progress
+                let normalizedY = from.y + (to.y - from.y) * progress
+                let x = 24 + normalizedX * max(0, geometry.size.width - 48)
+                let y = 24 + normalizedY * max(0, geometry.size.height - 48)
+
+                ZStack {
+                    GhostSilhouette()
+                        .fill(Color(red: 0.91, green: 0.93, blue: 0.97))
+                        .shadow(color: .black.opacity(0.2), radius: 6, y: 3)
+
+                    HStack(spacing: 8) {
+                        Circle().frame(width: 4, height: 6)
+                        Circle().frame(width: 4, height: 6)
+                    }
+                    .foregroundStyle(Color(red: 0.19, green: 0.20, blue: 0.29))
+                    .offset(y: -3)
+                }
+                .frame(width: 38, height: 48)
+                .rotationEffect(.degrees(Double(to.x - from.x) * 18.0))
+                .position(x: x, y: y)
+            }
+        }
+        .opacity(0.72)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+
+    private func currentLeg(at elapsed: TimeInterval) -> (index: Int, progress: CGFloat) {
+        var legStart = 0.0
+        for (index, duration) in legDurations.enumerated() {
+            if elapsed < legStart + duration {
+                return (index, CGFloat((elapsed - legStart) / duration))
+            }
+            legStart += duration
+        }
+        return (0, 0)
+    }
+}
+
+private struct GhostSilhouette: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.minX, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.height * 0.48))
+        path.addCurve(to: CGPoint(x: rect.midX, y: rect.minY), control1: CGPoint(x: rect.minX, y: rect.height * 0.2), control2: CGPoint(x: rect.width * 0.2, y: rect.minY))
+        path.addCurve(to: CGPoint(x: rect.maxX, y: rect.height * 0.48), control1: CGPoint(x: rect.width * 0.8, y: rect.minY), control2: CGPoint(x: rect.maxX, y: rect.height * 0.2))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+        path.addCurve(to: CGPoint(x: rect.width * 0.68, y: rect.maxY * 0.92), control1: CGPoint(x: rect.width * 0.88, y: rect.height * 0.84), control2: CGPoint(x: rect.width * 0.79, y: rect.height * 0.84))
+        path.addCurve(to: CGPoint(x: rect.width * 0.34, y: rect.maxY), control1: CGPoint(x: rect.width * 0.57, y: rect.height * 0.99), control2: CGPoint(x: rect.width * 0.46, y: rect.height * 0.99))
+        path.addCurve(to: CGPoint(x: rect.minX, y: rect.maxY), control1: CGPoint(x: rect.width * 0.2, y: rect.height * 0.84), control2: CGPoint(x: rect.width * 0.1, y: rect.height * 0.84))
+        path.closeSubpath()
+        return path
+    }
+}
+
 struct WhatsNewView: View {
     let onDismiss: () -> Void
     @State private var opacity: Double = 0
@@ -120,6 +191,8 @@ struct WhatsNewView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .opacity(opacity)
+
+                FlyingGhostView()
             }
         }
         .onAppear { withAnimation(.easeOut(duration: 0.6)) { opacity = 1.0 } }
@@ -162,6 +235,8 @@ private extension WhatsNewView {
             .padding(.leading, 10)
 
             VStack(alignment: .leading, spacing: 12) {
+                // Temporarily hidden; restore for the next release.
+                /*
                 Image("GitHubRepositoryQRCode")
                     .resizable()
                     .interpolation(.none)
@@ -170,6 +245,7 @@ private extension WhatsNewView {
                     .background(.white)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                     .accessibilityLabel("QR code for the Immich Gallery GitHub repository")
+                */
 
                 Text("Be a star - leave a star, or five.")
                     .font(.system(size: 22, weight: .medium))
