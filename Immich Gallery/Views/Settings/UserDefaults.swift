@@ -40,6 +40,14 @@ extension UserDefaults {
         }
         set { set(newValue, forKey: UserDefaultsKeys.showLocationOverlay) }
     }
+
+    var preferTranscodedVideoStreaming: Bool {
+        get {
+            if object(forKey: UserDefaultsKeys.preferTranscodedVideoStreaming) == nil { return true }
+            return bool(forKey: UserDefaultsKeys.preferTranscodedVideoStreaming)
+        }
+        set { set(newValue, forKey: UserDefaultsKeys.preferTranscodedVideoStreaming) }
+    }
     
     var slideshowInterval: TimeInterval {
         get { 
