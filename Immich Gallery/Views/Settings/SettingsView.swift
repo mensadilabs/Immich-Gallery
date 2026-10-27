@@ -67,6 +67,7 @@ struct SettingsView: View {
     @State private var showingSignIn = false
     @State private var showingWhatsNew = false
     @State private var showingVisibleTabs = false
+    @State private var showingPrivacyPINSetup = false
     @State private var isValidatingSlideshowConfig = false
     @State private var slideshowConfigValidationMessage = ""
     @State private var showingSlideshowConfigValidation = false
@@ -93,6 +94,8 @@ struct SettingsView: View {
     @AppStorage(UserDefaultsKeys.reverseFullscreenHorizontalNavigation) private var reverseFullscreenHorizontalNavigation = false
     @AppStorage(UserDefaultsKeys.photosViewMode) private var photosViewMode = "timeline"
     @AppStorage(UserDefaultsKeys.lockupThumbnailMode) private var lockupThumbnailMode = LockupThumbnailMode.current.rawValue
+    @AppStorage("privacyScreenEnabled") private var privacyScreenEnabled = false
+    @AppStorage("privacyScreenPIN") private var privacyScreenPIN = ""
     @AppStorage(UserDefaultsKeys.appBackgroundStyle) private var appBackgroundStyle = AppBackgroundStyle.graphite.rawValue
     @AppStorage("navigationStyle") private var navigationStyle = NavigationStyle.tabs.rawValue
     @AppStorage("enableTopShelf", store: UserDefaults(suiteName: AppConstants.appGroupIdentifier)) private var enableTopShelf = true
@@ -502,6 +505,34 @@ struct SettingsView: View {
                                     Spacer()
                                 }
                                 SettingsRow(
+                                    icon: "lock.shield",
+                                    title: "Privacy Screen",
+                                    subtitle: "Shows a PIN when you return to the app. It only hides the screen; it does not protect your data.",
+                                    content: AnyView(
+                                        Button(privacyScreenEnabled ? "Clear PIN and Turn Off" : "Set PIN") {
+                                            if privacyScreenEnabled {
+                                                privacyScreenEnabled = false
+                                                privacyScreenPIN = ""
+                                            } else {
+                                                showingPrivacyPINSetup = true
+                                            }
+                                        }
+                                        .buttonStyle(.bordered)
+                                        .sheet(isPresented: $showingPrivacyPINSetup) {
+                                            PrivacyPINSetupView(
+                                                onCancel: { showingPrivacyPINSetup = false },
+                                                onSave: { pin in
+                                                    privacyScreenPIN = pin
+                                                    privacyScreenEnabled = true
+                                                    showingPrivacyPINSetup = false
+                                                }
+                                            )
+                                        }
+                                    ),
+                                    isOn: privacyScreenEnabled
+                                )
+
+                                SettingsRow(
                                     icon: "paintbrush",
                                     title: "Dim Level",
                                     subtitle: "Apply a transparent overlay to dim slideshow images. Best used with black slideshow background color",
@@ -905,6 +936,75 @@ struct SettingsView: View {
     }
 }
 
+
+private struct PrivacyPINSetupView: View {
+    let onCancel: () -> Void
+    let onSave: (String) -> Void
+
+    @State private var pin = ""
+    @State private var confirmation = ""
+    @State private var errorMessage: String?
+    @FocusState private var pinFieldFocused: Bool
+
+    private var canSave: Bool {
+        pin.count == 4 && confirmation.count == 4 && pin == confirmation
+    }
+
+    var body: some View {
+        VStack(spacing: 24) {
+            Text("Set Privacy PIN")
+                .font(.system(size: 44, weight: .bold))
+
+            Text("Choose a 4-digit PIN to reveal the app when you return.")
+                .font(.system(size: 28))
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+
+            SecureField("New 4-digit PIN", text: $pin)
+                .keyboardType(.numberPad)
+                .focused($pinFieldFocused)
+                .onChange(of: pin) { _, value in
+                    let digits = String(value.filter(\.isNumber).prefix(4))
+                    if digits != value { pin = digits }
+                    errorMessage = nil
+                }
+                .frame(width: 420)
+
+            SecureField("Confirm PIN", text: $confirmation)
+                .keyboardType(.numberPad)
+                .onChange(of: confirmation) { _, value in
+                    let digits = String(value.filter(\.isNumber).prefix(4))
+                    if digits != value { confirmation = digits }
+                    errorMessage = nil
+                }
+                .frame(width: 420)
+
+            if let errorMessage {
+                Text(errorMessage)
+                    .font(.system(size: 24, weight: .medium))
+                    .foregroundStyle(.red)
+            }
+
+            HStack(spacing: 24) {
+                Button("Cancel", action: onCancel)
+                    .buttonStyle(.bordered)
+                Button("Save PIN") {
+                    guard canSave else {
+                        errorMessage = "Enter the same 4-digit PIN in both fields."
+                        return
+                    }
+                    onSave(pin)
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(pin.count != 4 || confirmation.count != 4)
+            }
+        }
+        .padding(64)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(.black)
+        .onAppear { pinFieldFocused = true }
+    }
+}
 
 #Preview {
     let userManager = UserManager()

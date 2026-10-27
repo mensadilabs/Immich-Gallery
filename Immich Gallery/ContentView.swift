@@ -71,6 +71,12 @@ struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage(UserDefaultsKeys.autoSlideshowTimeout) private var autoSlideshowTimeout: Int = 0
     @AppStorage(UserDefaultsKeys.launchIntoSlideshow) private var launchIntoSlideshow: Bool = false
+    @AppStorage("privacyScreenEnabled") private var privacyScreenEnabled = false
+    @AppStorage("privacyScreenPIN") private var privacyScreenPIN = ""
+    @State private var isPrivacyScreenLocked = UserDefaults.standard.bool(forKey: "privacyScreenEnabled")
+    @State private var privacyPINEntry = ""
+    @State private var privacyPINError: String?
+    @FocusState private var isPrivacyPINFocused: Bool
     @State private var inactivityTask: Task<Void, Never>?
     @State private var isInactivityMonitoringPaused = false
     @State private var suppressNextTabActivity = false
@@ -324,6 +330,11 @@ struct ContentView: View {
                 recordUserActivity()
             case .inactive, .background:
                 cancelIdleSlideshowTasks()
+                if privacyScreenEnabled {
+                    isPrivacyScreenLocked = true
+                    privacyPINEntry = ""
+                    privacyPINError = nil
+                }
             @unknown default:
                 cancelIdleSlideshowTasks()
             }
@@ -348,6 +359,70 @@ struct ContentView: View {
                 authenticationService: authService,
                 currentAssetIndex: $deepLinkedAssetIndex
             )
+        }
+        .overlay {
+            if privacyScreenEnabled && !privacyScreenPIN.isEmpty && isPrivacyScreenLocked {
+                privacyScreenLockView
+                    .transition(.opacity)
+                    .zIndex(10)
+            }
+        }
+    }
+
+    private var privacyScreenLockView: some View {
+        VStack(spacing: 28) {
+            Image(systemName: "lock.fill")
+                .font(.system(size: 72, weight: .medium))
+                .foregroundStyle(.white.opacity(0.9))
+
+            Text("Privacy Screen")
+                .font(.system(size: 48, weight: .bold))
+                .foregroundStyle(.white)
+
+            Text("Enter your PIN to continue")
+                .font(.system(size: 30, weight: .medium))
+                .foregroundStyle(.white.opacity(0.75))
+
+            SecureField("4-digit PIN", text: $privacyPINEntry)
+                .focused($isPrivacyPINFocused)
+                .keyboardType(.numberPad)
+                .textContentType(.oneTimeCode)
+                .frame(width: 420)
+                .padding(18)
+                .background(.white.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
+                .onChange(of: privacyPINEntry) { _, value in
+                    let digits = String(value.filter(\.isNumber).prefix(4))
+                    if digits != value { privacyPINEntry = digits }
+                }
+                .onSubmit(unlockPrivacyScreen)
+
+            if let privacyPINError {
+                Text(privacyPINError)
+                    .font(.system(size: 26, weight: .medium))
+                    .foregroundStyle(.red)
+            }
+
+            Button("Unlock", action: unlockPrivacyScreen)
+                .buttonStyle(.borderedProminent)
+                .disabled(privacyPINEntry.count != 4)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(.black)
+        .ignoresSafeArea()
+        .focusSection()
+        .onAppear { isPrivacyPINFocused = true }
+        .onExitCommand {}
+    }
+
+    private func unlockPrivacyScreen() {
+        guard privacyPINEntry.count == 4 else { return }
+        if privacyPINEntry == privacyScreenPIN {
+            isPrivacyScreenLocked = false
+            privacyPINEntry = ""
+            privacyPINError = nil
+        } else {
+            privacyPINEntry = ""
+            privacyPINError = "Incorrect PIN. Try again."
         }
     }
     
