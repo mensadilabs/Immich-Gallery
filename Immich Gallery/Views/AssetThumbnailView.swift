@@ -59,8 +59,16 @@ struct AssetThumbnailView: View {
             if asset.type == .video {
                 // Play button at top right
                 VStack {
-                    HStack {
+                    HStack(spacing: 8) {
                         Spacer()
+                        if let duration = asset.displayDuration {
+                            Text(duration)
+                                .font(.caption.bold().monospacedDigit())
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 9)
+                                .padding(.vertical, 6)
+                                .background(Color.black.opacity(0.65), in: Capsule())
+                        }
                         Image(systemName: "play.circle.fill")
                             .font(.system(size: 40))
                             .foregroundColor(.white)

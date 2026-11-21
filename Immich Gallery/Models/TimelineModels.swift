@@ -23,7 +23,7 @@ struct TimelineBucket: Codable, Identifiable, Equatable {
 /// Columnar response from GET /api/timeline/bucket. Immich returns parallel
 /// arrays keyed by field; index `i` across all arrays describes one asset.
 /// Only the fields used by the grid are decoded; unused/volatile fields
-/// (duration, projectionType, EXIF, …) are intentionally omitted so the
+/// (projectionType, EXIF, …) are intentionally omitted so the
 /// decoder is resilient to server-version differences.
 struct TimeBucketAssetResponse: Codable {
     let id: [String]
@@ -38,6 +38,7 @@ struct TimeBucketAssetResponse: Codable {
     let livePhotoVideoId: [String?]?
     let visibility: [String]?
     let stack: [[String]?]?
+    let duration: [String?]?
 
     /// Map the columnar arrays into ImmichAsset values, one per index.
     /// EXIF/people are left empty — the grid only needs id, type, thumbhash,
@@ -92,7 +93,7 @@ struct TimeBucketAssetResponse: Codable {
                 isOffline: false,
                 isTrashed: flag(isTrashed, i),
                 checksum: "",
-                duration: nil,
+                duration: optStr(duration, i),
                 hasMetadata: false,
                 livePhotoVideoId: optStr(livePhotoVideoId, i),
                 people: [],
