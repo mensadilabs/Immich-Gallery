@@ -55,6 +55,7 @@ struct FullScreenImageView: View {
                             showingVideoPlayer = true
                         }
                     )
+                    .id(currentAsset.id)
                 }
             } else {
                 // Use image view for photos
