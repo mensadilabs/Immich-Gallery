@@ -93,6 +93,11 @@ extension UserDefaults {
         get { bool(forKey: UserDefaultsKeys.reverseFullscreenHorizontalNavigation) }
         set { set(newValue, forKey: UserDefaultsKeys.reverseFullscreenHorizontalNavigation) }
     }
+
+    var loopVideos: Bool {
+        get { bool(forKey: UserDefaultsKeys.loopVideos) }
+        set { set(newValue, forKey: UserDefaultsKeys.loopVideos) }
+    }
     
     var navigationStyle: String {
         get { string(forKey: UserDefaultsKeys.navigationStyle) ?? NavigationStyle.tabs.rawValue }
