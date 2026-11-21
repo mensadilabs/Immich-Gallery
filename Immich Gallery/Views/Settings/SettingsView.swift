@@ -104,6 +104,7 @@ struct SettingsView: View {
     @AppStorage(UserDefaultsKeys.autoSlideshowTimeout) private var autoSlideshowTimeout: Int = 0 // 0 = off
     @AppStorage(UserDefaultsKeys.launchIntoSlideshow) private var launchIntoSlideshow: Bool = false
     @AppStorage(UserDefaultsKeys.showDiagnosticsOverlay) private var showDiagnosticsOverlay = false
+    @AppStorage(UserDefaultsKeys.playOriginalVideos) private var playOriginalVideos = false
     @AppStorage("artModeLevel") private var artModeLevel = "off"
     @AppStorage("artModeDayStart") private var artModeDayStart = 7
     @AppStorage("artModeNightStart") private var artModeNightStart = 20
@@ -320,6 +321,20 @@ struct SettingsView: View {
                                             }
                                             .buttonStyle(.bordered)
                                         )
+                                    )
+                                    SettingsRow(
+                                        icon: "play.rectangle",
+                                        title: "Video Quality",
+                                        subtitle: "Original streams the full-quality file (4K, HDR, all audio tracks) instead of the server's transcoded copy. Needs a fast home network.",
+                                        content: AnyView(
+                                            Picker("Video Quality", selection: $playOriginalVideos) {
+                                                Text("Optimized").tag(false)
+                                                Text("Original").tag(true)
+                                            }
+                                            .pickerStyle(.menu)
+                                            .frame(width: 300, alignment: .trailing)
+                                        ),
+                                        isOn: playOriginalVideos
                                     )
                                     SettingsRow(
                                         icon: "calendar",

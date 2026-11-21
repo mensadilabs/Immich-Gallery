@@ -552,7 +552,12 @@ class AssetService: ObservableObject {
 
     func loadVideoURL(asset: ImmichAsset) async throws -> URL {
         guard asset.type == .video else { throw ImmichError.clientError(400) }
-        let endpoint = "/api/assets/\(asset.id)/video/playback"
+        // Immich's playback route returns its transcoded copy whenever one exists (by default 1080p at a
+        // few Mbit/s). The original keeps the full resolution, HDR and audio tracks; Apple TV is usually on
+        // the home network, so streaming it is fine there.
+        let endpoint = UserDefaults.standard.bool(forKey: UserDefaultsKeys.playOriginalVideos)
+            ? "/api/assets/\(asset.id)/original"
+            : "/api/assets/\(asset.id)/video/playback"
         guard let url = URL(string: "\(networkService.baseURL)\(endpoint)") else {
             throw ImmichError.invalidURL
         }
