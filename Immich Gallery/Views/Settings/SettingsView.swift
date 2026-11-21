@@ -92,6 +92,7 @@ struct SettingsView: View {
     @AppStorage("enableDynamicTransitions") private var enableDynamicTransitions = false
     @AppStorage("enableSlideshowShuffle") private var enableSlideshowShuffle = false
     @AppStorage(UserDefaultsKeys.reverseFullscreenHorizontalNavigation) private var reverseFullscreenHorizontalNavigation = false
+    @AppStorage(UserDefaultsKeys.loopVideos) private var loopVideos = false
     @AppStorage(UserDefaultsKeys.photosViewMode) private var photosViewMode = "timeline"
     @AppStorage(UserDefaultsKeys.lockupThumbnailMode) private var lockupThumbnailMode = LockupThumbnailMode.current.rawValue
     @AppStorage("privacyScreenEnabled") private var privacyScreenEnabled = false
@@ -395,6 +396,21 @@ struct SettingsView: View {
                                             .frame(width: 300, alignment: .trailing)
                                         ),
                                         isOn: reverseFullscreenHorizontalNavigation
+                                    )
+
+                                    SettingsRow(
+                                        icon: "repeat",
+                                        title: "Loop Videos",
+                                        subtitle: "Restart videos from the beginning when they finish.",
+                                        content: AnyView(
+                                            Picker("Loop Videos", selection: $loopVideos) {
+                                                Text("Off").tag(false)
+                                                Text("On").tag(true)
+                                            }
+                                            .pickerStyle(.menu)
+                                            .frame(width: 300, alignment: .trailing)
+                                        ),
+                                        isOn: loopVideos
                                     )
                                 }
                             )

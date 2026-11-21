@@ -15,6 +15,7 @@ struct SimpleVideoPlayerView: View {
     @ObservedObject var authenticationService: AuthenticationService
 
     @State private var player: AVPlayer?
+    @State private var looper: AVPlayerLooper?
     @State private var isLoading = true
     @State private var errorMessage: String?
     @State private var hasAttemptedLoad = false
@@ -68,6 +69,7 @@ struct SimpleVideoPlayerView: View {
         }
         .onDisappear {
             player?.pause()
+            looper = nil
             player = nil
             hasAttemptedLoad = false
         }
@@ -97,9 +99,17 @@ struct SimpleVideoPlayerView: View {
             }
 
             let playerItem = AVPlayerItem(asset: urlAsset)
-            let player = AVPlayer(playerItem: playerItem)
 
             await MainActor.run {
+                let player: AVPlayer
+                if UserDefaults.standard.loopVideos {
+                    let queuePlayer = AVQueuePlayer()
+                    self.looper = AVPlayerLooper(player: queuePlayer, templateItem: playerItem)
+                    player = queuePlayer
+                } else {
+                    self.looper = nil
+                    player = AVPlayer(playerItem: playerItem)
+                }
                 self.player = player
                 self.player?.play()
                 self.isLoading = false
