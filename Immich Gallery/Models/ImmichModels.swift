@@ -485,3 +485,22 @@ struct ExploreAsset: Identifiable {
     var iconName: String { "photo" }
     var gridColor: Color? { nil }
 } 
+
+extension ImmichAsset {
+    /// Video length for display on thumbnails, e.g. "0:12" or "1:02:03".
+    /// Nil for images and for durations that are missing, zero, or unparseable.
+    var displayDuration: String? {
+        guard type == .video, let duration else { return nil }
+        return Self.formatDuration(duration)
+    }
+
+    /// Formats Immich's "H:MM:SS.ffffff" duration string.
+    static func formatDuration(_ raw: String) -> String? {
+        let parts = raw.split(separator: ":").compactMap { Double($0) }
+        guard parts.count == 3 else { return nil }
+        let seconds = parts.reduce(0) { $0 * 60 + $1 }
+        guard seconds > 0 else { return nil }
+        return Duration.seconds(max(1, seconds.rounded()))
+            .formatted(.time(pattern: seconds >= 3600 ? .hourMinuteSecond : .minuteSecond))
+    }
+}

@@ -126,6 +126,29 @@ struct Immich_GalleryTests {
         #expect(assets[1].stack == nil)
     }
 
+    @Test func timelineResponseCarriesVideoDuration() throws {
+        let json = """
+        {
+          "id": ["photo-1", "video-1"],
+          "isImage": [true, false],
+          "duration": [null, "0:01:05.480000"]
+        }
+        """.data(using: .utf8)!
+
+        let assets = try JSONDecoder().decode(TimeBucketAssetResponse.self, from: json).toAssets()
+
+        #expect(assets[0].displayDuration == nil)
+        #expect(assets[1].displayDuration == "1:05")
+    }
+
+    @Test func videoDurationFormatting() {
+        #expect(ImmichAsset.formatDuration("0:00:12.345000") == "0:12")
+        #expect(ImmichAsset.formatDuration("0:00:00.400000") == "0:01")
+        #expect(ImmichAsset.formatDuration("1:02:03.000000") == "1:02:03")
+        #expect(ImmichAsset.formatDuration("0:00:00.000000") == nil)
+        #expect(ImmichAsset.formatDuration("12") == nil)
+    }
+
     @Test func albumResponseDecodesV3PayloadWithoutOwnerOrAssets() async throws {
         let json = """
         {
