@@ -101,6 +101,10 @@ struct SettingsView: View {
     @AppStorage("enableTopShelf", store: UserDefaults(suiteName: AppConstants.appGroupIdentifier)) private var enableTopShelf = true
     @AppStorage("topShelfStyle", store: UserDefaults(suiteName: AppConstants.appGroupIdentifier)) private var topShelfStyle = "sectioned"
     @AppStorage("topShelfImageSelection", store: UserDefaults(suiteName: AppConstants.appGroupIdentifier)) private var topShelfImageSelection = "recent"
+    @AppStorage(UserDefaultsKeys.topShelfAlbumId, store: UserDefaults(suiteName: AppConstants.appGroupIdentifier)) private var topShelfAlbumId = ""
+    @AppStorage(UserDefaultsKeys.topShelfAlbumName, store: UserDefaults(suiteName: AppConstants.appGroupIdentifier)) private var topShelfAlbumName = ""
+    @State private var topShelfAlbums: [ImmichAlbum] = []
+    @State private var isLoadingTopShelfAlbums = false
     @AppStorage(UserDefaultsKeys.autoSlideshowTimeout) private var autoSlideshowTimeout: Int = 0 // 0 = off
     @AppStorage(UserDefaultsKeys.launchIntoSlideshow) private var launchIntoSlideshow: Bool = false
     @AppStorage(UserDefaultsKeys.showDiagnosticsOverlay) private var showDiagnosticsOverlay = false
@@ -433,19 +437,54 @@ struct SettingsView: View {
                                     SettingsRow(
                                         icon: "photo.on.rectangle.angled",
                                         title: "Image Selection",
-                                        subtitle: "Choose between recent photos or random photos from your library.",
+                                        subtitle: "Choose recent photos, random photos from your library, or random photos from one album.",
                                         content: AnyView(
                                             Picker("Image Selection", selection: $topShelfImageSelection) {
                                                 Text("Recent Photos").tag("recent")
                                                 Text("Random Photos").tag("random")
+                                                Text("From Album").tag("album")
                                             }
                                                 .pickerStyle(.menu)
                                                 .frame(width: 500, alignment: .trailing)
-                                                .onChange(of: topShelfImageSelection) { _, _ in
+                                                .onChange(of: topShelfImageSelection) { _, newValue in
+                                                    if newValue == "album" {
+                                                        Task { await loadTopShelfAlbums() }
+                                                    }
                                                     TVTopShelfContentProvider.topShelfContentDidChange()
                                                 }
                                         )
                                     )
+
+                                    if topShelfImageSelection == "album" {
+                                        SettingsRow(
+                                            icon: "rectangle.stack",
+                                            title: "Top Shelf Album",
+                                            subtitle: "Top Shelf shows random photos from this album.",
+                                            content: AnyView(
+                                                Picker("Top Shelf Album", selection: Binding(
+                                                    get: { topShelfAlbumId },
+                                                    set: { newValue in
+                                                        topShelfAlbumId = newValue
+                                                        topShelfAlbumName = topShelfAlbums.first { $0.id == newValue }?.albumName ?? ""
+                                                        TVTopShelfContentProvider.topShelfContentDidChange()
+                                                    }
+                                                )) {
+                                                    if topShelfAlbumId.isEmpty {
+                                                        Text(isLoadingTopShelfAlbums ? "Loading…" : "Choose Album").tag("")
+                                                    }
+                                                    // Keep the saved album selectable before the list loads (or if it's gone).
+                                                    if !topShelfAlbumId.isEmpty && !topShelfAlbums.contains(where: { $0.id == topShelfAlbumId }) {
+                                                        Text(topShelfAlbumName.isEmpty ? "Saved Album" : topShelfAlbumName).tag(topShelfAlbumId)
+                                                    }
+                                                    ForEach(topShelfAlbums) { album in
+                                                        Text(album.albumName).tag(album.id)
+                                                    }
+                                                }
+                                                    .pickerStyle(.menu)
+                                                    .frame(width: 500, alignment: .trailing)
+                                            )
+                                        )
+                                    }
                                 }
                             })
                         }
@@ -768,6 +807,11 @@ struct SettingsView: View {
             .task {
                 await refreshSlideshowConfigSummary()
             }
+            .task {
+                if topShelfImageSelection == "album" {
+                    await loadTopShelfAlbums()
+                }
+            }
             .alert("Slideshow Configuration", isPresented: $showingSlideshowConfigValidation) {
                 Button("OK", role: .cancel) { }
             } message: {
@@ -899,6 +943,28 @@ struct SettingsView: View {
                 isValidatingSlideshowConfig = false
                 showingSlideshowConfigValidation = true
             }
+        }
+    }
+
+    private func loadTopShelfAlbums() async {
+        guard topShelfAlbums.isEmpty, !isLoadingTopShelfAlbums else { return }
+        isLoadingTopShelfAlbums = true
+        defer { isLoadingTopShelfAlbums = false }
+        do {
+            let albums = try await AlbumService(
+                networkService: authService.authenticatedNetworkService
+            ).fetchAlbums()
+            topShelfAlbums = albums
+                .filter { $0.albumName != AppConstants.configAlbumName }
+                .sorted { $0.albumName.localizedCaseInsensitiveCompare($1.albumName) == .orderedAscending }
+            // Refresh the cached name in case the album was renamed on the server.
+            if let current = topShelfAlbums.first(where: { $0.id == topShelfAlbumId }),
+               current.albumName != topShelfAlbumName {
+                topShelfAlbumName = current.albumName
+                TVTopShelfContentProvider.topShelfContentDidChange()
+            }
+        } catch {
+            print("SettingsView: Failed to load albums for Top Shelf: \(error)")
         }
     }
 

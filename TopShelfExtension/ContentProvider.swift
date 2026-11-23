@@ -47,7 +47,15 @@ class ContentProvider: TVTopShelfContentProvider {
         print("TopShelf: Using style: \(topShelfStyle)")
         
         if topShelfStyle == "sectioned" {
-            let sectionTitle = imageSelection == "random" ? nil : "Recent Photos"
+            let sectionTitle: String?
+            switch imageSelection {
+            case "random":
+                sectionTitle = nil
+            case "album":
+                sectionTitle = sharedDefaults.string(forKey: UserDefaultsKeys.topShelfAlbumName)
+            default:
+                sectionTitle = "Recent Photos"
+            }
             return try await createSectionedContent(
                 assets: Array(assets.prefix(10)),
                 title: sectionTitle
@@ -242,7 +250,23 @@ class ContentProvider: TVTopShelfContentProvider {
         // Test token validity first
         try await testTokenValidity(serverURL: serverURL, accessToken: accessToken, authType: authType)
         
-        if imageSelection == "random" {
+        if imageSelection == "album" {
+            if let albumId = sharedDefaults.string(forKey: UserDefaultsKeys.topShelfAlbumId), !albumId.isEmpty {
+                do {
+                    let albumAssets = try await fetchRandomPhotos(serverURL: serverURL, accessToken: accessToken, authType: authType, albumIds: [albumId])
+                    if !albumAssets.isEmpty {
+                        return albumAssets
+                    }
+                    print("TopShelf: Album \(albumId) returned no images, falling back to random photos")
+                } catch {
+                    // The album may have been deleted or unshared; don't leave the shelf empty.
+                    print("TopShelf: Album fetch failed (\(error)), falling back to random photos")
+                }
+            } else {
+                print("TopShelf: Album selection has no album set, falling back to random photos")
+            }
+            return try await fetchRandomPhotos(serverURL: serverURL, accessToken: accessToken, authType: authType)
+        } else if imageSelection == "random" {
             return try await fetchRandomPhotos(serverURL: serverURL, accessToken: accessToken, authType: authType)
         } else {
             return try await fetchRecentPhotos(serverURL: serverURL, accessToken: accessToken, authType: authType)
@@ -303,7 +327,7 @@ class ContentProvider: TVTopShelfContentProvider {
         return allImageAssets
     }
     
-    private func fetchRandomPhotos(serverURL: String, accessToken: String, authType: SavedUser.AuthType) async throws -> [SimpleAsset] {
+    private func fetchRandomPhotos(serverURL: String, accessToken: String, authType: SavedUser.AuthType, albumIds: [String]? = nil) async throws -> [SimpleAsset] {
         let urlString = "\(serverURL)/api/search/random"
         print("TopShelf: Making request to: \(urlString)")
         guard let url = URL(string: urlString) else {
@@ -311,10 +335,13 @@ class ContentProvider: TVTopShelfContentProvider {
             throw TopShelfError.invalidURL
         }
 
-        let searchRequest: [String: Any] = [
+        var searchRequest: [String: Any] = [
             "size": TOTAL_ITEMS_COUNT,
             "withExif": true,
         ]
+        if let albumIds, !albumIds.isEmpty {
+            searchRequest["albumIds"] = albumIds
+        }
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"

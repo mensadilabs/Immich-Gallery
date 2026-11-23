@@ -67,6 +67,8 @@ struct UserDefaultsKeys {
     static let enableTopShelf = "enableTopShelf"
     static let topShelfStyle = "topShelfStyle"
     static let topShelfImageSelection = "topShelfImageSelection"
+    static let topShelfAlbumId = "topShelfAlbumId"
+    static let topShelfAlbumName = "topShelfAlbumName"
     static let defaultStartupTab = "defaultStartupTab"
     static let lastSeenVersion = "lastSeenVersion"
     static let assetSortOrder = "assetSortOrder"
